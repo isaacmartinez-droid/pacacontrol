@@ -5,9 +5,9 @@ const toneClasses = {
   warning: 'bg-amber-400/15 text-amber-100',
 }
 
-function SummaryCard({ icon: Icon, label, value, detail, badge, tone = 'brand' }) {
-  return (
-    <article className="relative min-w-0 overflow-hidden rounded-2xl border border-brand-800 bg-brand-900 p-4 text-white shadow-lg shadow-brand-950/15 sm:p-5">
+function SummaryCard({ icon: Icon, label, value, detail, badge, tone = 'brand', to }) {
+  const content = (
+    <>
       <span aria-hidden="true" className="absolute -right-6 -top-8 size-24 rounded-full bg-white/5" />
       <div className="relative flex items-start justify-between gap-3">
         <div className={`grid size-10 place-items-center rounded-xl shadow-sm ${toneClasses[tone]}`}>
@@ -24,8 +24,13 @@ function SummaryCard({ icon: Icon, label, value, detail, badge, tone = 'brand' }
       <p className="relative mt-3 inline-flex rounded-lg bg-white/10 px-2 py-1 text-[0.68rem] font-bold text-brand-100">
         {detail}
       </p>
-    </article>
+    </>
   )
+
+  const className = `relative block min-w-0 overflow-hidden rounded-2xl border border-brand-800 bg-brand-900 p-4 text-white shadow-lg shadow-brand-950/15 sm:p-5 ${to ? 'transition hover:-translate-y-0.5 hover:bg-brand-800 focus:outline-none focus-visible:ring-4 focus-visible:ring-brand-300 active:translate-y-0' : ''}`
+  if (to) return <Link to={to} className={className} aria-label={`${label}: ${value}. Ver detalle`}>{content}</Link>
+  return <article className={className}>{content}</article>
 }
 
 export default SummaryCard
+import { Link } from 'react-router-dom'

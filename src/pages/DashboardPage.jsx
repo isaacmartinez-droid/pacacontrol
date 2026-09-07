@@ -118,6 +118,7 @@ function DashboardPage() {
               detail="Requieren atención"
               badge="Revisar"
               tone="warning"
+              to="/productos-danados"
             />
           </div>
         </section>
