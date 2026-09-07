@@ -3,13 +3,12 @@ import { getSupabaseClient, isSupabaseConfigured } from '../lib/supabaseClient'
 
 const AuthContext = createContext(null)
 const IDLE_TIMEOUT_MS = 30 * 60 * 1000
-// Supabase Auth necesita una identidad de tipo email para autenticar con contraseña.
-// El dominio reservado .invalid permite mantener ese detalle fuera de la interfaz
-// sin asociar las cuentas a direcciones de correo reales.
-const USER_ACCOUNT_DOMAIN = 'usuarios.pacacontrol.invalid'
-
 function usernameToEmail(username) {
-  return `${username.trim().toLowerCase()}@${USER_ACCOUNT_DOMAIN}`
+  // Supabase Auth necesita una identidad con formato de email para usar
+  // contraseñas. Reutilizamos el host real del proyecto como identificador
+  // interno para que Supabase lo acepte sin pedirle un correo al usuario.
+  const projectHostname = new URL(import.meta.env.VITE_SUPABASE_URL).hostname
+  return `${username.trim().toLowerCase()}@${projectHostname}`
 }
 
 export function AuthProvider({ children }) {
