@@ -17,6 +17,8 @@ function NewBalePage() {
     transportCost: '0',
     otherExpenses: '0',
     receivedPieces: '',
+    damagedPieces: '0',
+    damageReason: '',
     categoryName: '',
   })
   const [formError, setFormError] = useState('')
@@ -27,8 +29,10 @@ function NewBalePage() {
   const transportCost = Number(form.transportCost) || 0
   const otherExpenses = Number(form.otherExpenses) || 0
   const receivedPieces = Number(form.receivedPieces) || 0
+  const damagedPieces = Number(form.damagedPieces) || 0
+  const sellablePieces = Math.max(0, receivedPieces - damagedPieces)
   const totalInvestment = purchaseCost + transportCost + otherExpenses
-  const averageCost = receivedPieces > 0 ? totalInvestment / receivedPieces : 0
+  const costPerSellablePiece = sellablePieces > 0 ? totalInvestment / sellablePieces : 0
 
   function updateForm(field, value) {
     setForm((currentForm) => ({ ...currentForm, [field]: value }))
@@ -53,6 +57,22 @@ function NewBalePage() {
       return
     }
 
+    if (damagedPieces < 0) {
+      setFormError('La cantidad de piezas dañadas no puede ser negativa.')
+      return
+    }
+
+    if (damagedPieces > receivedPieces) {
+      setFormError('Las piezas dañadas no pueden superar las piezas recibidas.')
+      return
+    }
+
+    const damageReason = form.damageReason.trim().replace(/\s+/g, ' ')
+    if (damagedPieces > 0 && !damageReason) {
+      setFormError('Escribe el motivo de las piezas dañadas.')
+      return
+    }
+
     const categoryName = form.categoryName.trim().replace(/\s+/g, ' ')
     if (!categoryName) {
       setFormError('Escribe la categoría de las prendas.')
@@ -66,8 +86,17 @@ function NewBalePage() {
 
     setIsSaving(true)
     try {
-      const bale = await createBale({ ...form, categoryName, purchaseCost, transportCost, otherExpenses, receivedPieces })
-      setRegisteredBale({ ...bale, totalInvestment, averageCost })
+      const bale = await createBale({
+        ...form,
+        categoryName,
+        damageReason,
+        purchaseCost,
+        transportCost,
+        otherExpenses,
+        receivedPieces,
+        damagedPieces,
+      })
+      setRegisteredBale({ ...bale, totalInvestment, sellablePieces, costPerSellablePiece })
     } catch (error) {
       setFormError(error.message || 'No fue posible registrar la paca.')
     } finally {
@@ -83,6 +112,8 @@ function NewBalePage() {
       transportCost: '0',
       otherExpenses: '0',
       receivedPieces: '',
+      damagedPieces: '0',
+      damageReason: '',
       categoryName: '',
     })
   }
@@ -193,6 +224,34 @@ function NewBalePage() {
                     />
                     <p className="mt-2 text-xs font-medium text-brand-700">Cantidad total antes de clasificarla.</p>
                   </Field>
+                  <Field label="Piezas dañadas" htmlFor="bale-damaged-pieces">
+                    <input
+                      id="bale-damaged-pieces"
+                      type="number"
+                      min="0"
+                      max={receivedPieces || undefined}
+                      step="1"
+                      inputMode="numeric"
+                      value={form.damagedPieces}
+                      onChange={(event) => updateForm('damagedPieces', event.target.value)}
+                      className="sale-input"
+                    />
+                    <p className="mt-2 text-xs font-medium text-amber-700">Se descontarán del inventario disponible.</p>
+                  </Field>
+                  {damagedPieces > 0 && (
+                    <Field label="Motivo del daño" htmlFor="bale-damage-reason">
+                      <input
+                        id="bale-damage-reason"
+                        type="text"
+                        required
+                        maxLength="500"
+                        placeholder="Ej. Manchas o roturas"
+                        value={form.damageReason}
+                        onChange={(event) => updateForm('damageReason', event.target.value)}
+                        className="sale-input"
+                      />
+                    </Field>
+                  )}
                   <Field label="Categoría de prendas" htmlFor="bale-category">
                     <input
                       id="bale-category"
@@ -235,7 +294,9 @@ function NewBalePage() {
                 <SummaryRow label="Fecha" value={form.purchaseDate ? formatShortDate(form.purchaseDate) : 'Sin seleccionar'} />
                 <SummaryRow label="Categoría" value={form.categoryName.trim() || 'Sin escribir'} />
                 <SummaryRow label="Piezas recibidas" value={`${receivedPieces || 0} prendas`} />
-                <SummaryRow label="Costo por pieza" value={receivedPieces > 0 ? formatCurrency(averageCost) : '—'} />
+                <SummaryRow label="Piezas dañadas" value={`${damagedPieces} prendas`} />
+                <SummaryRow label="Disponibles para venta" value={`${sellablePieces} prendas`} />
+                <SummaryRow label="Costo por pieza vendible" value={sellablePieces > 0 ? formatCurrency(costPerSellablePiece) : '—'} />
               </dl>
 
               <div className="mt-5">
@@ -322,14 +383,20 @@ function BaleConfirmation({ bale, onRegisterAnother }) {
         {bale.code} lista para clasificar
       </h2>
       <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-slate-500">
-        Registraste {bale.receivedPieces} piezas con una inversión total de {formatCurrency(bale.totalInvestment)}.
+        Registraste {bale.receivedPieces} piezas, de las cuales {bale.damagedPieces} quedaron marcadas como dañadas,
+        con una inversión total de {formatCurrency(bale.totalInvestment)}.
       </p>
 
-      <dl className="mx-auto mt-6 grid max-w-2xl gap-px overflow-hidden rounded-2xl bg-slate-100 text-left sm:grid-cols-2 lg:grid-cols-4">
+      <dl className="mx-auto mt-6 grid max-w-3xl gap-px overflow-hidden rounded-2xl bg-slate-100 text-left sm:grid-cols-2 lg:grid-cols-3">
         <ConfirmationDetail label="Fecha" value={formatShortDate(bale.purchaseDate)} />
         <ConfirmationDetail label="Categoría" value={bale.categoryName} />
-        <ConfirmationDetail label="Piezas" value={`${bale.receivedPieces} prendas`} />
-        <ConfirmationDetail label="Costo por pieza" value={formatCurrency(bale.averageCost)} />
+        <ConfirmationDetail label="Piezas recibidas" value={`${bale.receivedPieces} prendas`} />
+        <ConfirmationDetail label="Piezas dañadas" value={`${bale.damagedPieces} prendas`} />
+        <ConfirmationDetail label="Disponibles" value={`${bale.sellablePieces} prendas`} />
+        <ConfirmationDetail
+          label="Costo por pieza vendible"
+          value={bale.sellablePieces > 0 ? formatCurrency(bale.costPerSellablePiece) : '—'}
+        />
       </dl>
 
       <div className="mt-6 flex flex-col justify-center gap-3 sm:flex-row">

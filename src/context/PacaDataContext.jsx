@@ -178,17 +178,45 @@ export function PacaDataProvider({ children }) {
 
   useEffect(() => { refresh() }, [refresh])
 
-  const createBale = useCallback(async ({ purchaseDate, purchaseCost, transportCost, otherExpenses, receivedPieces, categoryName }) => {
+  const createBale = useCallback(async ({
+    purchaseDate,
+    purchaseCost,
+    transportCost,
+    otherExpenses,
+    receivedPieces,
+    damagedPieces,
+    damageReason,
+    categoryName,
+  }) => {
     const supabase = getSupabaseClient()
     const category = await findOrCreateCategory(supabase, categoryName)
     const { data: bale, error: baleError } = await supabase.from('bales').insert({ purchase_date: purchaseDate, purchase_cost: purchaseCost, transport_cost: transportCost, other_expenses: otherExpenses, received_pieces: receivedPieces }).select('*').single()
     if (baleError) throw baleError
 
-    const { error: inventoryError } = await supabase.from('bale_inventory').insert({ bale_id: bale.id, category_id: category.id, received_quantity: receivedPieces })
+    const { data: inventory, error: inventoryError } = await supabase
+      .from('bale_inventory')
+      .insert({ bale_id: bale.id, category_id: category.id, received_quantity: receivedPieces })
+      .select('id')
+      .single()
     if (inventoryError) throw inventoryError
+
+    if (damagedPieces > 0) {
+      const { error: damagedError } = await supabase.rpc('register_damaged_product', {
+        p_bale_inventory_id: inventory.id,
+        p_quantity: damagedPieces,
+        p_reason: damageReason,
+      })
+      if (damagedError) throw damagedError
+    }
+
     await refresh()
     return {
-      ...mapBale({ ...bale, sold_pieces: 0, damaged_pieces: 0, available_pieces: receivedPieces }),
+      ...mapBale({
+        ...bale,
+        sold_pieces: 0,
+        damaged_pieces: damagedPieces,
+        available_pieces: receivedPieces - damagedPieces,
+      }),
       categoryName: category.name,
     }
   }, [refresh])
