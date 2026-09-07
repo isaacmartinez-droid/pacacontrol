@@ -6,6 +6,33 @@ import { formatShortDate } from '../utils/dates'
 const PacaDataContext = createContext(null)
 
 const asNumber = (value) => Number(value) || 0
+const defaultCategories = [
+  { slug: 'shirts', name: 'Camisas' },
+  { slug: 'blouses', name: 'Blusas' },
+  { slug: 'pants', name: 'Pantalones' },
+  { slug: 'skirts', name: 'Faldas' },
+  { slug: 'dresses', name: 'Vestidos' },
+  { slug: 'kids', name: 'Ropa infantil' },
+  { slug: 'other', name: 'Otros' },
+]
+
+async function ensureDefaultCategories(supabase, userId) {
+  const { data, error } = await supabase.from('categories').select('slug')
+  if (error) return error
+
+  const existingSlugs = new Set(data.map((category) => category.slug))
+  const missingCategories = defaultCategories
+    .filter((category) => !existingSlugs.has(category.slug))
+    .map((category) => ({ ...category, owner_id: userId }))
+
+  if (missingCategories.length === 0) return null
+
+  const { error: insertError } = await supabase
+    .from('categories')
+    .upsert(missingCategories, { onConflict: 'owner_id,slug', ignoreDuplicates: true })
+
+  return insertError
+}
 
 function mapBale(row, currentRevenue = 0) {
   return {
@@ -58,6 +85,12 @@ export function PacaDataProvider({ children }) {
 
     setState((current) => ({ ...current, isLoading: true, error: '' }))
     const supabase = getSupabaseClient()
+    const categorySetupError = await ensureDefaultCategories(supabase, user.id)
+    if (categorySetupError) {
+      setState((current) => ({ ...current, isLoading: false, error: categorySetupError.message }))
+      return
+    }
+
     const [categories, bales, sales, customers, expenses, damagedProducts, allocations] = await Promise.all([
       supabase.from('inventory_summary').select('category_id, name, available_pieces').order('name'),
       supabase.from('bale_summary').select('*').order('purchase_date', { ascending: false }),

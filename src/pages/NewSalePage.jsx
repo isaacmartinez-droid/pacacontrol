@@ -140,6 +140,7 @@ function NewSalePage() {
                       onChange={(event) => updateForm('categoryId', event.target.value)}
                       className="sale-input"
                     >
+                      {isLoading && <option value="">Cargando categorías…</option>}
                       {clothingCategories.map((category) => {
                         const categoryAvailable = Math.max(
                           0,

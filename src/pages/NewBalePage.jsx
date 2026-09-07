@@ -202,7 +202,13 @@ function NewBalePage() {
                       className="sale-input"
                       disabled={isLoading || categories.length === 0}
                     >
-                      <option value="">Selecciona una categoría</option>
+                      <option value="">
+                        {isLoading
+                          ? 'Cargando categorías…'
+                          : categories.length === 0
+                            ? 'No hay categorías disponibles'
+                            : 'Selecciona una categoría'}
+                      </option>
                       {categories.map((category) => (
                         <option key={category.id} value={category.id}>{category.name}</option>
                       ))}
