@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import {
   BadgeDollarSign,
   PackageCheck,
@@ -14,6 +14,7 @@ import SummaryCard from '../components/dashboard/SummaryCard'
 import Topbar from '../components/layout/Topbar'
 import SectionTitle from '../components/common/SectionTitle'
 import { formatCurrency } from '../utils/currency'
+import { useAuth } from '../context/AuthContext'
 import { usePacaData } from '../context/PacaDataContext'
 
 const dashboardPeriods = [
@@ -23,8 +24,18 @@ const dashboardPeriods = [
 ]
 
 function DashboardPage() {
+  const { user } = useAuth()
   const { data, isLoading } = usePacaData()
   const [selectedPeriod, setSelectedPeriod] = useState('month')
+  const [currentHour, setCurrentHour] = useState(() => new Date().getHours())
+  const firstName = getFirstName(user)
+  const greeting = getGreeting(currentHour)
+
+  useEffect(() => {
+    const timer = window.setInterval(() => setCurrentHour(new Date().getHours()), 60_000)
+    return () => window.clearInterval(timer)
+  }, [])
+
   const summary = {
     sales: data.sales.reduce((total, sale) => total + sale.total, 0),
     estimatedProfit: data.sales.reduce((total, sale) => total + sale.total, 0) - data.bales.reduce((total, bale) => total + bale.purchaseCost + bale.acquisitionTransport + bale.otherExpenses, 0),
@@ -37,8 +48,8 @@ function DashboardPage() {
   return (
     <div className="min-h-full bg-[#edf3f1]">
       <Topbar
-        eyebrow="Buenos días"
-        title="Mi tienda"
+        eyebrow="Mi tienda"
+        title={`${greeting}${firstName ? ` ${firstName}` : ''}`}
         description="Este es el resumen de tu negocio"
         availablePieces={summary.availablePieces}
       />
@@ -163,3 +174,15 @@ function DashboardPage() {
 }
 
 export default DashboardPage
+
+function getGreeting(hour) {
+  if (hour >= 5 && hour < 12) return 'Buenos días'
+  if (hour >= 12 && hour < 19) return 'Buenas tardes'
+  return 'Buenas noches'
+}
+
+function getFirstName(user) {
+  const username = user?.user_metadata?.username ?? user?.email?.split('@')[0] ?? ''
+  const firstName = username.split('.')[0].trim()
+  return firstName ? firstName.charAt(0).toUpperCase() + firstName.slice(1).toLowerCase() : ''
+}
