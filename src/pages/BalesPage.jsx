@@ -12,7 +12,7 @@ import { formatShortDate } from '../utils/dates'
 
 function BalesPage() {
   const { data } = usePacaData()
-  const [searchParams] = useSearchParams()
+  const [searchParams, setSearchParams] = useSearchParams()
   const selectedId = searchParams.get('paca')
   const activeBale = selectedId ? data.bales.find((bale) => bale.id === selectedId) : data.bales[0]
   if (selectedId && !activeBale) return <div><PageHeader title="Pacas" description="Revisión de la paca seleccionada." /><div className="page-content py-5"><p className="mb-3 text-sm text-slate-600">La paca seleccionada no está disponible en los datos cargados.</p><Link to="/pacas" className="font-bold text-brand-800 underline">Ver mis pacas</Link></div></div>
@@ -35,12 +35,21 @@ function BalesPage() {
           Registrar una paca
         </Link>
 
+        {data.bales.length > 1 && (
+          <label className="block max-w-md text-sm font-bold text-slate-700">
+            Ver otra paca
+            <select value={activeBale.id} onChange={(event) => setSearchParams({ paca: event.target.value })} className="sale-input mt-2">
+              {data.bales.map((bale) => <option key={bale.id} value={bale.id}>{bale.code} · {bale.status}</option>)}
+            </select>
+          </label>
+        )}
+
         <section aria-labelledby="current-bale-title" className="max-w-4xl">
           <div className="mb-3 flex items-center justify-between gap-3">
             <h2 id="current-bale-title" className="text-lg font-extrabold text-slate-900">
               {selectedId ? 'Paca seleccionada desde la alerta' : 'Paca actual'}
             </h2>
-            <span className="rounded-full bg-emerald-50 px-3 py-1 text-xs font-bold text-emerald-700">
+            <span className={`rounded-full px-3 py-1 text-xs font-bold ${activeBale.status === 'En venta' ? 'bg-emerald-50 text-emerald-700' : 'bg-amber-50 text-amber-800'}`}>
               {activeBale.status}
             </span>
           </div>

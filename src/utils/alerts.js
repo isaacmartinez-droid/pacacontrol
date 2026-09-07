@@ -66,6 +66,20 @@ export function buildAlerts(data, settings = defaultAlertSettings, now = Date.no
 
   if (rules.damageEnabled) {
     for (const bale of data.bales) {
+      if (bale.receivedPieces > 0 && Number.isFinite(bale.availablePieces)
+        && bale.availablePieces <= 0 && bale.soldPieces > 0) {
+        alerts.push({
+          id: `bale:${bale.id}`,
+          revision: 'exhausted',
+          type: 'bale',
+          priority: 1,
+          title: `Paca agotada: ${bale.code}`,
+          description: 'Esta paca ya no tiene piezas vendibles. Revisa su resultado antes de abrir otra compra.',
+          detail: `${bale.soldPieces} vendidas · ${bale.damagedPieces || 0} dañadas`,
+          to: `/pacas?paca=${encodeURIComponent(bale.id)}`,
+          action: 'Revisar paca',
+        })
+      }
       if (!(bale.receivedPieces > 0) || !(bale.damagedPieces > 0)) continue
       const percentage = bale.damagedPieces * 100 / bale.receivedPieces
       if (percentage < rules.damagePercent) continue
@@ -100,7 +114,7 @@ export function parseAlertPreferences(serialized) {
     return {
       settings: normalizeAlertSettings(parsed?.settings),
       reads: Object.fromEntries(Object.entries(parsed?.reads ?? {})
-        .filter(([id, revision]) => /^(stock|delivery|damage):/.test(id) && typeof revision === 'string')),
+        .filter(([id, revision]) => /^(stock|delivery|damage|bale):/.test(id) && typeof revision === 'string')),
     }
   } catch {
     return { settings: { ...defaultAlertSettings }, reads: {} }

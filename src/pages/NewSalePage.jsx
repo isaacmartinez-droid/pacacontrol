@@ -21,6 +21,7 @@ function NewSalePage() {
     unitPrice: 180,
     customerId: 'walk-in',
     paymentMethod: 'cash',
+    baleInventoryId: 'auto',
   })
   const [formError, setFormError] = useState('')
   const [completedSale, setCompletedSale] = useState(null)
@@ -41,9 +42,14 @@ function NewSalePage() {
     () => clothingCategories.find((category) => category.id === form.categoryId),
     [clothingCategories, form.categoryId],
   )
+  const baleOptions = useMemo(
+    () => data.baleInventory.filter((inventory) => inventory.categoryId === form.categoryId),
+    [data.baleInventory, form.categoryId],
+  )
+  const selectedBaleInventory = baleOptions.find((inventory) => inventory.id === form.baleInventoryId)
   const availablePieces = Math.max(
     0,
-    selectedCategory?.availablePieces ?? 0,
+    selectedBaleInventory?.availablePieces ?? selectedCategory?.availablePieces ?? 0,
   )
   const quantity = Number(form.quantity) || 0
   const unitPrice = Number(form.unitPrice) || 0
@@ -53,7 +59,11 @@ function NewSalePage() {
   const paymentLabel = paymentMethods.find((method) => method.id === form.paymentMethod)?.label
 
   function updateForm(field, value) {
-    setForm((currentForm) => ({ ...currentForm, [field]: value }))
+    setForm((currentForm) => ({
+      ...currentForm,
+      [field]: value,
+      ...(field === 'categoryId' ? { baleInventoryId: 'auto' } : {}),
+    }))
     setFormError('')
   }
 
@@ -82,8 +92,8 @@ function NewSalePage() {
 
     setIsSaving(true)
     try {
-      await registerSale({ categoryId: form.categoryId, quantity, unitPrice, paymentMethod: form.paymentMethod, customerId: form.customerId })
-      setCompletedSale({ categoryName: selectedCategory.name, customerName, paymentLabel, pieces: quantity, total })
+      await registerSale({ categoryId: form.categoryId, quantity, unitPrice, paymentMethod: form.paymentMethod, customerId: form.customerId, baleInventoryId: form.baleInventoryId === 'auto' ? null : form.baleInventoryId })
+      setCompletedSale({ categoryName: selectedCategory.name, customerName, paymentLabel, pieces: quantity, total, baleCode: selectedBaleInventory?.baleCode ?? 'Asignación automática' })
     } catch (error) {
       setFormError(error.message || 'No fue posible registrar la venta.')
     } finally {
@@ -154,6 +164,14 @@ function NewSalePage() {
                         )
                       })}
                     </select>
+                  </Field>
+
+                  <Field label="Paca de origen" htmlFor="sale-bale" className="sm:col-span-2">
+                    <select id="sale-bale" value={form.baleInventoryId} onChange={(event) => updateForm('baleInventoryId', event.target.value)} className="sale-input">
+                      <option value="auto">Automática · paca más antigua disponible</option>
+                      {baleOptions.map((inventory) => <option key={inventory.id} value={inventory.id}>{inventory.baleCode} · {inventory.availablePieces} disponibles</option>)}
+                    </select>
+                    <p className="mt-2 text-xs text-slate-500">Elige una paca solo si físicamente tomaste prendas de esa compra.</p>
                   </Field>
 
                   <Field label="Cantidad" htmlFor="sale-quantity">
@@ -269,6 +287,7 @@ function NewSalePage() {
 
               <dl className="mt-6 space-y-4 border-y border-white/10 py-5 text-sm">
                 <SummaryRow label="Categoría" value={selectedCategory?.name ?? 'Sin seleccionar'} />
+                <SummaryRow label="Origen" value={selectedBaleInventory?.baleCode ?? 'Automático'} />
                 <SummaryRow label="Piezas" value={`${quantity || 0} prendas`} />
                 <SummaryRow label="Cliente" value={customerName} />
                 <SummaryRow label="Pago" value={paymentLabel} />
@@ -339,10 +358,11 @@ function SaleConfirmation({ sale, onRegisterAnother }) {
         {sale.customerName} por {sale.paymentLabel.toLowerCase()}.
       </p>
 
-      <dl className="mx-auto mt-6 grid max-w-xl gap-px overflow-hidden rounded-2xl bg-slate-100 text-left sm:grid-cols-3">
+      <dl className="mx-auto mt-6 grid max-w-xl gap-px overflow-hidden rounded-2xl bg-slate-100 text-left sm:grid-cols-2 lg:grid-cols-4">
         <ConfirmationDetail label="Categoría" value={sale.categoryName} />
         <ConfirmationDetail label="Cliente" value={sale.customerName} />
         <ConfirmationDetail label="Pago" value={sale.paymentLabel} />
+        <ConfirmationDetail label="Paca" value={sale.baleCode} />
       </dl>
 
       <div className="mt-6 flex flex-col justify-center gap-3 sm:flex-row">

@@ -77,12 +77,12 @@ async function allRows(query, deadline) {
 export async function loadOwnerAlertsData(admin, ownerId, deadline) {
   const [categories, bales, sales] = await Promise.all([
     allRows(() => admin.from('inventory_summary').select('category_id,name,received_pieces,available_pieces').eq('owner_id', ownerId).order('category_id'), deadline),
-    allRows(() => admin.from('bale_summary').select('id,code,received_pieces,damaged_pieces').eq('owner_id', ownerId).order('id'), deadline),
+    allRows(() => admin.from('bale_summary').select('id,code,received_pieces,sold_pieces,damaged_pieces,available_pieces').eq('owner_id', ownerId).order('id'), deadline),
     allRows(() => admin.from('sales').select('*,customer:customers(name)').eq('owner_id', ownerId).not('customer_id', 'is', null).order('id'), deadline),
   ])
   return {
     categories: categories.map((row) => ({ id: row.category_id, name: row.name, receivedPieces: row.received_pieces, availablePieces: row.available_pieces })),
-    bales: bales.map((row) => ({ id: row.id, code: row.code, receivedPieces: row.received_pieces, damagedPieces: row.damaged_pieces })),
+    bales: bales.map((row) => ({ id: row.id, code: row.code, receivedPieces: row.received_pieces, soldPieces: row.sold_pieces, damagedPieces: row.damaged_pieces, availablePieces: row.available_pieces })),
     sales: sales.map((row) => ({ id: row.id, customerId: row.customer_id, customerName: row.customer?.name ?? 'Cliente', soldAt: row.sold_at,
       dateLabel: '', hasDeliveryStatus: ['paid', 'on_the_way', 'delivered'].includes(row.delivery_status), deliveryStatus: row.delivery_status })),
   }

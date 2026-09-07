@@ -92,12 +92,15 @@ function mapBale(row, currentRevenue = 0) {
     soldPieces: row.sold_pieces,
     damagedPieces: row.damaged_pieces,
     currentRevenue,
-    status: row.available_pieces > 0 ? 'En venta' : 'Finalizada',
+    status: row.available_pieces > 0 ? 'En venta' : row.sold_pieces > 0 ? 'Agotada' : 'Sin piezas vendibles',
   }
 }
 
 function mapSale(row) {
   const items = row.sale_items ?? []
+  const baleCodes = [...new Set(items.flatMap((item) => (
+    (item.sale_item_allocations ?? []).map((allocation) => allocation.inventory?.bale?.code).filter(Boolean)
+  )))]
   const deliveryStatus = deliveryStatuses.includes(row.delivery_status)
     ? row.delivery_status
     : 'paid'
@@ -112,6 +115,7 @@ function mapSale(row) {
     soldAt: row.sold_at,
     hasDeliveryStatus: deliveryStatuses.includes(row.delivery_status),
     deliveryStatus,
+    baleCodes,
   }
 }
 
@@ -171,17 +175,18 @@ function AccountPacaDataProvider({ userId, children }) {
       const categorySetupError = await ensureDefaultCategories(supabase, userId)
       if (categorySetupError) throw categorySetupError
 
-      const [categories, bales, sales, customers, expenses, damagedProducts, allocations, dailySummaries] = await Promise.all([
+      const [categories, bales, sales, customers, expenses, damagedProducts, allocations, dailySummaries, baleInventory] = await Promise.all([
         supabase.from('inventory_summary').select('category_id, name, received_pieces, available_pieces').order('name'),
         supabase.from('bale_summary').select('*').order('purchase_date', { ascending: false }),
-        supabase.from('sales').select('*, customer:customers(name), sale_items(quantity)').order('sold_at', { ascending: false }),
+        supabase.from('sales').select('*, customer:customers(name), sale_items(quantity, sale_item_allocations(quantity, inventory:bale_inventory(bale:bales(code))))').order('sold_at', { ascending: false }),
         supabase.from('customer_summary').select('id, name, phone, is_priority, purchases, total_spent').order('name'),
         supabase.from('expenses').select('id, concept, amount, expense_date').order('expense_date', { ascending: false }),
-        supabase.from('damaged_products').select('id, quantity, reason, reported_at, inventory:bale_inventory(category:categories(name))').order('reported_at', { ascending: false }),
+        supabase.from('damaged_products').select('id, quantity, reason, reported_at, inventory:bale_inventory(category:categories(name), bale:bales(code))').order('reported_at', { ascending: false }),
         supabase.from('sale_item_allocations').select('quantity, sale_item:sale_items(unit_price), inventory:bale_inventory(bale_id)'),
         supabase.from('daily_summaries').select('*').order('summary_date', { ascending: false }).limit(14),
+        supabase.from('bale_inventory').select('id, bale_id, category_id, available_quantity, bale:bales(code), category:categories(name)').gt('available_quantity', 0),
       ])
-      const failed = [categories, bales, sales, customers, expenses, damagedProducts, allocations, dailySummaries].find((result) => result.error)
+      const failed = [categories, bales, sales, customers, expenses, damagedProducts, allocations, dailySummaries, baleInventory].find((result) => result.error)
       if (failed) throw failed.error
       if (requestId !== latestRequest.current) return
 
@@ -202,7 +207,8 @@ function AccountPacaDataProvider({ userId, children }) {
           customers: customers.data.map(mapCustomer),
           expenses: expenses.data.map((row) => ({ id: row.id, concept: row.concept, dateLabel: formatShortDate(row.expense_date), amount: asNumber(row.amount) })),
           dailySummaries: dailySummaries.data.map(mapDailySummary),
-          damagedProducts: damagedProducts.data.map((row) => ({ id: row.id, category: row.inventory?.category?.name ?? 'Sin categoría', quantity: row.quantity, reason: row.reason })),
+          baleInventory: baleInventory.data.map((row) => ({ id: row.id, baleId: row.bale_id, baleCode: row.bale?.code ?? 'Paca', categoryId: row.category_id, categoryName: row.category?.name ?? 'Categoría', availablePieces: row.available_quantity })),
+          damagedProducts: damagedProducts.data.map((row) => ({ id: row.id, baleCode: row.inventory?.bale?.code ?? 'Paca', category: row.inventory?.category?.name ?? 'Sin categoría', quantity: row.quantity, reason: row.reason })),
         },
       })
     } catch (error) {
@@ -278,13 +284,24 @@ function AccountPacaDataProvider({ userId, children }) {
     }
   }, [refresh])
 
-  const registerSale = useCallback(async ({ categoryId, quantity, unitPrice, paymentMethod, customerId }) => {
+  const registerSale = useCallback(async ({ categoryId, quantity, unitPrice, paymentMethod, customerId, baleInventoryId = null }) => {
     const { error } = await getSupabaseClient().rpc('register_sale', {
       p_category_id: categoryId,
       p_quantity: quantity,
       p_unit_price: unitPrice,
       p_payment_method: paymentMethod,
       p_customer_id: customerId === 'walk-in' ? null : customerId,
+      p_bale_inventory_id: baleInventoryId || null,
+    })
+    if (error) throw error
+    await refresh()
+  }, [refresh])
+
+  const registerDamage = useCallback(async ({ baleInventoryId, quantity, reason }) => {
+    const { error } = await getSupabaseClient().rpc('register_damaged_product', {
+      p_bale_inventory_id: baleInventoryId,
+      p_quantity: quantity,
+      p_reason: reason.trim(),
     })
     if (error) throw error
     await refresh()
@@ -333,14 +350,14 @@ function AccountPacaDataProvider({ userId, children }) {
   }, [refresh])
 
   const value = useMemo(
-    () => ({ ...state, refresh, createBale, createCustomer, registerSale, updateSaleDeliveryStatus }),
-    [state, refresh, createBale, createCustomer, registerSale, updateSaleDeliveryStatus],
+    () => ({ ...state, refresh, createBale, createCustomer, registerSale, registerDamage, updateSaleDeliveryStatus }),
+    [state, refresh, createBale, createCustomer, registerSale, registerDamage, updateSaleDeliveryStatus],
   )
   return <PacaDataContext.Provider value={value}>{children}</PacaDataContext.Provider>
 }
 
 function emptyData() {
-  return { categories: [], bales: [], sales: [], customers: [], expenses: [], damagedProducts: [], dailySummaries: [] }
+  return { categories: [], bales: [], sales: [], customers: [], expenses: [], damagedProducts: [], dailySummaries: [], baleInventory: [] }
 }
 
 export function usePacaData() {

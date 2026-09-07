@@ -6,7 +6,7 @@ const now = Date.parse('2026-09-07T18:00:00Z')
 const store = (overrides = {}) => ({ categories: [], bales: [], sales: [], ...overrides })
 const category = (overrides = {}) => ({ id: 'cat-1', name: 'Camisas', receivedPieces: 100, availablePieces: 10, ...overrides })
 const sale = (overrides = {}) => ({ id: 'sale-1', customerId: 'customer-1', customerName: 'Cliente de prueba', hasDeliveryStatus: true, deliveryStatus: 'paid', soldAt: '2026-09-06T18:00:00Z', dateLabel: '6 sept 2026', ...overrides })
-const bale = (overrides = {}) => ({ id: 'bale-1', code: 'PAC-0001', receivedPieces: 100, damagedPieces: 10, ...overrides })
+const bale = (overrides = {}) => ({ id: 'bale-1', code: 'PAC-0001', receivedPieces: 100, soldPieces: 0, availablePieces: 90, damagedPieces: 10, ...overrides })
 
 test('una tienda vacía y categorías nunca usadas no generan avisos ficticios', () => {
   assert.deepEqual(buildAlerts(store(), undefined, now), [])
@@ -52,6 +52,13 @@ test('los daños se calculan por paca y no se mezclan con otra compra', () => {
   assert.equal(alerts[0].to, '/pacas?paca=bale-1')
   assert.match(alerts[0].description, /10 de 100/)
   assert.deepEqual(buildAlerts(store({ bales: [bale({ receivedPieces: 0 })] })), [])
+})
+
+test('avisa cuando una paca vendible se agota y conserva el enlace a su detalle', () => {
+  const alerts = buildAlerts(store({ bales: [bale({ soldPieces: 90, availablePieces: 0 })] }))
+  const exhausted = alerts.find((alert) => alert.type === 'bale')
+  assert.equal(exhausted.id, 'bale:bale-1')
+  assert.equal(exhausted.to, '/pacas?paca=bale-1')
 })
 
 test('respeta límites propios y permite desactivar cada regla', () => {

@@ -27,6 +27,9 @@ function RecentSaleCard({ sale, onAdvanceStatus, isUpdating = false }) {
               <p className="mt-0.5 text-xs text-slate-500">
                 {sale.pieces} {sale.pieces === 1 ? 'pieza' : 'piezas'} · {sale.dateLabel}
               </p>
+              {sale.baleCodes?.length > 0 && (
+                <p className="mt-0.5 truncate text-xs font-semibold text-brand-700">Paca: {sale.baleCodes.join(', ')}</p>
+              )}
             </div>
             <p className="shrink-0 text-sm font-extrabold text-slate-900">
               {formatCurrency(sale.total)}
