@@ -1,6 +1,8 @@
-import { BarChart3, ChevronRight, PackageSearch, PackageX, ReceiptText } from 'lucide-react'
+import { useState } from 'react'
+import { BarChart3, ChevronRight, CircleAlert, LoaderCircle, LogOut, PackageSearch, PackageX, ReceiptText, UserRound } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import PageHeader from '../components/common/PageHeader'
+import { useAuth } from '../context/AuthContext'
 
 const modules = [
   {
@@ -41,6 +43,23 @@ const toneClasses = {
 }
 
 function MorePage() {
+  const { user, signOut } = useAuth()
+  const [isSigningOut, setIsSigningOut] = useState(false)
+  const [signOutError, setSignOutError] = useState('')
+  const username = user?.user_metadata?.username ?? user?.email?.split('@')[0]
+
+  async function handleSignOut() {
+    setIsSigningOut(true)
+    setSignOutError('')
+
+    try {
+      await signOut()
+    } catch (error) {
+      setSignOutError(error.message || 'No fue posible cerrar la sesión.')
+      setIsSigningOut(false)
+    }
+  }
+
   return (
     <div>
       <PageHeader
@@ -48,7 +67,7 @@ function MorePage() {
         title="Más"
         description="Todo lo que necesitas para administrar la tienda desde un solo lugar."
       />
-      <div className="page-content py-5 md:py-8">
+      <div className="page-content space-y-6 py-5 md:py-8">
         <nav aria-label="Módulos adicionales" className="max-w-5xl space-y-3 sm:grid sm:grid-cols-2 sm:gap-4 sm:space-y-0">
           {modules.map((module) => {
             const Icon = module.icon
@@ -71,6 +90,35 @@ function MorePage() {
             )
           })}
         </nav>
+
+        <section className="max-w-5xl rounded-3xl bg-white p-4 shadow-soft ring-1 ring-slate-100 sm:flex sm:flex-wrap sm:items-center sm:justify-between sm:gap-5">
+          <div className="flex min-w-0 items-center gap-3">
+            <span className="grid size-11 shrink-0 place-items-center rounded-2xl bg-brand-50 text-brand-700">
+              <UserRound aria-hidden="true" size={21} />
+            </span>
+            <div className="min-w-0">
+              <p className="text-xs font-medium text-slate-500">Sesión actual</p>
+              <p className="truncate text-sm font-extrabold text-slate-900">{username}</p>
+            </div>
+          </div>
+
+          <button
+            type="button"
+            disabled={isSigningOut}
+            onClick={handleSignOut}
+            className="mt-4 flex min-h-11 w-full items-center justify-center gap-2 rounded-xl border border-coral-100 bg-coral-50 px-5 text-sm font-extrabold text-coral-600 transition hover:bg-coral-100 active:scale-[0.98] disabled:opacity-60 sm:mt-0 sm:w-auto"
+          >
+            {isSigningOut ? <LoaderCircle aria-hidden="true" className="animate-spin" size={18} /> : <LogOut aria-hidden="true" size={18} />}
+            {isSigningOut ? 'Cerrando…' : 'Cerrar sesión'}
+          </button>
+
+          {signOutError && (
+            <p role="alert" className="mt-3 flex gap-2 text-sm font-semibold text-coral-600 sm:basis-full">
+              <CircleAlert aria-hidden="true" className="shrink-0" size={18} />
+              {signOutError}
+            </p>
+          )}
+        </section>
       </div>
     </div>
   )
