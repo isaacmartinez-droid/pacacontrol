@@ -84,7 +84,7 @@ export async function loadOwnerAlertsData(admin, ownerId, deadline) {
     categories: categories.map((row) => ({ id: row.category_id, name: row.name, receivedPieces: row.received_pieces, availablePieces: row.available_pieces })),
     bales: bales.map((row) => ({ id: row.id, code: row.code, receivedPieces: row.received_pieces, soldPieces: row.sold_pieces, damagedPieces: row.damaged_pieces, availablePieces: row.available_pieces })),
     sales: sales.map((row) => ({ id: row.id, customerId: row.customer_id, customerName: row.customer?.name ?? 'Cliente', soldAt: row.sold_at,
-      dateLabel: '', hasDeliveryStatus: ['paid', 'on_the_way', 'delivered'].includes(row.delivery_status), deliveryStatus: row.delivery_status })),
+      dateLabel: '', hasDeliveryStatus: ['to_prepare', 'ready', 'on_the_way', 'delivered'].includes(row.delivery_status), deliveryStatus: row.delivery_status, paymentStatus: row.payment_status ?? 'paid' })),
   }
 }
 

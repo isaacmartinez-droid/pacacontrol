@@ -55,7 +55,7 @@ test('resolver y volver a caer por debajo del límite crea un nuevo aviso', () =
 
 test('cada dispositivo conserva sus propios límites y el mensaje no contiene datos del cliente', () => {
   assert.equal(makePushPlan(data, { ...subscription, settings: { stockEnabled: false } }).payload, null)
-  const withCustomer = { ...data, sales: [{ id: 'sale', customerId: 'customer', customerName: 'Nombre privado', soldAt: '2026-09-01T00:00:00Z', dateLabel: '1 sept', hasDeliveryStatus: true, deliveryStatus: 'paid' }] }
+  const withCustomer = { ...data, sales: [{ id: 'sale', customerId: 'customer', customerName: 'Nombre privado', soldAt: '2026-09-01T00:00:00Z', dateLabel: '1 sept', hasDeliveryStatus: true, paymentStatus: 'paid', deliveryStatus: 'to_prepare' }] }
   const plan = makePushPlan(withCustomer, subscription, Date.parse('2026-09-07T00:00:00Z'))
   assert.match(plan.payload.body, /2 alertas/)
   assert.doesNotMatch(JSON.stringify(plan.payload), /Nombre privado|customer|Camisas/)

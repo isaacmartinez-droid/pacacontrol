@@ -6,7 +6,7 @@ import RecentSaleCard from '../components/dashboard/RecentSaleCard'
 import { usePacaData } from '../context/PacaDataContext'
 
 function SalesPage() {
-  const { data, updateSaleDeliveryStatus } = usePacaData()
+  const { data, updateSaleDeliveryStatus, updateSalePayment } = usePacaData()
   const [searchParams] = useSearchParams()
   const selectedId = searchParams.get('venta')
   const recentSales = selectedId ? data.sales.filter((sale) => sale.id === selectedId) : data.sales
@@ -24,6 +24,14 @@ function SalesPage() {
     } finally {
       setUpdatingSaleId('')
     }
+  }
+
+  async function handleConfirmPayment(saleId, payment) {
+    setUpdatingSaleId(saleId)
+    setStatusError('')
+    try { await updateSalePayment(saleId, payment) }
+    catch (error) { setStatusError(error.message || 'No fue posible actualizar el pago.') }
+    finally { setUpdatingSaleId('') }
   }
 
   return (
@@ -48,7 +56,7 @@ function SalesPage() {
               Seguimiento de pedidos
             </h2>
             <p className="mt-1 text-xs font-medium text-slate-500">
-              Actualiza cada venta desde el pago hasta la entrega al cliente.
+              El pago se confirma por separado; solo los pedidos pagados avanzan a preparación y entrega.
             </p>
           </div>
           {statusError && (
@@ -63,6 +71,7 @@ function SalesPage() {
                 key={sale.id}
                 sale={sale}
                 onAdvanceStatus={handleAdvanceStatus}
+                onConfirmPayment={handleConfirmPayment}
                 isUpdating={updatingSaleId === sale.id}
               />
             ))}

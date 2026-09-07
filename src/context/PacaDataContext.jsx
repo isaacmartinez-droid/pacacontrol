@@ -6,7 +6,8 @@ import { formatShortDate } from '../utils/dates'
 const PacaDataContext = createContext(null)
 
 const asNumber = (value) => Number(value) || 0
-const deliveryStatuses = ['paid', 'on_the_way', 'delivered']
+const deliveryStatuses = ['to_prepare', 'ready', 'on_the_way', 'delivered']
+const paymentStatuses = ['pending', 'partial', 'paid']
 const defaultCategories = [
   { slug: 'shirts', name: 'Camisas' },
   { slug: 'blouses', name: 'Blusas' },
@@ -101,9 +102,9 @@ function mapSale(row) {
   const baleCodes = [...new Set(items.flatMap((item) => (
     (item.sale_item_allocations ?? []).map((allocation) => allocation.inventory?.bale?.code).filter(Boolean)
   )))]
-  const deliveryStatus = deliveryStatuses.includes(row.delivery_status)
-    ? row.delivery_status
-    : 'paid'
+  const deliveryStatus = deliveryStatuses.includes(row.delivery_status) ? row.delivery_status : 'to_prepare'
+  const paymentStatus = paymentStatuses.includes(row.payment_status) ? row.payment_status : 'paid'
+  const paidAmount = paymentStatus === 'paid' ? asNumber(row.total) : asNumber(row.paid_amount)
 
   return {
     id: row.id,
@@ -115,6 +116,10 @@ function mapSale(row) {
     soldAt: row.sold_at,
     hasDeliveryStatus: deliveryStatuses.includes(row.delivery_status),
     deliveryStatus,
+    paymentStatus,
+    paidAmount,
+    balance: Math.max(0, asNumber(row.total) - paidAmount),
+    paymentMethod: row.payment_method,
     baleCodes,
   }
 }
@@ -284,7 +289,7 @@ function AccountPacaDataProvider({ userId, children }) {
     }
   }, [refresh])
 
-  const registerSale = useCallback(async ({ categoryId, quantity, unitPrice, paymentMethod, customerId, baleInventoryId = null }) => {
+  const registerSale = useCallback(async ({ categoryId, quantity, unitPrice, paymentMethod, customerId, baleInventoryId = null, paymentStatus = 'paid', paidAmount = null }) => {
     const { error } = await getSupabaseClient().rpc('register_sale', {
       p_category_id: categoryId,
       p_quantity: quantity,
@@ -292,6 +297,8 @@ function AccountPacaDataProvider({ userId, children }) {
       p_payment_method: paymentMethod,
       p_customer_id: customerId === 'walk-in' ? null : customerId,
       p_bale_inventory_id: baleInventoryId || null,
+      p_payment_status: paymentStatus,
+      p_paid_amount: paidAmount,
     })
     if (error) throw error
     await refresh()
@@ -312,12 +319,9 @@ function AccountPacaDataProvider({ userId, children }) {
       throw new Error('El estado de entrega no es válido.')
     }
 
-    const { data: updatedSale, error } = await getSupabaseClient()
-      .from('sales')
-      .update({ delivery_status: deliveryStatus })
-      .eq('id', saleId)
-      .select('id, delivery_status')
-      .single()
+    const { data: updatedSale, error } = await getSupabaseClient().rpc('update_sale_delivery_status', {
+      p_sale_id: saleId, p_delivery_status: deliveryStatus,
+    })
 
     if (error) throw error
 
@@ -330,6 +334,17 @@ function AccountPacaDataProvider({ userId, children }) {
         )),
       },
     }))
+    await refresh()
+  }, [refresh])
+
+  const updateSalePayment = useCallback(async (saleId, { paymentStatus, paidAmount, paymentMethod }) => {
+    const { error } = await getSupabaseClient().rpc('update_sale_payment', {
+      p_sale_id: saleId,
+      p_payment_status: paymentStatus,
+      p_paid_amount: paidAmount,
+      p_payment_method: paymentMethod,
+    })
+    if (error) throw error
     await refresh()
   }, [refresh])
 
@@ -350,8 +365,8 @@ function AccountPacaDataProvider({ userId, children }) {
   }, [refresh])
 
   const value = useMemo(
-    () => ({ ...state, refresh, createBale, createCustomer, registerSale, registerDamage, updateSaleDeliveryStatus }),
-    [state, refresh, createBale, createCustomer, registerSale, registerDamage, updateSaleDeliveryStatus],
+    () => ({ ...state, refresh, createBale, createCustomer, registerSale, registerDamage, updateSaleDeliveryStatus, updateSalePayment }),
+    [state, refresh, createBale, createCustomer, registerSale, registerDamage, updateSaleDeliveryStatus, updateSalePayment],
   )
   return <PacaDataContext.Provider value={value}>{children}</PacaDataContext.Provider>
 }

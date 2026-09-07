@@ -48,7 +48,7 @@ export function buildAlerts(data, settings = defaultAlertSettings, now = Date.no
       const soldAt = Date.parse(sale.soldAt)
       // La venta de mostrador no implica un envío. Tampoco inferimos un pago
       // cuando el estado todavía no existe en el esquema de la base de datos.
-      if (!sale.customerId || !sale.hasDeliveryStatus || sale.deliveryStatus !== 'paid'
+      if (!sale.customerId || !sale.hasDeliveryStatus || sale.paymentStatus !== 'paid' || sale.deliveryStatus !== 'to_prepare'
         || !Number.isFinite(soldAt) || now - soldAt < rules.deliveryHours * 3600000) continue
       alerts.push({
         id: `delivery:${sale.id}`,
@@ -56,7 +56,7 @@ export function buildAlerts(data, settings = defaultAlertSettings, now = Date.no
         type: 'delivery',
         priority: 1,
         title: `Revisar entrega: ${sale.customerName}`,
-        description: 'La venta sigue en “Pagado”. Revisa si está pendiente de despacho o si falta actualizar su entrega.',
+        description: 'El pedido ya está pagado, pero sigue pendiente de preparación o despacho.',
         detail: `${Math.floor((now - soldAt) / 3600000)} h desde el registro · ${sale.dateLabel}`,
         to: `/ventas?venta=${encodeURIComponent(sale.id)}`,
         action: 'Revisar pedido',

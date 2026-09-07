@@ -21,6 +21,8 @@ function NewSalePage() {
     unitPrice: 180,
     customerId: 'walk-in',
     paymentMethod: 'cash',
+    paymentStatus: 'paid',
+    paidAmount: '',
     baleInventoryId: 'auto',
   })
   const [formError, setFormError] = useState('')
@@ -57,6 +59,7 @@ function NewSalePage() {
   const selectedCustomer = customers.find((customer) => customer.id === form.customerId)
   const customerName = selectedCustomer?.name ?? 'Venta de mostrador'
   const paymentLabel = paymentMethods.find((method) => method.id === form.paymentMethod)?.label
+  const paymentStatusLabels = { pending: 'Pendiente', partial: 'Parcial', paid: 'Pagado' }
 
   function updateForm(field, value) {
     setForm((currentForm) => ({
@@ -89,11 +92,20 @@ function NewSalePage() {
       setFormError('Ingresa un precio válido por pieza.')
       return
     }
+    const paidAmount = form.paymentStatus === 'paid' ? total : form.paymentStatus === 'pending' ? 0 : Number(form.paidAmount)
+    if (form.paymentStatus !== 'paid' && form.customerId === 'walk-in') {
+      setFormError('Elige un cliente para dejar un pago pendiente o parcial.')
+      return
+    }
+    if (form.paymentStatus === 'partial' && (!(paidAmount > 0) || paidAmount >= total)) {
+      setFormError('El pago parcial debe ser mayor que cero y menor que el total.')
+      return
+    }
 
     setIsSaving(true)
     try {
-      await registerSale({ categoryId: form.categoryId, quantity, unitPrice, paymentMethod: form.paymentMethod, customerId: form.customerId, baleInventoryId: form.baleInventoryId === 'auto' ? null : form.baleInventoryId })
-      setCompletedSale({ categoryName: selectedCategory.name, customerName, paymentLabel, pieces: quantity, total, baleCode: selectedBaleInventory?.baleCode ?? 'Asignación automática' })
+      await registerSale({ categoryId: form.categoryId, quantity, unitPrice, paymentMethod: form.paymentMethod, customerId: form.customerId, baleInventoryId: form.baleInventoryId === 'auto' ? null : form.baleInventoryId, paymentStatus: form.paymentStatus, paidAmount })
+      setCompletedSale({ categoryName: selectedCategory.name, customerName, paymentLabel, paymentStatus: paymentStatusLabels[form.paymentStatus], pieces: quantity, total, baleCode: selectedBaleInventory?.baleCode ?? 'Asignación automática' })
     } catch (error) {
       setFormError(error.message || 'No fue posible registrar la venta.')
     } finally {
@@ -270,6 +282,19 @@ function NewSalePage() {
                       })}
                     </div>
                   </fieldset>
+
+                  <Field label="Estado de pago" htmlFor="sale-payment-status">
+                    <select id="sale-payment-status" value={form.paymentStatus} onChange={(event) => updateForm('paymentStatus', event.target.value)} className="sale-input">
+                      <option value="paid">Pagado completo</option>
+                      <option value="partial">Pago parcial</option>
+                      <option value="pending">Pendiente de pago</option>
+                    </select>
+                  </Field>
+                  {form.paymentStatus === 'partial' && (
+                    <Field label="Monto recibido" htmlFor="sale-paid-amount">
+                      <input id="sale-paid-amount" type="number" min="1" max={Math.max(0, total - 1)} value={form.paidAmount} onChange={(event) => updateForm('paidAmount', event.target.value)} className="sale-input" />
+                    </Field>
+                  )}
                 </div>
               </section>
             </div>
@@ -291,6 +316,7 @@ function NewSalePage() {
                 <SummaryRow label="Piezas" value={`${quantity || 0} prendas`} />
                 <SummaryRow label="Cliente" value={customerName} />
                 <SummaryRow label="Pago" value={paymentLabel} />
+                <SummaryRow label="Estado" value={paymentStatusLabels[form.paymentStatus]} />
               </dl>
 
               <div className="mt-5">
@@ -362,6 +388,7 @@ function SaleConfirmation({ sale, onRegisterAnother }) {
         <ConfirmationDetail label="Categoría" value={sale.categoryName} />
         <ConfirmationDetail label="Cliente" value={sale.customerName} />
         <ConfirmationDetail label="Pago" value={sale.paymentLabel} />
+        <ConfirmationDetail label="Estado" value={sale.paymentStatus} />
         <ConfirmationDetail label="Paca" value={sale.baleCode} />
       </dl>
 

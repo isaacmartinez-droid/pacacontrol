@@ -2,12 +2,13 @@ import { Check, CircleDollarSign, PackageCheck, ShoppingBag, Truck } from 'lucid
 import { formatCurrency } from '../../utils/currency'
 
 const deliverySteps = [
-  { id: 'paid', label: 'Pagado', icon: CircleDollarSign },
+  { id: 'to_prepare', label: 'Preparar', icon: CircleDollarSign },
+  { id: 'ready', label: 'Listo', icon: PackageCheck },
   { id: 'on_the_way', label: 'En camino', icon: Truck },
   { id: 'delivered', label: 'Entregado', icon: PackageCheck },
 ]
 
-function RecentSaleCard({ sale, onAdvanceStatus, isUpdating = false }) {
+function RecentSaleCard({ sale, onAdvanceStatus, onConfirmPayment, isUpdating = false }) {
   const currentStep = Math.max(
     0,
     deliverySteps.findIndex((step) => step.id === sale.deliveryStatus),
@@ -36,6 +37,10 @@ function RecentSaleCard({ sale, onAdvanceStatus, isUpdating = false }) {
             </p>
           </div>
         </div>
+      </div>
+
+      <div className={`mt-3 rounded-xl px-3 py-2 text-xs font-bold ${sale.paymentStatus === 'paid' ? 'bg-emerald-50 text-emerald-800' : 'bg-amber-50 text-amber-800'}`}>
+        Pago: {sale.paymentStatus === 'paid' ? 'Pagado' : sale.paymentStatus === 'partial' ? `Parcial · faltan ${formatCurrency(sale.balance)}` : `Pendiente · faltan ${formatCurrency(sale.balance)}`}
       </div>
 
       <div className="mt-4 grid grid-cols-3" aria-label={`Estado del pedido: ${deliverySteps[currentStep].label}`}>
@@ -71,7 +76,18 @@ function RecentSaleCard({ sale, onAdvanceStatus, isUpdating = false }) {
         })}
       </div>
 
-      {onAdvanceStatus && nextStep && (
+      {onConfirmPayment && sale.paymentStatus !== 'paid' && (
+        <button
+          type="button"
+          disabled={isUpdating}
+          onClick={() => onConfirmPayment(sale.id, { paymentStatus: 'paid', paidAmount: sale.total, paymentMethod: sale.paymentMethod })}
+          className="mt-3 flex min-h-10 w-full items-center justify-center rounded-xl bg-emerald-50 px-4 text-xs font-extrabold text-emerald-800 transition hover:bg-emerald-100 active:scale-[0.98] disabled:cursor-wait disabled:opacity-60"
+        >
+          {isUpdating ? 'Actualizando…' : 'Confirmar pago completo'}
+        </button>
+      )}
+
+      {onAdvanceStatus && nextStep && sale.paymentStatus === 'paid' && (
         <button
           type="button"
           disabled={isUpdating}

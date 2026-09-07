@@ -5,7 +5,7 @@ import { buildAlerts, defaultAlertSettings, normalizeAlertSettings, parseAlertPr
 const now = Date.parse('2026-09-07T18:00:00Z')
 const store = (overrides = {}) => ({ categories: [], bales: [], sales: [], ...overrides })
 const category = (overrides = {}) => ({ id: 'cat-1', name: 'Camisas', receivedPieces: 100, availablePieces: 10, ...overrides })
-const sale = (overrides = {}) => ({ id: 'sale-1', customerId: 'customer-1', customerName: 'Cliente de prueba', hasDeliveryStatus: true, deliveryStatus: 'paid', soldAt: '2026-09-06T18:00:00Z', dateLabel: '6 sept 2026', ...overrides })
+const sale = (overrides = {}) => ({ id: 'sale-1', customerId: 'customer-1', customerName: 'Cliente de prueba', hasDeliveryStatus: true, paymentStatus: 'paid', deliveryStatus: 'to_prepare', soldAt: '2026-09-06T18:00:00Z', dateLabel: '6 sept 2026', ...overrides })
 const bale = (overrides = {}) => ({ id: 'bale-1', code: 'PAC-0001', receivedPieces: 100, soldPieces: 0, availablePieces: 90, damagedPieces: 10, ...overrides })
 
 test('una tienda vacía y categorías nunca usadas no generan avisos ficticios', () => {
@@ -37,7 +37,7 @@ test('el recordatorio de entrega se activa al cumplir 24 horas, incluso sin nuev
 
 test('despachar o entregar resuelve la alerta; mostrador, esquema antiguo y fechas inválidas no avisan', () => {
   for (const changes of [
-    { deliveryStatus: 'on_the_way' }, { deliveryStatus: 'delivered' },
+    { deliveryStatus: 'ready' }, { deliveryStatus: 'on_the_way' }, { deliveryStatus: 'delivered' }, { paymentStatus: 'pending' },
     { customerId: null }, { hasDeliveryStatus: false }, { soldAt: null },
     { soldAt: 'inválida' }, { soldAt: '2026-09-08T18:00:00Z' },
   ]) {
