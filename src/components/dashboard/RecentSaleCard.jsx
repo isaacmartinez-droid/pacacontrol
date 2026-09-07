@@ -43,7 +43,7 @@ function RecentSaleCard({ sale, onAdvanceStatus, onConfirmPayment, isUpdating = 
         Pago: {sale.paymentStatus === 'paid' ? 'Pagado' : sale.paymentStatus === 'partial' ? `Parcial · faltan ${formatCurrency(sale.balance)}` : `Pendiente · faltan ${formatCurrency(sale.balance)}`}
       </div>
 
-      <div className="mt-4 grid grid-cols-3" aria-label={`Estado del pedido: ${deliverySteps[currentStep].label}`}>
+      <div className="mt-4 grid grid-cols-4" aria-label={`Estado del pedido: ${deliverySteps[currentStep].label}`}>
         {deliverySteps.map((step, index) => {
           const Icon = step.icon
           const isComplete = index <= currentStep
