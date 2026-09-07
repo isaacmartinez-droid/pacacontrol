@@ -12,3 +12,5 @@ La carpeta `migrations` contiene el esquema de la aplicación y sus cambios post
 6. Reinicia el servidor de Vite tras guardar `.env.local`.
 
 La migración activa RLS: cada cuenta autenticada solo puede consultar y modificar sus propios datos. La clave `service_role` no debe copiarse al navegador ni a ningún archivo `VITE_*`.
+
+Para recibir avisos con la aplicación cerrada, sigue [la configuración de notificaciones push](../docs/notificaciones-push.md). Requiere la migración `20260907010000_web_push.sql`, secretos exclusivos del servidor y `setup/push_cron.sql`.

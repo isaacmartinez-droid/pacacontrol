@@ -16,6 +16,6 @@ Los datos se consultan cada minuto mientras la pestaña esté visible y al volve
 
 Las preferencias y lecturas se guardan en `localStorage` bajo una clave separada por el ID de la cuenta y se comparten entre pestañas del mismo navegador. No se sincronizan con otros dispositivos. Si se borra el almacenamiento, vuelven los límites iniciales y las alertas activas quedan sin leer. Si el navegador bloquea el almacenamiento, funcionan durante la sesión y se muestra el aviso en la configuración.
 
-No hay envío de mensajes, push ni procesamiento con la aplicación cerrada. Para eso se necesitarán almacenamiento de alertas y preferencias en Supabase y tareas programadas en el servidor; esta versión no registra un historial de problemas que aparecen y se resuelven entre consultas.
+La campana no procesa datos con la aplicación cerrada. Los avisos del dispositivo se configuran por separado siguiendo [notificaciones-push.md](notificaciones-push.md); requieren suscripciones en Supabase y la tarea del servidor. Ningún modo registra problemas que aparecen y se resuelven entre consultas.
 
 Verificación local: `npm test` prueba límites, resolución, repetición y casos sin datos; `npm run build` verifica la compilación de la interfaz.

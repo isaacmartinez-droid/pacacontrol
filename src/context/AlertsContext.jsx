@@ -2,6 +2,8 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useState } 
 import { useAuth } from './AuthContext'
 import { usePacaData } from './PacaDataContext'
 import { buildAlerts, normalizeAlertSettings, parseAlertPreferences, reconcileAlertReads } from '../utils/alerts'
+import { syncDevicePushSettings } from '../lib/devicePush'
+import { getSupabaseClient } from '../lib/supabaseClient'
 
 const AlertsContext = createContext(null)
 
@@ -78,9 +80,14 @@ function AccountAlertsProvider({ userId, children }) {
     }))
   }, [activeAlerts])
 
-  const saveSettings = useCallback((settings) => {
-    setPreferences((current) => ({ ...current, settings: normalizeAlertSettings(settings) }))
-  }, [])
+  const saveSettings = useCallback(async (settings) => {
+    const normalized = normalizeAlertSettings(settings)
+    setPreferences((current) => ({ ...current, settings: normalized }))
+    try {
+      await syncDevicePushSettings(getSupabaseClient(), userId, normalized)
+      return {}
+    } catch (error) { return { error: error.message } }
+  }, [userId])
 
   const value = {
     notifications, unreadCount: notifications.filter((item) => !item.read).length,

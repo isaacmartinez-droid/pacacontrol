@@ -1,8 +1,14 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
+  "functions": {
+    "api/push-dispatch.js": { "maxDuration": 60 }
+  },
+  "headers": [
+    { "source": "/sw.js", "headers": [{ "key": "Cache-Control", "value": "no-cache" }] }
+  ],
   "rewrites": [
     {
-      "source": "/(.*)",
+      "source": "/((?!api/|sw\\.js|manifest\\.webmanifest|icons/).*)",
       "destination": "/index.html"
     }
   ]

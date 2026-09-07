@@ -1,5 +1,6 @@
 import { createContext, useContext, useEffect, useMemo, useRef, useState } from 'react'
 import { getSupabaseClient, isSupabaseConfigured } from '../lib/supabaseClient'
+import { disableDevicePush, readPushBinding } from '../lib/devicePush'
 
 const AuthContext = createContext(null)
 const IDLE_TIMEOUT_MS = 30 * 60 * 1000
@@ -34,6 +35,10 @@ export function AuthProvider({ children }) {
     } = client.auth.onAuthStateChange((_event, nextSession) => {
       setSession(nextSession)
       setIsLoading(false)
+      const binding = readPushBinding()
+      if (_event === 'SIGNED_OUT' || (nextSession?.user && binding?.ownerId && binding.ownerId !== nextSession.user.id)) {
+        disableDevicePush().catch(() => {})
+      }
     })
 
     return () => subscription.unsubscribe()
@@ -45,8 +50,9 @@ export function AuthProvider({ children }) {
     const client = getSupabaseClient()
     const resetInactivityTimer = () => {
       window.clearTimeout(inactivityTimerRef.current)
-      inactivityTimerRef.current = window.setTimeout(() => {
-        client.auth.signOut()
+      inactivityTimerRef.current = window.setTimeout(async () => {
+        await disableDevicePush(client).catch(() => {})
+        await client.auth.signOut()
       }, IDLE_TIMEOUT_MS)
     }
     const activityEvents = ['pointerdown', 'keydown', 'touchstart', 'scroll']
@@ -88,6 +94,7 @@ export function AuthProvider({ children }) {
         return data
       },
       async signOut() {
+        await disableDevicePush(getSupabaseClient()).catch(() => {})
         const { error } = await getSupabaseClient().auth.signOut()
         if (error) throw error
       },

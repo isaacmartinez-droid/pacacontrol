@@ -3,6 +3,7 @@ import { Bell, CheckCheck, Settings2 } from 'lucide-react'
 import PageHeader from '../components/common/PageHeader'
 import EmptyState from '../components/common/EmptyState'
 import AlertItem from '../components/common/AlertItem'
+import DevicePushSettings from '../components/common/DevicePushSettings'
 import { useAlerts } from '../context/AlertsContext'
 
 export default function AlertsPage() {
@@ -18,7 +19,7 @@ export default function AlertsPage() {
     setMessage('')
   }
 
-  function handleSave(event) {
+  async function handleSave(event) {
     event.preventDefault()
     const stockLimit = Number(draft.stockLimit)
     const deliveryHours = Number(draft.deliveryHours)
@@ -29,8 +30,8 @@ export default function AlertsPage() {
       setMessage('Revisa los límites: inventario de 0 a 10000, horas de 1 a 720 y daños de 1 a 100 %. Usa números enteros.')
       return
     }
-    saveSettings({ ...draft, stockLimit, deliveryHours, damagePercent })
-    setMessage('Reglas actualizadas. Las alertas ya usan tus nuevos límites.')
+    const result = await saveSettings({ ...draft, stockLimit, deliveryHours, damagePercent })
+    setMessage(result?.error || 'Reglas actualizadas. Las alertas ya usan tus nuevos límites.')
   }
 
   return (
@@ -38,6 +39,7 @@ export default function AlertsPage() {
       <PageHeader eyebrow="Tu tienda al día" title="Alertas" description="Detecta lo que necesita atención y abre el registro para revisarlo." backTo="/mas" />
       <div className="page-content grid items-start gap-6 py-6 md:py-8 lg:grid-cols-[minmax(0,1.3fr)_minmax(18rem,0.7fr)]">
         <section aria-labelledby="alerts-title" className="min-w-0">
+          <DevicePushSettings />
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div>
               <h2 id="alerts-title" className="text-lg font-extrabold text-slate-900">{notifications.length} alertas activas</h2>

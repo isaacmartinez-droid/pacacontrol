@@ -4,7 +4,8 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "test": "node --test",
+    "push:keys": "node scripts/push-keys.js",
+    "test": "node --test src/utils/alerts.test.js server/push.test.js tests/service-worker.test.js",
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview"
@@ -20,6 +21,7 @@
     "lucide-react": "^1.39.0",
     "react": "^19.2.8",
     "react-dom": "^19.2.8",
-    "react-router-dom": "^7.18.3"
+    "react-router-dom": "^7.18.3",
+    "web-push": "3.6.7"
   }
 }
