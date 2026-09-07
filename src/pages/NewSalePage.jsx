@@ -13,7 +13,7 @@ const paymentMethods = [
 
 function NewSalePage() {
   const { data, registerSale, isLoading, error } = usePacaData()
-  const clothingCategories = data.categories
+  const clothingCategories = data.categories.filter((category) => category.availablePieces > 0)
   const customers = data.customers
   const [form, setForm] = useState({
     categoryId: '',

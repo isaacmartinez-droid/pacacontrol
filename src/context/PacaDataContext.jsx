@@ -8,34 +8,6 @@ const PacaDataContext = createContext(null)
 const asNumber = (value) => Number(value) || 0
 const deliveryStatuses = ['to_prepare', 'ready', 'on_the_way', 'delivered']
 const paymentStatuses = ['pending', 'partial', 'paid']
-const defaultCategories = [
-  { slug: 'shirts', name: 'Camisas' },
-  { slug: 'blouses', name: 'Blusas' },
-  { slug: 'pants', name: 'Pantalones' },
-  { slug: 'skirts', name: 'Faldas' },
-  { slug: 'dresses', name: 'Vestidos' },
-  { slug: 'kids', name: 'Ropa infantil' },
-  { slug: 'other', name: 'Otros' },
-]
-
-async function ensureDefaultCategories(supabase, userId) {
-  const { data, error } = await supabase.from('categories').select('slug')
-  if (error) return error
-
-  const existingSlugs = new Set(data.map((category) => category.slug))
-  const missingCategories = defaultCategories
-    .filter((category) => !existingSlugs.has(category.slug))
-    .map((category) => ({ ...category, owner_id: userId }))
-
-  if (missingCategories.length === 0) return null
-
-  const { error: insertError } = await supabase
-    .from('categories')
-    .upsert(missingCategories, { onConflict: 'owner_id,slug', ignoreDuplicates: true })
-
-  return insertError
-}
-
 function normalizeCategoryName(value) {
   return value.trim().replace(/\s+/g, ' ')
 }
@@ -177,9 +149,6 @@ function AccountPacaDataProvider({ userId, children }) {
 
     try {
       const supabase = getSupabaseClient()
-      const categorySetupError = await ensureDefaultCategories(supabase, userId)
-      if (categorySetupError) throw categorySetupError
-
       const [categories, bales, sales, customers, expenses, damagedProducts, allocations, dailySummaries, baleInventory] = await Promise.all([
         supabase.from('inventory_summary').select('category_id, name, received_pieces, available_pieces').order('name'),
         supabase.from('bale_summary').select('*').order('purchase_date', { ascending: false }),
@@ -252,29 +221,28 @@ function AccountPacaDataProvider({ userId, children }) {
     transportCost,
     otherExpenses,
     receivedPieces,
-    damagedPieces,
-    damageReason,
-    categoryName,
+    categoryEntries,
   }) => {
     const supabase = getSupabaseClient()
-    const category = await findOrCreateCategory(supabase, categoryName)
     const { data: bale, error: baleError } = await supabase.from('bales').insert({ purchase_date: purchaseDate, purchase_cost: purchaseCost, transport_cost: transportCost, other_expenses: otherExpenses, received_pieces: receivedPieces }).select('*').single()
     if (baleError) throw baleError
 
-    const { data: inventory, error: inventoryError } = await supabase
-      .from('bale_inventory')
-      .insert({ bale_id: bale.id, category_id: category.id, received_quantity: receivedPieces })
-      .select('id')
-      .single()
-    if (inventoryError) throw inventoryError
-
-    if (damagedPieces > 0) {
-      const { error: damagedError } = await supabase.rpc('register_damaged_product', {
-        p_bale_inventory_id: inventory.id,
-        p_quantity: damagedPieces,
-        p_reason: damageReason,
-      })
-      if (damagedError) throw damagedError
+    const categoryNames = []
+    let damagedPieces = 0
+    for (const entry of categoryEntries) {
+      const category = await findOrCreateCategory(supabase, entry.name)
+      const { data: inventory, error: inventoryError } = await supabase.from('bale_inventory').insert({
+        bale_id: bale.id, category_id: category.id, received_quantity: entry.quantity,
+      }).select('id').single()
+      if (inventoryError) throw inventoryError
+      categoryNames.push(category.name)
+      damagedPieces += entry.damagedPieces
+      if (entry.damagedPieces > 0) {
+        const { error: damagedError } = await supabase.rpc('register_damaged_product', {
+          p_bale_inventory_id: inventory.id, p_quantity: entry.damagedPieces, p_reason: entry.damageReason,
+        })
+        if (damagedError) throw damagedError
+      }
     }
 
     await refresh()
@@ -285,7 +253,7 @@ function AccountPacaDataProvider({ userId, children }) {
         damaged_pieces: damagedPieces,
         available_pieces: receivedPieces - damagedPieces,
       }),
-      categoryName: category.name,
+      categoryNames,
     }
   }, [refresh])
 
