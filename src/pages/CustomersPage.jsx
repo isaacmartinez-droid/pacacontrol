@@ -64,7 +64,7 @@ function CustomersPage() {
                   value={search}
                   onChange={(event) => setSearch(event.target.value)}
                   placeholder="Buscar por nombre"
-                  className="sale-input pl-11"
+                  className="sale-input sale-input--icon"
                 />
               </label>
               <div className="flex flex-wrap gap-2" aria-label="Filtros de clientes">
