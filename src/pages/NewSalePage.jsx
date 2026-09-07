@@ -219,6 +219,12 @@ function NewSalePage() {
                         </option>
                       ))}
                     </select>
+                    <Link
+                      to="/clientes/nuevo"
+                      className="mt-2 inline-flex min-h-8 items-center text-xs font-bold text-brand-700 hover:underline"
+                    >
+                      Registrar un cliente nuevo
+                    </Link>
                   </Field>
 
                   <fieldset>

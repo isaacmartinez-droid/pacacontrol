@@ -35,6 +35,17 @@ function mapSale(row) {
   }
 }
 
+function mapCustomer(row) {
+  return {
+    id: row.id,
+    name: row.name,
+    phone: row.phone ?? '',
+    priority: row.is_priority,
+    purchases: row.purchases ?? 0,
+    totalSpent: asNumber(row.total_spent),
+  }
+}
+
 export function PacaDataProvider({ children }) {
   const { user } = useAuth()
   const [state, setState] = useState({ isLoading: true, error: '', data: emptyData() })
@@ -75,7 +86,7 @@ export function PacaDataProvider({ children }) {
         categories: categories.data.map((row) => ({ id: row.category_id, name: row.name, availablePieces: row.available_pieces })),
         bales: bales.data.map((row) => mapBale(row, revenueByBale.get(row.id) ?? 0)),
         sales: sales.data.map(mapSale),
-        customers: customers.data.map((row) => ({ id: row.id, name: row.name, phone: row.phone ?? '', priority: row.is_priority, purchases: row.purchases, totalSpent: asNumber(row.total_spent) })),
+        customers: customers.data.map(mapCustomer),
         expenses: expenses.data.map((row) => ({ id: row.id, concept: row.concept, dateLabel: formatShortDate(row.expense_date), amount: asNumber(row.amount) })),
         damagedProducts: damagedProducts.data.map((row) => ({ id: row.id, category: row.inventory?.category?.name ?? 'Sin categoría', quantity: row.quantity, reason: row.reason })),
       },
@@ -107,7 +118,26 @@ export function PacaDataProvider({ children }) {
     await refresh()
   }, [refresh])
 
-  const value = useMemo(() => ({ ...state, refresh, createBale, registerSale }), [state, refresh, createBale, registerSale])
+  const createCustomer = useCallback(async ({ name, phone, isPriority }) => {
+    const { data, error } = await getSupabaseClient()
+      .from('customers')
+      .insert({
+        name: name.trim(),
+        phone: phone.trim() || null,
+        is_priority: Boolean(isPriority),
+      })
+      .select('id, name, phone, is_priority')
+      .single()
+
+    if (error) throw error
+    await refresh()
+    return mapCustomer(data)
+  }, [refresh])
+
+  const value = useMemo(
+    () => ({ ...state, refresh, createBale, createCustomer, registerSale }),
+    [state, refresh, createBale, createCustomer, registerSale],
+  )
   return <PacaDataContext.Provider value={value}>{children}</PacaDataContext.Provider>
 }
 

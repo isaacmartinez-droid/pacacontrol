@@ -10,6 +10,7 @@ import ExpensesPage from './pages/ExpensesPage'
 import InventoryPage from './pages/InventoryPage'
 import MorePage from './pages/MorePage'
 import NewBalePage from './pages/NewBalePage'
+import NewCustomerPage from './pages/NewCustomerPage'
 import NewSalePage from './pages/NewSalePage'
 import NotFoundPage from './pages/NotFoundPage'
 import ReportsPage from './pages/ReportsPage'
@@ -27,6 +28,7 @@ function App() {
         <Route path="inventario" element={<InventoryPage />} />
         <Route path="ventas/nueva" element={<NewSalePage />} />
         <Route path="ventas" element={<SalesPage />} />
+        <Route path="clientes/nuevo" element={<NewCustomerPage />} />
         <Route path="clientes" element={<CustomersPage />} />
         <Route path="gastos" element={<ExpensesPage />} />
         <Route path="productos-danados" element={<DamagedProductsPage />} />
