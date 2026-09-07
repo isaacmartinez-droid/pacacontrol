@@ -126,6 +126,25 @@ function mapCustomer(row) {
   }
 }
 
+function mapDailySummary(row) {
+  return {
+    id: row.id,
+    date: row.summary_date,
+    salesTotal: asNumber(row.sales_total),
+    cashTotal: asNumber(row.cash_total),
+    transferTotal: asNumber(row.transfer_total),
+    cardTotal: asNumber(row.card_total),
+    otherTotal: asNumber(row.other_total),
+    piecesSold: row.pieces_sold ?? 0,
+    damagedPieces: row.damaged_pieces ?? 0,
+    estimatedCost: asNumber(row.estimated_cost),
+    estimatedProfit: asNumber(row.estimated_profit),
+    expensesTotal: asNumber(row.expenses_total),
+    netResult: asNumber(row.net_result),
+    pendingDeliveries: row.pending_deliveries ?? 0,
+  }
+}
+
 export function PacaDataProvider({ children }) {
   const { user } = useAuth()
   return <AccountPacaDataProvider key={user?.id ?? 'guest'} userId={user?.id}>{children}</AccountPacaDataProvider>
@@ -152,7 +171,7 @@ function AccountPacaDataProvider({ userId, children }) {
       const categorySetupError = await ensureDefaultCategories(supabase, userId)
       if (categorySetupError) throw categorySetupError
 
-      const [categories, bales, sales, customers, expenses, damagedProducts, allocations] = await Promise.all([
+      const [categories, bales, sales, customers, expenses, damagedProducts, allocations, dailySummaries] = await Promise.all([
         supabase.from('inventory_summary').select('category_id, name, received_pieces, available_pieces').order('name'),
         supabase.from('bale_summary').select('*').order('purchase_date', { ascending: false }),
         supabase.from('sales').select('*, customer:customers(name), sale_items(quantity)').order('sold_at', { ascending: false }),
@@ -160,8 +179,9 @@ function AccountPacaDataProvider({ userId, children }) {
         supabase.from('expenses').select('id, concept, amount, expense_date').order('expense_date', { ascending: false }),
         supabase.from('damaged_products').select('id, quantity, reason, reported_at, inventory:bale_inventory(category:categories(name))').order('reported_at', { ascending: false }),
         supabase.from('sale_item_allocations').select('quantity, sale_item:sale_items(unit_price), inventory:bale_inventory(bale_id)'),
+        supabase.from('daily_summaries').select('*').order('summary_date', { ascending: false }).limit(14),
       ])
-      const failed = [categories, bales, sales, customers, expenses, damagedProducts, allocations].find((result) => result.error)
+      const failed = [categories, bales, sales, customers, expenses, damagedProducts, allocations, dailySummaries].find((result) => result.error)
       if (failed) throw failed.error
       if (requestId !== latestRequest.current) return
 
@@ -181,6 +201,7 @@ function AccountPacaDataProvider({ userId, children }) {
           sales: sales.data.map(mapSale),
           customers: customers.data.map(mapCustomer),
           expenses: expenses.data.map((row) => ({ id: row.id, concept: row.concept, dateLabel: formatShortDate(row.expense_date), amount: asNumber(row.amount) })),
+          dailySummaries: dailySummaries.data.map(mapDailySummary),
           damagedProducts: damagedProducts.data.map((row) => ({ id: row.id, category: row.inventory?.category?.name ?? 'Sin categoría', quantity: row.quantity, reason: row.reason })),
         },
       })
@@ -319,7 +340,7 @@ function AccountPacaDataProvider({ userId, children }) {
 }
 
 function emptyData() {
-  return { categories: [], bales: [], sales: [], customers: [], expenses: [], damagedProducts: [] }
+  return { categories: [], bales: [], sales: [], customers: [], expenses: [], damagedProducts: [], dailySummaries: [] }
 }
 
 export function usePacaData() {

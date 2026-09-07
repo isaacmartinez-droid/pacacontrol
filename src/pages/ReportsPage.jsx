@@ -1,78 +1,40 @@
-import { ArrowUp, BadgeDollarSign, PieChart } from 'lucide-react'
+import { ArrowUp, BadgeDollarSign, CalendarDays, PackageCheck, PieChart, ReceiptText, Truck } from 'lucide-react'
 import PageHeader from '../components/common/PageHeader'
 import { usePacaData } from '../context/PacaDataContext'
-import {
-  getEffectiveCostPerSellablePiece,
-  getSoldPercentage,
-  getTotalInvestment,
-} from '../utils/calculations'
+import { getEffectiveCostPerSellablePiece, getSoldPercentage, getTotalInvestment } from '../utils/calculations'
 import { formatCurrency } from '../utils/currency'
+import { formatShortDate } from '../utils/dates'
 
 function ReportsPage() {
   const { data } = usePacaData()
-  const activeBale = data.bales[0]
-  if (!activeBale) return <div><PageHeader eyebrow="Resultados" title="Reportes y ganancias" description="Mide el rendimiento de cada paca con indicadores simples y comparables." backTo="/mas" /><div className="page-content py-5 text-sm font-semibold text-slate-500">Registra una paca para ver reportes.</div></div>
-  const investment = getTotalInvestment(activeBale)
-  const currentResult = activeBale.currentRevenue - investment
-
-  return (
-    <div>
-      <PageHeader
-        eyebrow="Resultados"
-        title="Reportes y ganancias"
-        description="Mide el rendimiento de cada paca con indicadores simples y comparables."
-        backTo="/mas"
-      />
-      <div className="page-content grid items-start gap-5 py-5 md:py-8 lg:grid-cols-2 lg:gap-8">
-        <section className="relative overflow-hidden rounded-3xl bg-brand-900 p-5 text-white shadow-lg shadow-brand-900/15">
-          <div aria-hidden="true" className="absolute -right-6 -top-6 size-28 rounded-full bg-white/5" />
-          <div className="relative">
-            <p className="text-sm font-medium text-brand-100">Resultado actual de {activeBale.code}</p>
-            <p className="mt-2 text-4xl font-extrabold tracking-tight">
-              {formatCurrency(currentResult)}
-            </p>
-            <p className="mt-3 inline-flex items-center gap-1.5 rounded-full bg-emerald-400/15 px-3 py-1.5 text-xs font-bold text-emerald-100">
-              <ArrowUp aria-hidden="true" size={14} />
-              Ingresos por encima de la inversión
-            </p>
-          </div>
-        </section>
-
-        <section className="grid grid-cols-2 gap-3" aria-label="Indicadores de rentabilidad">
-          <ReportMetric
-            icon={BadgeDollarSign}
-            label="Inversión"
-            value={formatCurrency(investment)}
-          />
-          <ReportMetric
-            icon={PieChart}
-            label="Paca vendida"
-            value={`${Math.round(getSoldPercentage(activeBale))}%`}
-          />
-        </section>
-
-        <section className="rounded-3xl bg-white p-5 shadow-soft ring-1 ring-slate-100 lg:col-span-2 lg:max-w-3xl">
-          <h2 className="text-lg font-extrabold text-slate-900">Costo efectivo</h2>
-          <p className="mt-2 text-3xl font-extrabold tracking-tight text-brand-800">
-            {formatCurrency(getEffectiveCostPerSellablePiece(activeBale))}
-          </p>
-          <p className="mt-2 text-sm leading-6 text-slate-500">
-            Por cada pieza vendible, considerando la inversión completa y excluyendo las prendas dañadas.
-          </p>
-        </section>
-      </div>
+  const bale = data.bales[0]
+  const summary = data.dailySummaries[0]
+  return <div>
+    <PageHeader eyebrow="Resultados" title="Reportes y ganancias" description="Consulta cierres diarios y el rendimiento de tus inversiones." backTo="/mas" />
+    <div className="page-content grid items-start gap-5 py-5 md:py-8 lg:grid-cols-2 lg:gap-8">
+      <DailySummary summary={summary} />
+      {bale ? <BaleReport bale={bale} /> : <section className="rounded-3xl bg-white p-5 text-sm font-semibold text-slate-500 shadow-soft ring-1 ring-slate-100 lg:col-span-2">Registra una paca para ver el rendimiento de tus inversiones.</section>}
     </div>
-  )
+  </div>
 }
 
-function ReportMetric({ icon: Icon, label, value }) {
-  return (
-    <article className="rounded-2xl bg-white p-4 shadow-soft ring-1 ring-slate-100">
-      <Icon aria-hidden="true" className="text-brand-600" size={20} />
-      <p className="mt-4 text-xs font-medium text-slate-500">{label}</p>
-      <p className="mt-1 text-xl font-extrabold text-slate-900">{value}</p>
-    </article>
-  )
+function DailySummary({ summary }) {
+  if (!summary) return <section className="rounded-3xl bg-white p-5 shadow-soft ring-1 ring-slate-100 lg:col-span-2"><div className="flex items-center gap-3"><span className="grid size-11 place-items-center rounded-2xl bg-brand-50 text-brand-700"><CalendarDays aria-hidden="true" size={21} /></span><div><h2 className="font-extrabold text-slate-900">Resumen diario</h2><p className="mt-1 text-sm leading-6 text-slate-500">El primer cierre aparecerá al terminar el día. Incluye el costo estimado de las prendas vendidas, no la compra completa de una paca.</p></div></div></section>
+  const payments = [['Efectivo', summary.cashTotal], ['Transferencia', summary.transferTotal], ['Tarjeta', summary.cardTotal], ['Otros', summary.otherTotal]].filter(([, value]) => value > 0)
+  return <section className="rounded-3xl bg-white p-5 shadow-soft ring-1 ring-slate-100 lg:col-span-2">
+    <div className="flex flex-wrap items-start justify-between gap-3"><div><p className="text-sm font-medium text-slate-500">Cierre diario</p><h2 className="mt-1 text-xl font-extrabold text-slate-900">{formatShortDate(`${summary.date}T12:00:00Z`)}</h2></div><span className="rounded-full bg-brand-50 px-3 py-1.5 text-xs font-extrabold text-brand-800">Generado automáticamente</span></div>
+    <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-4"><Metric icon={BadgeDollarSign} label="Cobrado" value={formatCurrency(summary.salesTotal)} detail="Ventas registradas" /><Metric icon={PackageCheck} label="Costo estimado" value={formatCurrency(summary.estimatedCost)} detail={`${summary.piecesSold} piezas vendidas`} /><Metric icon={ReceiptText} label="Gastos del día" value={formatCurrency(summary.expensesTotal)} detail="Gastos registrados" /><Metric icon={ArrowUp} label="Resultado neto" value={formatCurrency(summary.netResult)} detail="Después de costo y gastos" tone={summary.netResult >= 0 ? 'positive' : 'warning'} /></div>
+    <div className="mt-5 grid gap-4 border-t border-slate-100 pt-5 md:grid-cols-2"><div><h3 className="text-sm font-extrabold text-slate-900">Cobros por método</h3>{payments.length ? <dl className="mt-2 space-y-1.5 text-sm">{payments.map(([label, value]) => <div key={label} className="flex justify-between gap-3 text-slate-600"><dt>{label}</dt><dd className="font-bold text-slate-900">{formatCurrency(value)}</dd></div>)}</dl> : <p className="mt-2 text-sm text-slate-500">No hubo cobros registrados.</p>}</div><div className="grid gap-2 sm:grid-cols-2"><MiniMetric icon={Truck} label="Entregas pendientes" value={summary.pendingDeliveries} /><MiniMetric icon={PackageCheck} label="Mermas del día" value={`${summary.damagedPieces} piezas`} /></div></div>
+    <p className="mt-4 text-xs leading-5 text-slate-500">Ganancia estimada antes de gastos: {formatCurrency(summary.estimatedProfit)}. El costo se asigna según la paca de origen de cada prenda vendida.</p>
+  </section>
 }
 
+function BaleReport({ bale }) {
+  const investment = getTotalInvestment(bale)
+  const result = bale.currentRevenue - investment
+  return <><section className="relative overflow-hidden rounded-3xl bg-brand-900 p-5 text-white shadow-lg shadow-brand-900/15"><div aria-hidden="true" className="absolute -right-6 -top-6 size-28 rounded-full bg-white/5" /><div className="relative"><p className="text-sm font-medium text-brand-100">Resultado actual de {bale.code}</p><p className="mt-2 text-4xl font-extrabold tracking-tight">{formatCurrency(result)}</p><p className="mt-3 inline-flex items-center gap-1.5 rounded-full bg-emerald-400/15 px-3 py-1.5 text-xs font-bold text-emerald-100"><ArrowUp aria-hidden="true" size={14} />Ingresos frente a inversión</p></div></section><section className="grid grid-cols-2 gap-3" aria-label="Indicadores de rentabilidad"><Metric icon={BadgeDollarSign} label="Inversión" value={formatCurrency(investment)} /><Metric icon={PieChart} label="Paca vendida" value={`${Math.round(getSoldPercentage(bale))}%`} /></section><section className="rounded-3xl bg-white p-5 shadow-soft ring-1 ring-slate-100 lg:col-span-2 lg:max-w-3xl"><h2 className="text-lg font-extrabold text-slate-900">Costo efectivo</h2><p className="mt-2 text-3xl font-extrabold tracking-tight text-brand-800">{formatCurrency(getEffectiveCostPerSellablePiece(bale))}</p><p className="mt-2 text-sm leading-6 text-slate-500">Por cada pieza vendible, considerando la inversión completa y excluyendo las prendas dañadas.</p></section></>
+}
+
+function Metric({ icon: Icon, label, value, detail, tone = 'brand' }) { const color = tone === 'positive' ? 'text-emerald-600' : tone === 'warning' ? 'text-coral-600' : 'text-brand-600'; return <article className="rounded-2xl bg-slate-50 p-4 ring-1 ring-slate-100"><Icon aria-hidden="true" className={color} size={20} /><p className="mt-3 text-xs font-medium text-slate-500">{label}</p><p className="mt-1 text-xl font-extrabold text-slate-900">{value}</p>{detail && <p className="mt-1 text-xs text-slate-500">{detail}</p>}</article> }
+function MiniMetric({ icon: Icon, label, value }) { return <div className="rounded-2xl bg-slate-50 p-3"><Icon aria-hidden="true" className="text-brand-600" size={18} /><p className="mt-2 text-xs text-slate-500">{label}</p><p className="mt-0.5 font-extrabold text-slate-900">{value}</p></div> }
 export default ReportsPage
