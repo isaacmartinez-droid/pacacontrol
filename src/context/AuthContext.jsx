@@ -3,6 +3,14 @@ import { getSupabaseClient, isSupabaseConfigured } from '../lib/supabaseClient'
 
 const AuthContext = createContext(null)
 const IDLE_TIMEOUT_MS = 30 * 60 * 1000
+// Supabase Auth necesita una identidad de tipo email para autenticar con contraseña.
+// El dominio reservado .invalid permite mantener ese detalle fuera de la interfaz
+// sin asociar las cuentas a direcciones de correo reales.
+const USER_ACCOUNT_DOMAIN = 'usuarios.pacacontrol.invalid'
+
+function usernameToEmail(username) {
+  return `${username.trim().toLowerCase()}@${USER_ACCOUNT_DOMAIN}`
+}
 
 export function AuthProvider({ children }) {
   const [session, setSession] = useState(null)
@@ -59,25 +67,26 @@ export function AuthProvider({ children }) {
       session,
       isLoading,
       isConfigured: isSupabaseConfigured,
-      async signIn({ email, password }) {
+      async signIn({ username, password }) {
+        const email = usernameToEmail(username)
         const { error } = await getSupabaseClient().auth.signInWithPassword({ email, password })
         if (error) throw error
       },
-      async signUp({ displayName, email, password }) {
+      async signUp({ username, password }) {
+        const normalizedUsername = username.trim().toLowerCase()
+        const email = usernameToEmail(normalizedUsername)
         const { data, error } = await getSupabaseClient().auth.signUp({
           email,
           password,
-          options: { data: { display_name: displayName } },
+          options: {
+            data: {
+              display_name: normalizedUsername,
+              username: normalizedUsername,
+            },
+          },
         })
         if (error) throw error
         return data
-      },
-      async signInWithGoogle() {
-        const { error } = await getSupabaseClient().auth.signInWithOAuth({
-          provider: 'google',
-          options: { redirectTo: window.location.origin },
-        })
-        if (error) throw error
       },
       async signOut() {
         const { error } = await getSupabaseClient().auth.signOut()
