@@ -1,10 +1,14 @@
 import { PackageCheck } from 'lucide-react'
+import { Link, useSearchParams } from 'react-router-dom'
 import PageHeader from '../components/common/PageHeader'
 import { usePacaData } from '../context/PacaDataContext'
 
 function InventoryPage() {
   const { data } = usePacaData()
+  const [searchParams] = useSearchParams()
+  const selectedId = searchParams.get('categoria')
   const clothingCategories = data.categories
+  const visibleCategories = selectedId ? clothingCategories.filter((category) => category.id === selectedId) : clothingCategories
   const totalPieces = clothingCategories.reduce(
     (total, category) => total + category.availablePieces,
     0,
@@ -31,11 +35,13 @@ function InventoryPage() {
         </section>
 
         <section aria-labelledby="categories-title" className="max-w-4xl">
+          {selectedId && <div className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-xl bg-brand-50 p-4 text-sm text-brand-800"><span>Categoría seleccionada desde la alerta</span><Link to="/inventario" className="font-bold underline">Ver todas las categorías</Link></div>}
           <h2 id="categories-title" className="mb-3 text-lg font-extrabold text-slate-900">
             Por categoría
           </h2>
           <div className="overflow-hidden rounded-3xl bg-white shadow-soft ring-1 ring-slate-100">
-            {clothingCategories.map((category, index) => (
+            {selectedId && visibleCategories.length === 0 && <p className="p-5 text-sm text-slate-600">La categoría seleccionada no está disponible en los datos cargados.</p>}
+            {visibleCategories.map((category, index) => (
               <div
                 key={category.id}
                 className={`flex min-h-14 items-center justify-between gap-4 px-5 py-3 ${

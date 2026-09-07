@@ -4,6 +4,7 @@ import { BrowserRouter } from 'react-router-dom'
 import App from './App'
 import { AuthProvider } from './context/AuthContext'
 import { PacaDataProvider } from './context/PacaDataContext'
+import { AlertsProvider } from './context/AlertsContext'
 import './index.css'
 
 createRoot(document.getElementById('root')).render(
@@ -11,7 +12,9 @@ createRoot(document.getElementById('root')).render(
     <BrowserRouter>
       <AuthProvider>
         <PacaDataProvider>
-          <App />
+          <AlertsProvider>
+            <App />
+          </AlertsProvider>
         </PacaDataProvider>
       </AuthProvider>
     </BrowserRouter>

@@ -1,13 +1,15 @@
 import { useState } from 'react'
 import { ShoppingBag } from 'lucide-react'
-import { Link } from 'react-router-dom'
+import { Link, useSearchParams } from 'react-router-dom'
 import PageHeader from '../components/common/PageHeader'
 import RecentSaleCard from '../components/dashboard/RecentSaleCard'
 import { usePacaData } from '../context/PacaDataContext'
 
 function SalesPage() {
   const { data, updateSaleDeliveryStatus } = usePacaData()
-  const recentSales = data.sales
+  const [searchParams] = useSearchParams()
+  const selectedId = searchParams.get('venta')
+  const recentSales = selectedId ? data.sales.filter((sale) => sale.id === selectedId) : data.sales
   const [updatingSaleId, setUpdatingSaleId] = useState('')
   const [statusError, setStatusError] = useState('')
 
@@ -40,6 +42,7 @@ function SalesPage() {
           Registrar venta
         </Link>
         <section aria-labelledby="sales-list-title" className="max-w-5xl">
+          {selectedId && <div className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-xl bg-brand-50 p-4 text-sm text-brand-800"><span>Venta seleccionada desde la alerta</span><Link to="/ventas" className="font-bold underline">Ver todas las ventas</Link></div>}
           <div className="mb-3">
             <h2 id="sales-list-title" className="text-lg font-extrabold text-slate-900">
               Seguimiento de pedidos
@@ -54,6 +57,7 @@ function SalesPage() {
             </p>
           )}
           <div className="space-y-2.5 md:grid md:grid-cols-2 md:gap-4 md:space-y-0">
+            {selectedId && recentSales.length === 0 && <p className="rounded-2xl bg-white p-5 text-sm text-slate-600">La venta seleccionada no está disponible en los datos cargados.</p>}
             {recentSales.map((sale) => (
               <RecentSaleCard
                 key={sale.id}

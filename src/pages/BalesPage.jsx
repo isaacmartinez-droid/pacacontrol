@@ -1,5 +1,5 @@
 import { CalendarDays, PackagePlus, Truck } from 'lucide-react'
-import { Link } from 'react-router-dom'
+import { Link, useSearchParams } from 'react-router-dom'
 import PageHeader from '../components/common/PageHeader'
 import { usePacaData } from '../context/PacaDataContext'
 import {
@@ -12,7 +12,10 @@ import { formatShortDate } from '../utils/dates'
 
 function BalesPage() {
   const { data } = usePacaData()
-  const activeBale = data.bales[0]
+  const [searchParams] = useSearchParams()
+  const selectedId = searchParams.get('paca')
+  const activeBale = selectedId ? data.bales.find((bale) => bale.id === selectedId) : data.bales[0]
+  if (selectedId && !activeBale) return <div><PageHeader title="Pacas" description="Revisión de la paca seleccionada." /><div className="page-content py-5"><p className="mb-3 text-sm text-slate-600">La paca seleccionada no está disponible en los datos cargados.</p><Link to="/pacas" className="font-bold text-brand-800 underline">Ver mis pacas</Link></div></div>
   if (!activeBale) return <div><PageHeader eyebrow="Compras e inversión" title="Pacas" description="Consulta el avance de cada compra y cuánto inventario continúa disponible." /><div className="page-content py-5"><Link to="/pacas/nueva" className="inline-flex min-h-12 items-center rounded-2xl bg-brand-900 px-5 text-sm font-bold text-white">Registrar una paca</Link></div></div>
   const percentage = Math.round(getSoldPercentage(activeBale))
 
@@ -35,7 +38,7 @@ function BalesPage() {
         <section aria-labelledby="current-bale-title" className="max-w-4xl">
           <div className="mb-3 flex items-center justify-between gap-3">
             <h2 id="current-bale-title" className="text-lg font-extrabold text-slate-900">
-              Paca actual
+              {selectedId ? 'Paca seleccionada desde la alerta' : 'Paca actual'}
             </h2>
             <span className="rounded-full bg-emerald-50 px-3 py-1 text-xs font-bold text-emerald-700">
               {activeBale.status}

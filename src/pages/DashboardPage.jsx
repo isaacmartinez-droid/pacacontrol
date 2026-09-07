@@ -51,7 +51,6 @@ function DashboardPage() {
         eyebrow="Mi tienda"
         title={`${greeting}${firstName ? ` ${firstName}` : ''}`}
         description="Este es el resumen de tu negocio"
-        availablePieces={summary.availablePieces}
       />
       <div className="page-content relative -ml-1 mt-1 space-y-7 pb-4 sm:space-y-8 md:pb-8">
         <section

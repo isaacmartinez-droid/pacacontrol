@@ -1,4 +1,4 @@
-import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react'
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react'
 import { useAuth } from './AuthContext'
 import { getSupabaseClient } from '../lib/supabaseClient'
 import { formatShortDate } from '../utils/dates'
@@ -104,10 +104,13 @@ function mapSale(row) {
 
   return {
     id: row.id,
+    customerId: row.customer_id,
     customerName: row.customer?.name ?? 'Venta de mostrador',
     pieces: items.reduce((total, item) => total + item.quantity, 0),
     total: asNumber(row.total),
     dateLabel: formatShortDate(row.sold_at),
+    soldAt: row.sold_at,
+    hasDeliveryStatus: deliveryStatuses.includes(row.delivery_status),
     deliveryStatus,
   }
 }
@@ -125,58 +128,91 @@ function mapCustomer(row) {
 
 export function PacaDataProvider({ children }) {
   const { user } = useAuth()
-  const [state, setState] = useState({ isLoading: true, error: '', data: emptyData() })
+  return <AccountPacaDataProvider key={user?.id ?? 'guest'} userId={user?.id}>{children}</AccountPacaDataProvider>
+}
 
-  const refresh = useCallback(async () => {
-    if (!user) {
-      setState({ isLoading: false, error: '', data: emptyData() })
+function AccountPacaDataProvider({ userId, children }) {
+  const [state, setState] = useState({ isLoading: true, error: '', lastUpdatedAt: null, data: emptyData() })
+  const latestRequest = useRef(0)
+  const pendingRequests = useRef(0)
+  const lastRefreshAt = useRef(0)
+
+  const refresh = useCallback(async ({ silent = false } = {}) => {
+    if (!userId) {
+      setState({ isLoading: false, error: '', lastUpdatedAt: null, data: emptyData() })
       return
     }
+    if (silent && pendingRequests.current > 0) return
+    const requestId = ++latestRequest.current
+    pendingRequests.current += 1
+    if (!silent) setState((current) => ({ ...current, isLoading: true, error: '' }))
 
-    setState((current) => ({ ...current, isLoading: true, error: '' }))
-    const supabase = getSupabaseClient()
-    const categorySetupError = await ensureDefaultCategories(supabase, user.id)
-    if (categorySetupError) {
-      setState((current) => ({ ...current, isLoading: false, error: categorySetupError.message }))
-      return
+    try {
+      const supabase = getSupabaseClient()
+      const categorySetupError = await ensureDefaultCategories(supabase, userId)
+      if (categorySetupError) throw categorySetupError
+
+      const [categories, bales, sales, customers, expenses, damagedProducts, allocations] = await Promise.all([
+        supabase.from('inventory_summary').select('category_id, name, received_pieces, available_pieces').order('name'),
+        supabase.from('bale_summary').select('*').order('purchase_date', { ascending: false }),
+        supabase.from('sales').select('*, customer:customers(name), sale_items(quantity)').order('sold_at', { ascending: false }),
+        supabase.from('customer_summary').select('id, name, phone, is_priority, purchases, total_spent').order('name'),
+        supabase.from('expenses').select('id, concept, amount, expense_date').order('expense_date', { ascending: false }),
+        supabase.from('damaged_products').select('id, quantity, reason, reported_at, inventory:bale_inventory(category:categories(name))').order('reported_at', { ascending: false }),
+        supabase.from('sale_item_allocations').select('quantity, sale_item:sale_items(unit_price), inventory:bale_inventory(bale_id)'),
+      ])
+      const failed = [categories, bales, sales, customers, expenses, damagedProducts, allocations].find((result) => result.error)
+      if (failed) throw failed.error
+      if (requestId !== latestRequest.current) return
+
+      const revenueByBale = new Map()
+      allocations.data.forEach((row) => {
+        const baleId = row.inventory?.bale_id
+        if (baleId) revenueByBale.set(baleId, (revenueByBale.get(baleId) ?? 0) + row.quantity * asNumber(row.sale_item?.unit_price))
+      })
+      lastRefreshAt.current = Date.now()
+      setState({
+        isLoading: false,
+        error: '',
+        lastUpdatedAt: lastRefreshAt.current,
+        data: {
+          categories: categories.data.map((row) => ({ id: row.category_id, name: row.name, receivedPieces: row.received_pieces, availablePieces: row.available_pieces })),
+          bales: bales.data.map((row) => mapBale(row, revenueByBale.get(row.id) ?? 0)),
+          sales: sales.data.map(mapSale),
+          customers: customers.data.map(mapCustomer),
+          expenses: expenses.data.map((row) => ({ id: row.id, concept: row.concept, dateLabel: formatShortDate(row.expense_date), amount: asNumber(row.amount) })),
+          damagedProducts: damagedProducts.data.map((row) => ({ id: row.id, category: row.inventory?.category?.name ?? 'Sin categoría', quantity: row.quantity, reason: row.reason })),
+        },
+      })
+    } catch (error) {
+      if (requestId === latestRequest.current) {
+        setState((current) => ({ ...current, isLoading: false, error: error.message || 'No fue posible actualizar los datos.' }))
+      }
+    } finally {
+      pendingRequests.current -= 1
     }
-
-    const [categories, bales, sales, customers, expenses, damagedProducts, allocations] = await Promise.all([
-      supabase.from('inventory_summary').select('category_id, name, available_pieces').order('name'),
-      supabase.from('bale_summary').select('*').order('purchase_date', { ascending: false }),
-      supabase.from('sales').select('*, customer:customers(name), sale_items(quantity)').order('sold_at', { ascending: false }),
-      supabase.from('customer_summary').select('id, name, phone, is_priority, purchases, total_spent').order('name'),
-      supabase.from('expenses').select('id, concept, amount, expense_date').order('expense_date', { ascending: false }),
-      supabase.from('damaged_products').select('id, quantity, reason, reported_at, inventory:bale_inventory(category:categories(name))').order('reported_at', { ascending: false }),
-      supabase.from('sale_item_allocations').select('quantity, sale_item:sale_items(unit_price), inventory:bale_inventory(bale_id)'),
-    ])
-    const failed = [categories, bales, sales, customers, expenses, damagedProducts, allocations].find((result) => result.error)
-    if (failed) {
-      setState((current) => ({ ...current, isLoading: false, error: failed.error.message }))
-      return
-    }
-
-    const revenueByBale = new Map()
-    allocations.data.forEach((row) => {
-      const baleId = row.inventory?.bale_id
-      if (baleId) revenueByBale.set(baleId, (revenueByBale.get(baleId) ?? 0) + row.quantity * asNumber(row.sale_item?.unit_price))
-    })
-
-    setState({
-      isLoading: false,
-      error: '',
-      data: {
-        categories: categories.data.map((row) => ({ id: row.category_id, name: row.name, availablePieces: row.available_pieces })),
-        bales: bales.data.map((row) => mapBale(row, revenueByBale.get(row.id) ?? 0)),
-        sales: sales.data.map(mapSale),
-        customers: customers.data.map(mapCustomer),
-        expenses: expenses.data.map((row) => ({ id: row.id, concept: row.concept, dateLabel: formatShortDate(row.expense_date), amount: asNumber(row.amount) })),
-        damagedProducts: damagedProducts.data.map((row) => ({ id: row.id, category: row.inventory?.category?.name ?? 'Sin categoría', quantity: row.quantity, reason: row.reason })),
-      },
-    })
-  }, [user])
+  }, [userId])
 
   useEffect(() => { refresh() }, [refresh])
+
+  useEffect(() => {
+    if (!userId) return undefined
+    const refreshVisible = () => {
+      if (document.visibilityState === 'visible' && Date.now() - lastRefreshAt.current >= 15000) {
+        refresh({ silent: true })
+      }
+    }
+    const timer = window.setInterval(refreshVisible, 60000)
+    document.addEventListener('visibilitychange', refreshVisible)
+    window.addEventListener('focus', refreshVisible)
+    window.addEventListener('online', refreshVisible)
+    return () => {
+      window.clearInterval(timer)
+      document.removeEventListener('visibilitychange', refreshVisible)
+      window.removeEventListener('focus', refreshVisible)
+      window.removeEventListener('online', refreshVisible)
+    }
+  }, [userId, refresh])
 
   const createBale = useCallback(async ({
     purchaseDate,
@@ -238,10 +274,12 @@ export function PacaDataProvider({ children }) {
       throw new Error('El estado de entrega no es válido.')
     }
 
-    const { error } = await getSupabaseClient()
+    const { data: updatedSale, error } = await getSupabaseClient()
       .from('sales')
       .update({ delivery_status: deliveryStatus })
       .eq('id', saleId)
+      .select('id, delivery_status')
+      .single()
 
     if (error) throw error
 
@@ -250,11 +288,12 @@ export function PacaDataProvider({ children }) {
       data: {
         ...current.data,
         sales: current.data.sales.map((sale) => (
-          sale.id === saleId ? { ...sale, deliveryStatus } : sale
+          sale.id === saleId ? { ...sale, deliveryStatus: updatedSale.delivery_status, hasDeliveryStatus: true } : sale
         )),
       },
     }))
-  }, [])
+    await refresh()
+  }, [refresh])
 
   const createCustomer = useCallback(async ({ name, phone, isPriority }) => {
     const { data, error } = await getSupabaseClient()

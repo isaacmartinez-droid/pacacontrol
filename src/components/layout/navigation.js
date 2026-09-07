@@ -9,7 +9,7 @@ export const navigationItems = [
     label: 'Más',
     to: '/mas',
     icon: Grid2X2,
-    matches: ['/mas', '/inventario', '/gastos', '/productos-danados', '/reportes'],
+    matches: ['/mas', '/alertas', '/inventario', '/gastos', '/productos-danados', '/reportes'],
   },
 ]
 

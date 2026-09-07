@@ -15,6 +15,7 @@ import NewSalePage from './pages/NewSalePage'
 import NotFoundPage from './pages/NotFoundPage'
 import ReportsPage from './pages/ReportsPage'
 import SalesPage from './pages/SalesPage'
+import AlertsPage from './pages/AlertsPage'
 
 function App() {
   return (
@@ -34,6 +35,7 @@ function App() {
         <Route path="productos-danados" element={<DamagedProductsPage />} />
         <Route path="reportes" element={<ReportsPage />} />
         <Route path="mas" element={<MorePage />} />
+        <Route path="alertas" element={<AlertsPage />} />
         <Route path="*" element={<NotFoundPage />} />
       </Route>
       </Route>

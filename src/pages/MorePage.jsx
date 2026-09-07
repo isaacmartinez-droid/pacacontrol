@@ -1,10 +1,17 @@
 import { useState } from 'react'
-import { BarChart3, ChevronRight, CircleAlert, LoaderCircle, LogOut, PackageSearch, PackageX, ReceiptText, UserRound } from 'lucide-react'
+import { BarChart3, Bell, ChevronRight, CircleAlert, LoaderCircle, LogOut, PackageSearch, PackageX, ReceiptText, UserRound } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import PageHeader from '../components/common/PageHeader'
 import { useAuth } from '../context/AuthContext'
 
 const modules = [
+  {
+    title: 'Alertas',
+    description: 'Avisos automáticos y límites de tu tienda',
+    to: '/alertas',
+    icon: Bell,
+    tone: 'brand',
+  },
   {
     title: 'Inventario',
     description: 'Prendas disponibles por categoría',
