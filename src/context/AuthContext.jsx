@@ -77,7 +77,7 @@ export function AuthProvider({ children }) {
         const { error } = await getSupabaseClient().auth.signInWithPassword({ email, password })
         if (error) throw error
       },
-      async signUp({ username, password }) {
+      async signUp({ username, password, firstName = '', lastName = '' }) {
         const normalizedUsername = username.trim().toLowerCase()
         const email = usernameToEmail(normalizedUsername)
         const { data, error } = await getSupabaseClient().auth.signUp({
@@ -85,8 +85,10 @@ export function AuthProvider({ children }) {
           password,
           options: {
             data: {
-              display_name: normalizedUsername,
+              display_name: `${firstName.trim()} ${lastName.trim()}`.trim() || normalizedUsername,
               username: normalizedUsername,
+              first_name: firstName.trim(),
+              last_name: lastName.trim(),
             },
           },
         })

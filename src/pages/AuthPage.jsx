@@ -1,5 +1,5 @@
-import { useState } from 'react'
-import { CircleAlert, LoaderCircle, LockKeyhole, Store, UserPlus } from 'lucide-react'
+import { useMemo, useState } from 'react'
+import { CircleAlert, Eye, EyeOff, LoaderCircle, LockKeyhole, Store, UserPlus } from 'lucide-react'
 import { Navigate, useLocation } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 
@@ -7,12 +7,17 @@ function AuthPage() {
   const { isConfigured, isLoading, signIn, signUp, user } = useAuth()
   const location = useLocation()
   const [isRegistering, setIsRegistering] = useState(false)
-  const [form, setForm] = useState({ username: '', password: '' })
+  const [form, setForm] = useState({ username: '', firstName: '', lastName: '', password: '' })
+  const [showPassword, setShowPassword] = useState(false)
   const [error, setError] = useState('')
   const [message, setMessage] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
 
   const destination = location.state?.from || '/'
+  const generatedUsername = useMemo(
+    () => buildUsername(form.firstName, form.lastName),
+    [form.firstName, form.lastName],
+  )
 
   if (user) return <Navigate to={destination} replace />
 
@@ -30,7 +35,7 @@ function AuthPage() {
 
     try {
       if (isRegistering) {
-        const data = await signUp(form)
+        const data = await signUp({ ...form, username: generatedUsername })
         setMessage(
           data.session
             ? 'Cuenta creada. Ya puedes comenzar a registrar tu inventario.'
@@ -65,28 +70,24 @@ function AuthPage() {
           ) : (
             <>
               <h2 className="text-xl font-extrabold text-slate-900">{isRegistering ? 'Crea tu cuenta' : 'Bienvenido de nuevo'}</h2>
-              <p className="mt-1 text-sm text-slate-500">{isRegistering ? 'Elige un usuario con el formato nombre.apellido.' : 'Ingresa con tu usuario y contraseña.'}</p>
+              <p className="mt-1 text-sm text-slate-500">{isRegistering ? 'Escribe tu nombre y apellido; generaremos tu usuario automáticamente.' : 'Ingresa con tu usuario y contraseña.'}</p>
 
               <form className="mt-6 space-y-4" onSubmit={handleSubmit}>
-                <label className="block text-sm font-bold text-slate-700">
-                  Usuario
-                  <input
-                    className="sale-input mt-2"
-                    type="text"
-                    autoComplete="username"
-                    autoCapitalize="none"
-                    spellCheck="false"
-                    pattern="[a-zA-Z0-9]+(?:\.[a-zA-Z0-9]+)+"
-                    title="Usa el formato nombre.apellido, sin espacios ni tildes."
-                    placeholder="nombre.apellido"
-                    value={form.username}
-                    required
-                    onChange={(event) => update('username', event.target.value)}
-                  />
-                </label>
+                {isRegistering ? (
+                  <>
+                    <div className="grid gap-4 sm:grid-cols-2">
+                      <label className="block text-sm font-bold text-slate-700">Nombre<input className="sale-input mt-2" autoComplete="given-name" value={form.firstName} required onChange={(event) => update('firstName', event.target.value)} /></label>
+                      <label className="block text-sm font-bold text-slate-700">Apellido<input className="sale-input mt-2" autoComplete="family-name" value={form.lastName} required onChange={(event) => update('lastName', event.target.value)} /></label>
+                    </div>
+                    <label className="block text-sm font-bold text-slate-700">Usuario generado<input className="sale-input mt-2 bg-brand-50" type="text" autoComplete="username" value={generatedUsername} readOnly aria-describedby="generated-username-help" /></label>
+                    <p id="generated-username-help" className="-mt-2 text-xs text-slate-500">Se crea como nombre.apellido, sin espacios ni tildes.</p>
+                  </>
+                ) : (
+                  <label className="block text-sm font-bold text-slate-700">Usuario<input className="sale-input mt-2" type="text" autoComplete="username" autoCapitalize="none" spellCheck="false" pattern="[a-zA-Z0-9]+(?:\.[a-zA-Z0-9]+)+" title="Usa el formato nombre.apellido, sin espacios ni tildes." placeholder="nombre.apellido" value={form.username} required onChange={(event) => update('username', event.target.value)} /></label>
+                )}
                 <label className="block text-sm font-bold text-slate-700">
                   Contraseña
-                  <input className="sale-input mt-2" type="password" minLength="6" autoComplete={isRegistering ? 'new-password' : 'current-password'} value={form.password} required onChange={(event) => update('password', event.target.value)} />
+                  <span className="relative mt-2 block"><input className="sale-input pr-12" type={showPassword ? 'text' : 'password'} minLength="6" autoComplete={isRegistering ? 'new-password' : 'current-password'} value={form.password} required onChange={(event) => update('password', event.target.value)} /><button type="button" onClick={() => setShowPassword((value) => !value)} aria-label={showPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'} className="absolute inset-y-0 right-0 grid w-12 place-items-center text-slate-500 hover:text-brand-800">{showPassword ? <EyeOff aria-hidden="true" size={19} /> : <Eye aria-hidden="true" size={19} />}</button></span>
                 </label>
 
                 {error && <p role="alert" className="flex gap-2 rounded-xl bg-coral-50 p-3 text-sm font-semibold text-coral-600"><CircleAlert aria-hidden="true" size={18} />{error}</p>}
@@ -98,7 +99,7 @@ function AuthPage() {
                 </button>
               </form>
 
-              <button type="button" className="mt-5 w-full text-sm font-bold text-brand-700 hover:underline" onClick={() => { setIsRegistering((value) => !value); setError(''); setMessage('') }}>
+              <button type="button" className="mt-5 w-full text-sm font-bold text-brand-700 hover:underline" onClick={() => { setIsRegistering((value) => !value); setError(''); setMessage(''); setShowPassword(false) }}>
                 {isRegistering ? 'Ya tengo cuenta' : 'Crear mi primera cuenta'}
               </button>
             </>
@@ -107,6 +108,13 @@ function AuthPage() {
       </section>
     </main>
   )
+}
+
+function buildUsername(firstName, lastName) {
+  const normalize = (value) => value.trim().normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]/g, '')
+  const first = normalize(firstName)
+  const last = normalize(lastName)
+  return first && last ? `${first}.${last}` : ''
 }
 
 export default AuthPage
