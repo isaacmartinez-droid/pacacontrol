@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { BadgeDollarSign, CalendarDays, CircleCheck, PackageCheck, PackagePlus, Truck } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import PageHeader from '../components/common/PageHeader'
@@ -17,17 +17,11 @@ function NewBalePage() {
     transportCost: '0',
     otherExpenses: '0',
     receivedPieces: '',
-    categoryId: '',
+    categoryName: '',
   })
   const [formError, setFormError] = useState('')
   const [registeredBale, setRegisteredBale] = useState(null)
   const [isSaving, setIsSaving] = useState(false)
-
-  useEffect(() => {
-    if (!form.categoryId && categories[0]) {
-      setForm((currentForm) => ({ ...currentForm, categoryId: categories[0].id }))
-    }
-  }, [categories, form.categoryId])
 
   const purchaseCost = Number(form.purchaseCost) || 0
   const transportCost = Number(form.transportCost) || 0
@@ -59,14 +53,20 @@ function NewBalePage() {
       return
     }
 
-    if (!form.categoryId) {
-      setFormError('Selecciona la categoría de las prendas.')
+    const categoryName = form.categoryName.trim().replace(/\s+/g, ' ')
+    if (!categoryName) {
+      setFormError('Escribe la categoría de las prendas.')
+      return
+    }
+
+    if (categoryName.length > 80) {
+      setFormError('La categoría debe tener 80 caracteres o menos.')
       return
     }
 
     setIsSaving(true)
     try {
-      const bale = await createBale({ ...form, purchaseCost, transportCost, otherExpenses, receivedPieces })
+      const bale = await createBale({ ...form, categoryName, purchaseCost, transportCost, otherExpenses, receivedPieces })
       setRegisteredBale({ ...bale, totalInvestment, averageCost })
     } catch (error) {
       setFormError(error.message || 'No fue posible registrar la paca.')
@@ -83,7 +83,7 @@ function NewBalePage() {
       transportCost: '0',
       otherExpenses: '0',
       receivedPieces: '',
-      categoryId: categories[0]?.id ?? '',
+      categoryName: '',
     })
   }
 
@@ -194,25 +194,26 @@ function NewBalePage() {
                     <p className="mt-2 text-xs font-medium text-brand-700">Cantidad total antes de clasificarla.</p>
                   </Field>
                   <Field label="Categoría de prendas" htmlFor="bale-category">
-                    <select
+                    <input
                       id="bale-category"
+                      type="text"
+                      list="bale-category-suggestions"
                       required
-                      value={form.categoryId}
-                      onChange={(event) => updateForm('categoryId', event.target.value)}
+                      maxLength="80"
+                      autoComplete="off"
+                      placeholder="Ej. Ropa deportiva"
+                      value={form.categoryName}
+                      onChange={(event) => updateForm('categoryName', event.target.value)}
                       className="sale-input"
-                      disabled={isLoading || categories.length === 0}
-                    >
-                      <option value="">
-                        {isLoading
-                          ? 'Cargando categorías…'
-                          : categories.length === 0
-                            ? 'No hay categorías disponibles'
-                            : 'Selecciona una categoría'}
-                      </option>
+                    />
+                    <datalist id="bale-category-suggestions">
                       {categories.map((category) => (
-                        <option key={category.id} value={category.id}>{category.name}</option>
+                        <option key={category.id} value={category.name} />
                       ))}
-                    </select>
+                    </datalist>
+                    <p className="mt-2 text-xs font-medium text-brand-700">
+                      Escribe una categoría nueva o reutiliza una que ya exista.
+                    </p>
                   </Field>
                 </div>
               </section>
@@ -232,6 +233,7 @@ function NewBalePage() {
               <dl className="mt-6 space-y-4 border-y border-white/10 py-5 text-sm">
                 <SummaryRow label="Código" value="Se asigna al guardar" />
                 <SummaryRow label="Fecha" value={form.purchaseDate ? formatShortDate(form.purchaseDate) : 'Sin seleccionar'} />
+                <SummaryRow label="Categoría" value={form.categoryName.trim() || 'Sin escribir'} />
                 <SummaryRow label="Piezas recibidas" value={`${receivedPieces || 0} prendas`} />
                 <SummaryRow label="Costo por pieza" value={receivedPieces > 0 ? formatCurrency(averageCost) : '—'} />
               </dl>
@@ -249,14 +251,14 @@ function NewBalePage() {
 
               <button
                 type="submit"
-                disabled={isSaving || isLoading || categories.length === 0}
+                disabled={isSaving || isLoading}
                 className="mt-6 flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-white px-5 text-sm font-extrabold text-brand-950 transition hover:bg-brand-50 active:scale-[0.98]"
               >
                 <PackageCheck aria-hidden="true" size={19} />
                 {isSaving ? 'Guardando…' : 'Registrar paca'}
               </button>
               <p className="mt-3 text-center text-xs leading-5 text-brand-200">
-                Podrás clasificar las prendas y registrar ventas después de guardar la paca.
+                La categoría quedará disponible para registrar ventas después de guardar la paca.
               </p>
             </aside>
           </form>
@@ -323,8 +325,9 @@ function BaleConfirmation({ bale, onRegisterAnother }) {
         Registraste {bale.receivedPieces} piezas con una inversión total de {formatCurrency(bale.totalInvestment)}.
       </p>
 
-      <dl className="mx-auto mt-6 grid max-w-xl gap-px overflow-hidden rounded-2xl bg-slate-100 text-left sm:grid-cols-3">
+      <dl className="mx-auto mt-6 grid max-w-2xl gap-px overflow-hidden rounded-2xl bg-slate-100 text-left sm:grid-cols-2 lg:grid-cols-4">
         <ConfirmationDetail label="Fecha" value={formatShortDate(bale.purchaseDate)} />
+        <ConfirmationDetail label="Categoría" value={bale.categoryName} />
         <ConfirmationDetail label="Piezas" value={`${bale.receivedPieces} prendas`} />
         <ConfirmationDetail label="Costo por pieza" value={formatCurrency(bale.averageCost)} />
       </dl>

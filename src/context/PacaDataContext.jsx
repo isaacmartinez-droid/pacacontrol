@@ -6,6 +6,7 @@ import { formatShortDate } from '../utils/dates'
 const PacaDataContext = createContext(null)
 
 const asNumber = (value) => Number(value) || 0
+const deliveryStatuses = ['paid', 'on_the_way', 'delivered']
 const defaultCategories = [
   { slug: 'shirts', name: 'Camisas' },
   { slug: 'blouses', name: 'Blusas' },
@@ -34,6 +35,51 @@ async function ensureDefaultCategories(supabase, userId) {
   return insertError
 }
 
+function normalizeCategoryName(value) {
+  return value.trim().replace(/\s+/g, ' ')
+}
+
+function categoryComparisonKey(value) {
+  return normalizeCategoryName(value).toLocaleLowerCase('es')
+}
+
+function createCategorySlug(name) {
+  const baseSlug = name
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLocaleLowerCase('es')
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .slice(0, 60) || 'categoria'
+  const uniqueSuffix = globalThis.crypto?.randomUUID?.().slice(0, 8)
+    ?? Math.random().toString(36).slice(2, 10)
+
+  return `${baseSlug}-${uniqueSuffix}`
+}
+
+async function findOrCreateCategory(supabase, categoryName) {
+  const normalizedName = normalizeCategoryName(categoryName)
+  const { data: categories, error: categoriesError } = await supabase
+    .from('categories')
+    .select('id, name')
+
+  if (categoriesError) throw categoriesError
+
+  const existingCategory = categories.find(
+    (category) => categoryComparisonKey(category.name) === categoryComparisonKey(normalizedName),
+  )
+  if (existingCategory) return existingCategory
+
+  const { data: newCategory, error: categoryError } = await supabase
+    .from('categories')
+    .insert({ name: normalizedName, slug: createCategorySlug(normalizedName) })
+    .select('id, name')
+    .single()
+
+  if (categoryError) throw categoryError
+  return newCategory
+}
+
 function mapBale(row, currentRevenue = 0) {
   return {
     id: row.id,
@@ -52,13 +98,17 @@ function mapBale(row, currentRevenue = 0) {
 
 function mapSale(row) {
   const items = row.sale_items ?? []
+  const deliveryStatus = deliveryStatuses.includes(row.delivery_status)
+    ? row.delivery_status
+    : 'paid'
+
   return {
     id: row.id,
     customerName: row.customer?.name ?? 'Venta de mostrador',
     pieces: items.reduce((total, item) => total + item.quantity, 0),
     total: asNumber(row.total),
     dateLabel: formatShortDate(row.sold_at),
-    status: 'Completada',
+    deliveryStatus,
   }
 }
 
@@ -94,7 +144,7 @@ export function PacaDataProvider({ children }) {
     const [categories, bales, sales, customers, expenses, damagedProducts, allocations] = await Promise.all([
       supabase.from('inventory_summary').select('category_id, name, available_pieces').order('name'),
       supabase.from('bale_summary').select('*').order('purchase_date', { ascending: false }),
-      supabase.from('sales').select('id, total, sold_at, customer:customers(name), sale_items(quantity)').order('sold_at', { ascending: false }),
+      supabase.from('sales').select('*, customer:customers(name), sale_items(quantity)').order('sold_at', { ascending: false }),
       supabase.from('customer_summary').select('id, name, phone, is_priority, purchases, total_spent').order('name'),
       supabase.from('expenses').select('id, concept, amount, expense_date').order('expense_date', { ascending: false }),
       supabase.from('damaged_products').select('id, quantity, reason, reported_at, inventory:bale_inventory(category:categories(name))').order('reported_at', { ascending: false }),
@@ -128,15 +178,19 @@ export function PacaDataProvider({ children }) {
 
   useEffect(() => { refresh() }, [refresh])
 
-  const createBale = useCallback(async ({ purchaseDate, purchaseCost, transportCost, otherExpenses, receivedPieces, categoryId }) => {
+  const createBale = useCallback(async ({ purchaseDate, purchaseCost, transportCost, otherExpenses, receivedPieces, categoryName }) => {
     const supabase = getSupabaseClient()
+    const category = await findOrCreateCategory(supabase, categoryName)
     const { data: bale, error: baleError } = await supabase.from('bales').insert({ purchase_date: purchaseDate, purchase_cost: purchaseCost, transport_cost: transportCost, other_expenses: otherExpenses, received_pieces: receivedPieces }).select('*').single()
     if (baleError) throw baleError
 
-    const { error: inventoryError } = await supabase.from('bale_inventory').insert({ bale_id: bale.id, category_id: categoryId, received_quantity: receivedPieces })
+    const { error: inventoryError } = await supabase.from('bale_inventory').insert({ bale_id: bale.id, category_id: category.id, received_quantity: receivedPieces })
     if (inventoryError) throw inventoryError
     await refresh()
-    return mapBale({ ...bale, sold_pieces: 0, damaged_pieces: 0, available_pieces: receivedPieces })
+    return {
+      ...mapBale({ ...bale, sold_pieces: 0, damaged_pieces: 0, available_pieces: receivedPieces }),
+      categoryName: category.name,
+    }
   }, [refresh])
 
   const registerSale = useCallback(async ({ categoryId, quantity, unitPrice, paymentMethod, customerId }) => {
@@ -150,6 +204,29 @@ export function PacaDataProvider({ children }) {
     if (error) throw error
     await refresh()
   }, [refresh])
+
+  const updateSaleDeliveryStatus = useCallback(async (saleId, deliveryStatus) => {
+    if (!deliveryStatuses.includes(deliveryStatus)) {
+      throw new Error('El estado de entrega no es válido.')
+    }
+
+    const { error } = await getSupabaseClient()
+      .from('sales')
+      .update({ delivery_status: deliveryStatus })
+      .eq('id', saleId)
+
+    if (error) throw error
+
+    setState((current) => ({
+      ...current,
+      data: {
+        ...current.data,
+        sales: current.data.sales.map((sale) => (
+          sale.id === saleId ? { ...sale, deliveryStatus } : sale
+        )),
+      },
+    }))
+  }, [])
 
   const createCustomer = useCallback(async ({ name, phone, isPriority }) => {
     const { data, error } = await getSupabaseClient()
@@ -168,8 +245,8 @@ export function PacaDataProvider({ children }) {
   }, [refresh])
 
   const value = useMemo(
-    () => ({ ...state, refresh, createBale, createCustomer, registerSale }),
-    [state, refresh, createBale, createCustomer, registerSale],
+    () => ({ ...state, refresh, createBale, createCustomer, registerSale, updateSaleDeliveryStatus }),
+    [state, refresh, createBale, createCustomer, registerSale, updateSaleDeliveryStatus],
   )
   return <PacaDataContext.Provider value={value}>{children}</PacaDataContext.Provider>
 }

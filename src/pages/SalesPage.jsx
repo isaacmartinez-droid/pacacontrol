@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { ShoppingBag } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import PageHeader from '../components/common/PageHeader'
@@ -5,8 +6,24 @@ import RecentSaleCard from '../components/dashboard/RecentSaleCard'
 import { usePacaData } from '../context/PacaDataContext'
 
 function SalesPage() {
-  const { data } = usePacaData()
+  const { data, updateSaleDeliveryStatus } = usePacaData()
   const recentSales = data.sales
+  const [updatingSaleId, setUpdatingSaleId] = useState('')
+  const [statusError, setStatusError] = useState('')
+
+  async function handleAdvanceStatus(saleId, deliveryStatus) {
+    setUpdatingSaleId(saleId)
+    setStatusError('')
+
+    try {
+      await updateSaleDeliveryStatus(saleId, deliveryStatus)
+    } catch (error) {
+      setStatusError(error.message || 'No fue posible actualizar el estado del pedido.')
+    } finally {
+      setUpdatingSaleId('')
+    }
+  }
+
   return (
     <div>
       <PageHeader
@@ -23,12 +40,27 @@ function SalesPage() {
           Registrar venta
         </Link>
         <section aria-labelledby="sales-list-title" className="max-w-5xl">
-          <h2 id="sales-list-title" className="mb-3 text-lg font-extrabold text-slate-900">
-            Movimientos recientes
-          </h2>
+          <div className="mb-3">
+            <h2 id="sales-list-title" className="text-lg font-extrabold text-slate-900">
+              Seguimiento de pedidos
+            </h2>
+            <p className="mt-1 text-xs font-medium text-slate-500">
+              Actualiza cada venta desde el pago hasta la entrega al cliente.
+            </p>
+          </div>
+          {statusError && (
+            <p role="alert" className="mb-3 rounded-xl bg-red-50 px-4 py-3 text-sm font-semibold text-red-700">
+              {statusError}
+            </p>
+          )}
           <div className="space-y-2.5 md:grid md:grid-cols-2 md:gap-4 md:space-y-0">
             {recentSales.map((sale) => (
-              <RecentSaleCard key={sale.id} sale={sale} />
+              <RecentSaleCard
+                key={sale.id}
+                sale={sale}
+                onAdvanceStatus={handleAdvanceStatus}
+                isUpdating={updatingSaleId === sale.id}
+              />
             ))}
           </div>
         </section>
