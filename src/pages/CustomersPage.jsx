@@ -1,5 +1,6 @@
-import { Crown, Phone, ShoppingBag, UserPlus, Users } from 'lucide-react'
+import { Crown, Phone, Search, ShoppingBag, UserPlus, Users } from 'lucide-react'
 import { Link } from 'react-router-dom'
+import { useMemo, useState } from 'react'
 import EmptyState from '../components/common/EmptyState'
 import PageHeader from '../components/common/PageHeader'
 import { usePacaData } from '../context/PacaDataContext'
@@ -8,6 +9,25 @@ import { formatCurrency } from '../utils/currency'
 function CustomersPage() {
   const { data } = usePacaData()
   const customers = data.customers
+  const [search, setSearch] = useState('')
+  const [filter, setFilter] = useState('all')
+  const balanceByCustomer = useMemo(() => data.sales.reduce((balances, sale) => {
+    if (!sale.customerId || sale.balance <= 0) return balances
+    balances.set(sale.customerId, (balances.get(sale.customerId) ?? 0) + sale.balance)
+    return balances
+  }, new Map()), [data.sales])
+  const normalizedSearch = search.trim().toLocaleLowerCase('es')
+  const filteredCustomers = customers.filter((customer) => {
+    const matchesSearch = !normalizedSearch || customer.name.toLocaleLowerCase('es').includes(normalizedSearch)
+    const balance = balanceByCustomer.get(customer.id) ?? 0
+    const matchesFilter = filter === 'all' || (filter === 'pending' && balance > 0) || (filter === 'priority' && customer.priority)
+    return matchesSearch && matchesFilter
+  })
+  const filters = [
+    { id: 'all', label: 'Todos', count: customers.length },
+    { id: 'pending', label: 'Con saldo', count: customers.filter((customer) => (balanceByCustomer.get(customer.id) ?? 0) > 0).length },
+    { id: 'priority', label: 'Prioritarios', count: customers.filter((customer) => customer.priority).length },
+  ]
   return (
     <div>
       <PageHeader
@@ -34,8 +54,41 @@ function CustomersPage() {
             />
           </div>
         ) : (
+          <>
+            <div className="max-w-5xl space-y-3">
+              <label className="relative block">
+                <span className="sr-only">Buscar cliente por nombre</span>
+                <Search aria-hidden="true" size={18} className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
+                <input
+                  type="search"
+                  value={search}
+                  onChange={(event) => setSearch(event.target.value)}
+                  placeholder="Buscar por nombre"
+                  className="sale-input pl-11"
+                />
+              </label>
+              <div className="flex flex-wrap gap-2" aria-label="Filtros de clientes">
+                {filters.map((item) => (
+                  <button
+                    key={item.id}
+                    type="button"
+                    onClick={() => setFilter(item.id)}
+                    aria-pressed={filter === item.id}
+                    className={`min-h-10 rounded-xl px-4 text-sm font-extrabold transition ${filter === item.id ? 'bg-brand-900 text-white shadow-lg shadow-brand-900/15' : 'bg-white text-slate-600 ring-1 ring-slate-200 hover:bg-brand-50'}`}
+                  >
+                    {item.label} <span className="ml-1 opacity-75">{item.count}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+            {filteredCustomers.length === 0 ? (
+              <div className="max-w-3xl rounded-3xl bg-white p-6 text-center shadow-soft ring-1 ring-slate-100">
+                <p className="font-extrabold text-slate-800">No hay clientes para este filtro.</p>
+                <button type="button" onClick={() => { setSearch(''); setFilter('all') }} className="mt-2 text-sm font-bold text-brand-700 hover:underline">Ver todos los clientes</button>
+              </div>
+            ) : (
           <div className="max-w-5xl space-y-3 sm:grid sm:grid-cols-2 sm:gap-4 sm:space-y-0">
-            {customers.map((customer) => (
+            {filteredCustomers.map((customer) => (
               <article
                 key={customer.id}
                 className="rounded-3xl bg-white p-4 shadow-soft ring-1 ring-slate-100"
@@ -76,13 +129,17 @@ function CustomersPage() {
                     <ShoppingBag aria-hidden="true" size={14} />
                     <span><strong className="text-slate-800">{customer.purchases}</strong> compras</span>
                   </p>
-                  <p className="text-right text-xs text-slate-500">
-                    Total <strong className="text-slate-800">{formatCurrency(customer.totalSpent)}</strong>
-                  </p>
+                  {(balanceByCustomer.get(customer.id) ?? 0) > 0 ? (
+                    <p className="text-right text-xs font-bold text-coral-600">Debe {formatCurrency(balanceByCustomer.get(customer.id))}</p>
+                  ) : (
+                    <p className="text-right text-xs text-slate-500">Total <strong className="text-slate-800">{formatCurrency(customer.totalSpent)}</strong></p>
+                  )}
                 </div>
               </article>
             ))}
           </div>
+            )}
+          </>
         )}
       </div>
     </div>

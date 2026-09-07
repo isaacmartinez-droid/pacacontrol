@@ -64,6 +64,7 @@ function mapBale(row, currentRevenue = 0) {
     receivedPieces: row.received_pieces,
     soldPieces: row.sold_pieces,
     damagedPieces: row.damaged_pieces,
+    availablePieces: row.available_pieces,
     currentRevenue,
     status: row.available_pieces > 0 ? 'En venta' : row.sold_pieces > 0 ? 'Agotada' : 'Sin piezas vendibles',
   }
