@@ -1,0 +1,192 @@
+@import url('https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --color-brand-50: #eef8f6;
+  --color-brand-100: #d7eeea;
+  --color-brand-200: #b1ddd6;
+  --color-brand-300: #7fc4ba;
+  --color-brand-400: #4ba59a;
+  --color-brand-500: #2f887e;
+  --color-brand-600: #246d65;
+  --color-brand-700: #205852;
+  --color-brand-800: #1c4944;
+  --color-brand-900: #123f3a;
+  --color-brand-950: #092725;
+  --color-coral-50: #fff6f1;
+  --color-coral-100: #ffe8dc;
+  --color-coral-500: #e77850;
+  --color-coral-600: #cf5e38;
+  --shadow-soft: 0 8px 30px rgba(22, 54, 50, 0.07);
+  --shadow-nav: 0 -8px 30px rgba(22, 54, 50, 0.08);
+  --font-sans: "Manrope", ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+:root {
+  color: #172522;
+  background: #e9efed;
+  font-family: var(--font-sans);
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  background: #e9efed;
+}
+
+body {
+  min-height: 100vh;
+  margin: 0;
+  overflow-x: hidden;
+}
+
+button,
+a {
+  -webkit-tap-highlight-color: transparent;
+}
+
+button {
+  font: inherit;
+}
+
+:focus-visible {
+  outline: 3px solid #e77850;
+  outline-offset: 3px;
+}
+
+.app-shell {
+  width: 100%;
+  min-height: 100vh;
+  min-height: 100dvh;
+}
+
+.app-content {
+  min-height: 100vh;
+  min-height: 100dvh;
+  padding-bottom: calc(6.75rem + env(safe-area-inset-bottom));
+}
+
+.bottom-navigation {
+  padding-bottom: max(0.55rem, env(safe-area-inset-bottom));
+}
+
+.page-frame {
+  width: 100%;
+  max-width: 80rem;
+  margin-inline: auto;
+}
+
+.page-content {
+  width: 100%;
+  max-width: 80rem;
+  margin-inline: auto;
+  padding-inline: 1rem;
+}
+
+.sale-input {
+  width: 100%;
+  min-height: 3rem;
+  border: 1px solid #dbe3e1;
+  border-radius: 0.75rem;
+  background: #fff;
+  padding: 0.75rem 1rem;
+  color: #172522;
+  font: inherit;
+  font-size: 0.875rem;
+  font-weight: 600;
+  outline: none;
+  transition: border-color 150ms ease, box-shadow 150ms ease;
+}
+
+.sale-input:hover {
+  border-color: #b1ddd6;
+}
+
+.sale-input:focus {
+  border-color: #2f887e;
+  box-shadow: 0 0 0 3px rgba(47, 136, 126, 0.14);
+}
+
+.sale-input--currency {
+  padding-left: 2.75rem;
+}
+
+.sale-input--icon {
+  padding-left: 2.75rem;
+}
+
+.no-scrollbar {
+  scrollbar-width: none;
+}
+
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+.bale-progress {
+  width: 100%;
+  height: 0.55rem;
+  overflow: hidden;
+  border: 0;
+  border-radius: 9999px;
+  background: #d7eeea;
+  appearance: none;
+}
+
+.bale-progress::-webkit-progress-bar {
+  border-radius: 9999px;
+  background: #d7eeea;
+}
+
+.bale-progress::-webkit-progress-value {
+  border-radius: 9999px;
+  background: #2f887e;
+}
+
+.bale-progress::-moz-progress-bar {
+  border-radius: 9999px;
+  background: #2f887e;
+}
+
+.bale-piece-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+@media (min-width: 360px) {
+  .bale-piece-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
+@media (min-width: 768px) {
+  .page-content {
+    padding-inline: 2rem;
+  }
+}
+
+@media (min-width: 1024px) {
+  .app-content {
+    padding-bottom: 0;
+  }
+}
+
+@media (min-width: 1280px) {
+  .page-content {
+    padding-inline: 2.5rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+  }
+}
