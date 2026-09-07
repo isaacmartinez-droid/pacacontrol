@@ -110,6 +110,7 @@ function DashboardPage() {
               detail="Listas para vender"
               badge="Stock"
               tone="neutral"
+              to="/inventario"
             />
             <SummaryCard
               icon={TriangleAlert}
