@@ -6,6 +6,7 @@ import { useAuth } from '../../context/AuthContext'
 function SidebarNavigation() {
   const { pathname } = useLocation()
   const { user, signOut } = useAuth()
+  const username = user?.user_metadata?.username ?? user?.email?.split('@')[0]
 
   return (
     <aside className="sticky top-0 hidden h-dvh w-[4.75rem] shrink-0 flex-col border-r border-brand-800 bg-brand-950 px-3 py-5 text-white shadow-xl shadow-brand-950/10 lg:flex xl:w-72 xl:px-4 xl:py-6">
@@ -73,7 +74,7 @@ function SidebarNavigation() {
         <div className="mt-3 hidden border-t border-white/10 pt-3 xl:block">
           <p className="flex min-w-0 items-center gap-2 text-xs font-semibold text-brand-100">
             <UserRound aria-hidden="true" size={14} />
-            <span className="truncate">{user?.email}</span>
+            <span className="truncate">{username}</span>
           </p>
           <button
             type="button"

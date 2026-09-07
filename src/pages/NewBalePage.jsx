@@ -9,7 +9,8 @@ import { usePacaData } from '../context/PacaDataContext'
 const today = new Date().toISOString().slice(0, 10)
 
 function NewBalePage() {
-  const { categories, createBale, isLoading } = usePacaData()
+  const { data, createBale, isLoading } = usePacaData()
+  const categories = data.categories
   const [form, setForm] = useState({
     purchaseDate: today,
     purchaseCost: '',

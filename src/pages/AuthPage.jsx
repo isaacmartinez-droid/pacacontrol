@@ -40,7 +40,7 @@ function AuthPage() {
         await signIn(form)
       }
     } catch (nextError) {
-      setError(nextError.message || 'No fue posible completar el acceso.')
+      setError(getAuthErrorMessage(nextError, isRegistering))
     } finally {
       setIsSubmitting(false)
     }
@@ -110,3 +110,22 @@ function AuthPage() {
 }
 
 export default AuthPage
+
+function getAuthErrorMessage(error, isRegistering) {
+  const messages = {
+    invalid_credentials: 'Usuario o contraseña incorrectos.',
+    email_not_confirmed: 'Esta cuenta quedó pendiente de confirmación. Elimínala en Supabase y créala nuevamente.',
+    user_already_exists: 'Ese usuario ya existe. Usa la opción “Ya tengo cuenta” para ingresar.',
+    signup_disabled: 'La creación de cuentas está desactivada en Supabase.',
+    email_provider_disabled: 'El acceso con usuario y contraseña está desactivado en Supabase.',
+    weak_password: 'La contraseña no cumple los requisitos de seguridad.',
+    over_request_rate_limit: 'Se hicieron demasiados intentos. Espera un momento y vuelve a probar.',
+  }
+
+  if (messages[error?.code]) return messages[error.code]
+  if (isRegistering && error?.message?.toLowerCase().includes('already registered')) {
+    return 'Ese usuario ya existe. Usa la opción “Ya tengo cuenta” para ingresar.'
+  }
+
+  return error?.message || 'No fue posible completar el acceso.'
+}

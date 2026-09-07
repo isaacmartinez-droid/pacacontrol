@@ -22,7 +22,7 @@ function ExpensesPage() {
           <p className="mt-1 text-3xl font-extrabold tracking-tight text-slate-900">
             {formatCurrency(totalExpenses)}
           </p>
-          <p className="mt-1 text-xs text-slate-400">Datos simulados de agosto</p>
+          <p className="mt-1 text-xs text-slate-400">Total acumulado en tu tienda</p>
         </section>
 
         <section aria-labelledby="expenses-list-title" className="max-w-3xl">

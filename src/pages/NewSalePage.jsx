@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
-import { CircleCheck, CreditCard, PackageCheck, ShoppingBag, Users } from 'lucide-react'
+import { CircleCheck, CreditCard, PackageCheck, PackageX, ShoppingBag, Users } from 'lucide-react'
 import { Link } from 'react-router-dom'
+import EmptyState from '../components/common/EmptyState'
 import PageHeader from '../components/common/PageHeader'
 import { formatCurrency } from '../utils/currency'
 import { usePacaData } from '../context/PacaDataContext'
@@ -11,7 +12,9 @@ const paymentMethods = [
 ]
 
 function NewSalePage() {
-  const { categories: clothingCategories, customers, registerSale, isLoading } = usePacaData()
+  const { data, registerSale, isLoading, error } = usePacaData()
+  const clothingCategories = data.categories
+  const customers = data.customers
   const [form, setForm] = useState({
     categoryId: '',
     quantity: 1,
@@ -24,14 +27,19 @@ function NewSalePage() {
   const [isSaving, setIsSaving] = useState(false)
 
   useEffect(() => {
-    if (!form.categoryId && clothingCategories[0]) {
-      setForm((current) => ({ ...current, categoryId: clothingCategories[0].id }))
+    const firstAvailableCategory = clothingCategories.find((category) => category.availablePieces > 0)
+    const selectedCategoryIsAvailable = clothingCategories.some(
+      (category) => category.id === form.categoryId && category.availablePieces > 0,
+    )
+
+    if (firstAvailableCategory && !selectedCategoryIsAvailable) {
+      setForm((current) => ({ ...current, categoryId: firstAvailableCategory.id }))
     }
   }, [clothingCategories, form.categoryId])
 
   const selectedCategory = useMemo(
     () => clothingCategories.find((category) => category.id === form.categoryId),
-    [form.categoryId],
+    [clothingCategories, form.categoryId],
   )
   const availablePieces = Math.max(
     0,
@@ -52,7 +60,12 @@ function NewSalePage() {
   async function handleSubmit(event) {
     event.preventDefault()
 
-    if (!selectedCategory || quantity < 1) {
+    if (!selectedCategory) {
+      setFormError('Primero registra una paca con inventario disponible.')
+      return
+    }
+
+    if (quantity < 1) {
       setFormError('Ingresa al menos una pieza para continuar.')
       return
     }
@@ -83,6 +96,8 @@ function NewSalePage() {
     setForm((currentForm) => ({ ...currentForm, quantity: 1, unitPrice: 180 }))
   }
 
+  const hasAvailableInventory = clothingCategories.some((category) => category.availablePieces > 0)
+
   return (
     <div>
       <PageHeader
@@ -92,7 +107,14 @@ function NewSalePage() {
         backTo="/ventas"
       />
       <div className="page-content py-6 md:py-8">
-        {completedSale ? (
+        {!isLoading && !error && !hasAvailableInventory ? (
+          <EmptyState
+            icon={PackageX}
+            title="No hay piezas disponibles para vender"
+            description="Registra primero una paca. Cuando tenga inventario, podrás crear la venta desde aquí."
+            action={{ to: '/pacas/nueva', label: 'Registrar una paca' }}
+          />
+        ) : completedSale ? (
           <SaleConfirmation sale={completedSale} onRegisterAnother={registerAnotherSale} />
         ) : (
           <form className="grid items-start gap-5 lg:grid-cols-[minmax(0,1.35fr)_minmax(19rem,0.65fr)] lg:gap-8" onSubmit={handleSubmit}>
@@ -258,7 +280,7 @@ function NewSalePage() {
 
               <button
                 type="submit"
-                disabled={availablePieces === 0 || isSaving || isLoading}
+                disabled={isSaving || isLoading}
                 className="mt-6 flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-white px-5 text-sm font-extrabold text-brand-950 transition hover:bg-brand-50 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
               >
                 <PackageCheck aria-hidden="true" size={19} />
