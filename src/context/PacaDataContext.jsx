@@ -222,7 +222,7 @@ function AccountPacaDataProvider({ userId, children }) {
           bales: mappedBales,
           sales: sales.data.map(mapSale),
           customers: customers.data.map(mapCustomer),
-          expenses: expenses.data.map((row) => ({ id: row.id, concept: row.concept, dateLabel: formatShortDate(row.expense_date), amount: asNumber(row.amount) })),
+          expenses: expenses.data.map((row) => ({ id: row.id, concept: row.concept, expenseDate: row.expense_date, dateLabel: formatShortDate(row.expense_date), amount: asNumber(row.amount) })),
           dailySummaries: dailySummaries.data.map(mapDailySummary),
           baleInventory: baleInventory.data.map((row) => ({
             id: row.id,

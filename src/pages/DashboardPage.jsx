@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import {
-  BadgeDollarSign,
+  CircleDollarSign,
   PackageCheck,
   Plus,
   ShoppingBag,
@@ -16,11 +16,12 @@ import SectionTitle from '../components/common/SectionTitle'
 import { formatCurrency } from '../utils/currency'
 import { useAuth } from '../context/AuthContext'
 import { usePacaData } from '../context/PacaDataContext'
+import { calculateDashboardFinancials } from '../utils/dashboardFinancials'
 
 const dashboardPeriods = [
-  { id: 'today', label: 'Hoy', salesLabel: 'Ventas de hoy' },
-  { id: 'week', label: 'Esta semana', salesLabel: 'Ventas semanales' },
-  { id: 'month', label: 'Este mes', salesLabel: 'Ventas del mes' },
+  { id: 'today', label: 'Hoy', resultSuffix: 'de hoy', collectedSuffix: 'hoy' },
+  { id: 'week', label: 'Esta semana', resultSuffix: 'de la semana', collectedSuffix: 'esta semana' },
+  { id: 'month', label: 'Este mes', resultSuffix: 'del mes', collectedSuffix: 'este mes' },
 ]
 
 function DashboardPage() {
@@ -37,12 +38,12 @@ function DashboardPage() {
   }, [])
 
   const summary = {
-    sales: data.sales.reduce((total, sale) => total + sale.total, 0),
-    estimatedProfit: data.sales.reduce((total, sale) => total + sale.estimatedProfit, 0),
     availablePieces: data.categories.reduce((total, category) => total + category.availablePieces, 0),
     damagedPieces: data.bales.reduce((total, bale) => total + bale.damagedPieces, 0),
   }
   const period = dashboardPeriods.find((item) => item.id === selectedPeriod)
+  const financials = calculateDashboardFinancials(data, selectedPeriod)
+  const hasProfit = financials.netResult >= 0
   const activeBale = data.bales[0]
 
   return (
@@ -89,19 +90,20 @@ function DashboardPage() {
           </div>
           <div className="grid grid-cols-[repeat(auto-fit,minmax(min(100%,10rem),1fr))] gap-3 md:grid-cols-4 md:gap-4">
             <SummaryCard
-              icon={BadgeDollarSign}
-              label={period.salesLabel}
-              value={formatCurrency(summary.sales)}
-              detail="Ingresos registrados"
-              badge="Actual"
+              icon={hasProfit ? TrendingUp : TriangleAlert}
+              label={`${hasProfit ? 'Ganancia neta' : 'Pérdida neta'} ${period.resultSuffix}`}
+              value={formatCurrency(Math.abs(financials.netResult))}
+              detail="Después de prendas, delivery y gastos"
+              badge="Estimado"
+              tone={hasProfit ? 'positive' : 'warning'}
             />
             <SummaryCard
-              icon={TrendingUp}
-              label="Ganancia estimada"
-              value={formatCurrency(summary.estimatedProfit)}
-              detail="Después de costos"
-              badge="Estimado"
-              tone="positive"
+              icon={CircleDollarSign}
+              label={`Dinero cobrado ${period.collectedSuffix}`}
+              value={formatCurrency(financials.collected)}
+              detail={financials.receivables > 0 ? `Por cobrar: ${formatCurrency(financials.receivables)}` : 'Sin saldos pendientes'}
+              badge="Cobros"
+              tone={financials.receivables > 0 ? 'warning' : 'positive'}
             />
             <SummaryCard
               icon={PackageCheck}
@@ -160,9 +162,9 @@ function DashboardPage() {
           </section>
 
           <section aria-labelledby="recent-sales-title">
-            <SectionTitle title="Ventas recientes" linkTo="/ventas" />
+            <SectionTitle title="Ventas recientes" linkTo="/ventas" linkLabel={data.sales.length > 2 ? `Ver ${data.sales.length - 2} más` : 'Ver todas'} />
             <div className="mt-3 space-y-2.5">
-              {data.sales.slice(0, 3).map((sale) => (
+              {data.sales.slice(0, 2).map((sale) => (
                 <RecentSaleCard key={sale.id} sale={sale} />
               ))}
               {!isLoading && data.sales.length === 0 && <p className="rounded-2xl bg-white p-5 text-sm font-semibold text-slate-500">Aún no hay ventas registradas.</p>}

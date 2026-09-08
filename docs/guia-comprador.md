@@ -31,6 +31,13 @@ Al iniciar sesión verás el panel principal. Desde allí puedes abrir:
 
 Las tarjetas **Piezas disponibles** y **Piezas dañadas** del panel se pueden pulsar: abren directamente Inventario y Productos dañados.
 
+El panel separa dos cifras financieras importantes:
+
+- **Ganancia o pérdida neta:** ventas del período menos costo de prendas, delivery y gastos operativos.
+- **Dinero cobrado:** pagos que realmente ingresaron durante el período, aunque correspondan a una venta anterior. También muestra el saldo pendiente por cobrar.
+
+Puedes cambiar entre **Hoy**, **Esta semana** y **Este mes**. En Ventas recientes se muestran solamente los dos últimos pedidos; pulsa **Ver más** para abrir el historial completo.
+
 ## 3. Registrar una paca variada
 
 Una paca puede contener diferentes tipos de prendas. No necesitas crear una paca separada para pantalones, camisas o ropa deportiva que venían en la misma compra.
