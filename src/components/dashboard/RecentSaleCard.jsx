@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { Check, CircleDollarSign, PackageCheck, ShoppingBag, Truck } from 'lucide-react'
 import { formatCurrency } from '../../utils/currency'
 
@@ -9,6 +10,7 @@ const deliverySteps = [
 ]
 
 function RecentSaleCard({ sale, onAdvanceStatus, onConfirmPayment, isUpdating = false }) {
+  const [finalPaymentMethod, setFinalPaymentMethod] = useState('cash')
   const currentStep = Math.max(
     0,
     deliverySteps.findIndex((step) => step.id === sale.deliveryStatus),
@@ -76,16 +78,7 @@ function RecentSaleCard({ sale, onAdvanceStatus, onConfirmPayment, isUpdating = 
         })}
       </div>
 
-      {onConfirmPayment && sale.paymentStatus !== 'paid' && (
-        <button
-          type="button"
-          disabled={isUpdating}
-          onClick={() => onConfirmPayment(sale.id, { paymentStatus: 'paid', paidAmount: sale.total, paymentMethod: sale.paymentMethod })}
-          className="mt-3 flex min-h-10 w-full items-center justify-center rounded-xl bg-emerald-50 px-4 text-xs font-extrabold text-emerald-800 transition hover:bg-emerald-100 active:scale-[0.98] disabled:cursor-wait disabled:opacity-60"
-        >
-          {isUpdating ? 'Actualizando…' : 'Confirmar pago completo'}
-        </button>
-      )}
+      {onConfirmPayment && sale.paymentStatus !== 'paid' && <div className="mt-3 grid grid-cols-[1fr_auto] gap-2"><label className="sr-only" htmlFor={`payment-${sale.id}`}>Método del pago final</label><select id={`payment-${sale.id}`} value={finalPaymentMethod} onChange={(event) => setFinalPaymentMethod(event.target.value)} className="sale-input min-h-10 py-1 text-xs"><option value="cash">Efectivo</option><option value="transfer">Transferencia</option><option value="card">Tarjeta</option><option value="other">Otro</option></select><button type="button" disabled={isUpdating} onClick={() => onConfirmPayment(sale.id, finalPaymentMethod)} className="min-h-10 rounded-xl bg-emerald-50 px-4 text-xs font-extrabold text-emerald-800 transition hover:bg-emerald-100 disabled:opacity-60">{isUpdating ? 'Actualizando…' : 'Cobrar saldo'}</button></div>}
 
       {onAdvanceStatus && nextStep && sale.paymentStatus === 'paid' && (
         <button

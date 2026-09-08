@@ -77,22 +77,38 @@ function mapSale(row) {
   )))]
   const deliveryStatus = deliveryStatuses.includes(row.delivery_status) ? row.delivery_status : 'to_prepare'
   const paymentStatus = paymentStatuses.includes(row.payment_status) ? row.payment_status : 'paid'
-  const paidAmount = paymentStatus === 'paid' ? asNumber(row.total) : asNumber(row.paid_amount)
+  const paidAmount = asNumber(row.paid_amount)
+  const total = asNumber(row.total)
+  const merchandiseTotal = asNumber(row.merchandise_total ?? total - asNumber(row.delivery_charge))
+  const deliveryCost = asNumber(row.delivery_cost)
+  const estimatedMerchandiseCost = asNumber(row.estimated_merchandise_cost)
 
   return {
     id: row.id,
     customerId: row.customer_id,
     customerName: row.customer?.name ?? 'Venta de mostrador',
     pieces: items.reduce((total, item) => total + item.quantity, 0),
-    total: asNumber(row.total),
+    total,
+    merchandiseTotal,
+    deliveryCost,
+    deliveryCharge: asNumber(row.delivery_charge),
+    estimatedMerchandiseCost,
+    estimatedProfit: total - estimatedMerchandiseCost - deliveryCost,
     dateLabel: formatShortDate(row.sold_at),
     soldAt: row.sold_at,
     hasDeliveryStatus: deliveryStatuses.includes(row.delivery_status),
     deliveryStatus,
     paymentStatus,
     paidAmount,
-    balance: Math.max(0, asNumber(row.total) - paidAmount),
+    balance: Math.max(0, total - paidAmount),
     paymentMethod: row.payment_method,
+    firstPaymentAmount: asNumber(row.first_payment_amount ?? paidAmount),
+    firstPaymentMethod: row.first_payment_method ?? (paidAmount > 0 ? row.payment_method : null),
+    firstPaymentAt: row.first_payment_at ?? (paidAmount > 0 ? row.sold_at : null),
+    secondPaymentAmount: asNumber(row.second_payment_amount),
+    secondPaymentMethod: row.second_payment_method,
+    secondPaymentAt: row.second_payment_at,
+    lastPaymentAt: row.second_payment_at ?? row.first_payment_at ?? row.sold_at,
     baleCodes,
   }
 }
@@ -124,6 +140,10 @@ function mapDailySummary(row) {
     expensesTotal: asNumber(row.expenses_total),
     netResult: asNumber(row.net_result),
     pendingDeliveries: row.pending_deliveries ?? 0,
+    ordersTotal: asNumber(row.orders_total),
+    deliveryCostTotal: asNumber(row.delivery_cost_total),
+    deliveryChargeTotal: asNumber(row.delivery_charge_total),
+    pendingReceivables: asNumber(row.pending_receivables),
   }
 }
 
@@ -170,6 +190,8 @@ function AccountPacaDataProvider({ userId, children }) {
         const baleId = row.inventory?.bale_id
         if (baleId) revenueByBale.set(baleId, (revenueByBale.get(baleId) ?? 0) + row.quantity * asNumber(row.sale_item?.unit_price))
       })
+      const mappedBales = bales.data.map((row) => mapBale(row, revenueByBale.get(row.id) ?? 0))
+      const balesById = new Map(mappedBales.map((bale) => [bale.id, bale]))
       lastRefreshAt.current = Date.now()
       setState({
         isLoading: false,
@@ -177,12 +199,17 @@ function AccountPacaDataProvider({ userId, children }) {
         lastUpdatedAt: lastRefreshAt.current,
         data: {
           categories: categories.data.map((row) => ({ id: row.category_id, name: row.name, receivedPieces: row.received_pieces, availablePieces: row.available_pieces })),
-          bales: bales.data.map((row) => mapBale(row, revenueByBale.get(row.id) ?? 0)),
+          bales: mappedBales,
           sales: sales.data.map(mapSale),
           customers: customers.data.map(mapCustomer),
           expenses: expenses.data.map((row) => ({ id: row.id, concept: row.concept, dateLabel: formatShortDate(row.expense_date), amount: asNumber(row.amount) })),
           dailySummaries: dailySummaries.data.map(mapDailySummary),
-          baleInventory: baleInventory.data.map((row) => ({ id: row.id, baleId: row.bale_id, baleCode: row.bale?.code ?? 'Paca', categoryId: row.category_id, categoryName: row.category?.name ?? 'Categoría', availablePieces: row.available_quantity })),
+          baleInventory: baleInventory.data.map((row) => {
+            const bale = balesById.get(row.bale_id)
+            const sellablePieces = Math.max(0, (bale?.receivedPieces ?? 0) - (bale?.damagedPieces ?? 0))
+            const investment = (bale?.purchaseCost ?? 0) + (bale?.acquisitionTransport ?? 0) + (bale?.otherExpenses ?? 0)
+            return { id: row.id, baleId: row.bale_id, baleCode: row.bale?.code ?? 'Paca', categoryId: row.category_id, categoryName: row.category?.name ?? 'Categoría', availablePieces: row.available_quantity, estimatedUnitCost: sellablePieces > 0 ? investment / sellablePieces : 0 }
+          }),
           damagedProducts: damagedProducts.data.map((row) => ({ id: row.id, baleCode: row.inventory?.bale?.code ?? 'Paca', category: row.inventory?.category?.name ?? 'Sin categoría', quantity: row.quantity, reason: row.reason })),
         },
       })
@@ -258,7 +285,7 @@ function AccountPacaDataProvider({ userId, children }) {
     }
   }, [refresh])
 
-  const registerSale = useCallback(async ({ categoryId, quantity, unitPrice, paymentMethod, customerId, baleInventoryId = null, paymentStatus = 'paid', paidAmount = null }) => {
+  const registerSale = useCallback(async ({ categoryId, quantity, unitPrice, paymentMethod, customerId, baleInventoryId, paymentStatus = 'paid', paidAmount = null, deliveryCost = 0, deliveryCharge = 0 }) => {
     const { error } = await getSupabaseClient().rpc('register_sale', {
       p_category_id: categoryId,
       p_quantity: quantity,
@@ -268,6 +295,8 @@ function AccountPacaDataProvider({ userId, children }) {
       p_bale_inventory_id: baleInventoryId || null,
       p_payment_status: paymentStatus,
       p_paid_amount: paidAmount,
+      p_delivery_cost: deliveryCost,
+      p_delivery_charge: deliveryCharge,
     })
     if (error) throw error
     await refresh()
@@ -317,6 +346,15 @@ function AccountPacaDataProvider({ userId, children }) {
     await refresh()
   }, [refresh])
 
+  const completeSalePayment = useCallback(async (saleId, paymentMethod) => {
+    const { error } = await getSupabaseClient().rpc('complete_sale_payment', {
+      p_sale_id: saleId,
+      p_payment_method: paymentMethod,
+    })
+    if (error) throw error
+    await refresh()
+  }, [refresh])
+
   const createCustomer = useCallback(async ({ name, phone, isPriority }) => {
     const { data, error } = await getSupabaseClient()
       .from('customers')
@@ -334,8 +372,8 @@ function AccountPacaDataProvider({ userId, children }) {
   }, [refresh])
 
   const value = useMemo(
-    () => ({ ...state, refresh, createBale, createCustomer, registerSale, registerDamage, updateSaleDeliveryStatus, updateSalePayment }),
-    [state, refresh, createBale, createCustomer, registerSale, registerDamage, updateSaleDeliveryStatus, updateSalePayment],
+    () => ({ ...state, refresh, createBale, createCustomer, registerSale, registerDamage, updateSaleDeliveryStatus, updateSalePayment, completeSalePayment }),
+    [state, refresh, createBale, createCustomer, registerSale, registerDamage, updateSaleDeliveryStatus, updateSalePayment, completeSalePayment],
   )
   return <PacaDataContext.Provider value={value}>{children}</PacaDataContext.Provider>
 }

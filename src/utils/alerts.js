@@ -3,6 +3,7 @@ export const defaultAlertSettings = Object.freeze({
   stockLimit: 10,
   deliveryEnabled: true,
   deliveryHours: 24,
+  debtEnabled: true,
   damageEnabled: true,
   damagePercent: 10,
 })
@@ -10,7 +11,7 @@ export const defaultAlertSettings = Object.freeze({
 export function normalizeAlertSettings(value = {}) {
   const settings = { ...defaultAlertSettings }
   if (!value || typeof value !== 'object') return settings
-  for (const key of ['stockEnabled', 'deliveryEnabled', 'damageEnabled']) {
+  for (const key of ['stockEnabled', 'deliveryEnabled', 'debtEnabled', 'damageEnabled']) {
     if (typeof value[key] === 'boolean') settings[key] = value[key]
   }
   for (const [key, min, max] of [['stockLimit', 0, 10000], ['deliveryHours', 1, 720], ['damagePercent', 1, 100]]) {
@@ -60,6 +61,38 @@ export function buildAlerts(data, settings = defaultAlertSettings, now = Date.no
         detail: `${Math.floor((now - soldAt) / 3600000)} h desde el registro · ${sale.dateLabel}`,
         to: `/ventas?venta=${encodeURIComponent(sale.id)}`,
         action: 'Revisar pedido',
+      })
+    }
+  }
+
+  if (rules.debtEnabled) {
+    const debts = new Map()
+    for (const sale of data.sales) {
+      if (!sale.customerId || !(sale.balance > 0)) continue
+      const referenceAt = Date.parse(sale.lastPaymentAt ?? sale.soldAt)
+      if (!Number.isFinite(referenceAt)) continue
+      const current = debts.get(sale.customerId) ?? { customerId: sale.customerId, customerName: sale.customerName, balance: 0, referenceAt, sales: 0 }
+      current.balance += sale.balance
+      current.sales += 1
+      // Si tiene varios pedidos, uno reciente no debe ocultar una deuda vieja.
+      current.referenceAt = Math.min(current.referenceAt, referenceAt)
+      debts.set(sale.customerId, current)
+    }
+    for (const debt of debts.values()) {
+      const elapsed = now - debt.referenceAt
+      const wait = 24 * 3600000
+      if (elapsed < wait) continue
+      const reminder = Math.floor((elapsed - wait) / (5 * 3600000))
+      alerts.push({
+        id: `debt:${debt.customerId}`,
+        revision: `overdue-${reminder}`,
+        type: 'debt',
+        priority: 0,
+        title: `Cobro pendiente: ${debt.customerName}`,
+        description: `Tiene un saldo pendiente de C$${debt.balance.toLocaleString('es', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}.`,
+        detail: `${debt.sales} ${debt.sales === 1 ? 'pedido pendiente' : 'pedidos pendientes'} · recordatorio cada 5 horas`,
+        to: `/clientes/${encodeURIComponent(debt.customerId)}`,
+        action: 'Ver historial y cobrar',
       })
     }
   }
@@ -114,7 +147,7 @@ export function parseAlertPreferences(serialized) {
     return {
       settings: normalizeAlertSettings(parsed?.settings),
       reads: Object.fromEntries(Object.entries(parsed?.reads ?? {})
-        .filter(([id, revision]) => /^(stock|delivery|damage|bale):/.test(id) && typeof revision === 'string')),
+        .filter(([id, revision]) => /^(stock|delivery|debt|damage|bale):/.test(id) && typeof revision === 'string')),
     }
   } catch {
     return { settings: { ...defaultAlertSettings }, reads: {} }

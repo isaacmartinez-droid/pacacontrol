@@ -6,7 +6,7 @@ import RecentSaleCard from '../components/dashboard/RecentSaleCard'
 import { usePacaData } from '../context/PacaDataContext'
 
 function SalesPage() {
-  const { data, updateSaleDeliveryStatus, updateSalePayment } = usePacaData()
+  const { data, updateSaleDeliveryStatus, completeSalePayment } = usePacaData()
   const [searchParams] = useSearchParams()
   const selectedId = searchParams.get('venta')
   const recentSales = selectedId ? data.sales.filter((sale) => sale.id === selectedId) : data.sales
@@ -26,10 +26,10 @@ function SalesPage() {
     }
   }
 
-  async function handleConfirmPayment(saleId, payment) {
+  async function handleConfirmPayment(saleId, paymentMethod) {
     setUpdatingSaleId(saleId)
     setStatusError('')
-    try { await updateSalePayment(saleId, payment) }
+    try { await completeSalePayment(saleId, paymentMethod) }
     catch (error) { setStatusError(error.message || 'No fue posible actualizar el pago.') }
     finally { setUpdatingSaleId('') }
   }

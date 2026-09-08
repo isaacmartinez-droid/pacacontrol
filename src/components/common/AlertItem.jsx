@@ -1,10 +1,12 @@
-import { ArrowUpRight, PackageSearch, TriangleAlert, Truck } from 'lucide-react'
+import { ArrowUpRight, CircleDollarSign, PackageSearch, TriangleAlert, Truck } from 'lucide-react'
 import { Link } from 'react-router-dom'
 
 const styles = {
   stock: { icon: PackageSearch, tone: 'bg-coral-50 text-coral-600' },
   delivery: { icon: Truck, tone: 'bg-sky-50 text-sky-700' },
+  debt: { icon: CircleDollarSign, tone: 'bg-red-50 text-red-700' },
   damage: { icon: TriangleAlert, tone: 'bg-amber-50 text-amber-700' },
+  bale: { icon: PackageSearch, tone: 'bg-coral-50 text-coral-600' },
 }
 
 export default function AlertItem({ notification, onOpen }) {

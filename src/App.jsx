@@ -4,6 +4,7 @@ import AppShell from './components/layout/AppShell'
 import AuthPage from './pages/AuthPage'
 import BalesPage from './pages/BalesPage'
 import CustomersPage from './pages/CustomersPage'
+import CustomerDetailPage from './pages/CustomerDetailPage'
 import DamagedProductsPage from './pages/DamagedProductsPage'
 import DashboardPage from './pages/DashboardPage'
 import ExpensesPage from './pages/ExpensesPage'
@@ -31,6 +32,7 @@ function App() {
         <Route path="ventas" element={<SalesPage />} />
         <Route path="clientes/nuevo" element={<NewCustomerPage />} />
         <Route path="clientes" element={<CustomersPage />} />
+        <Route path="clientes/:customerId" element={<CustomerDetailPage />} />
         <Route path="gastos" element={<ExpensesPage />} />
         <Route path="productos-danados" element={<DamagedProductsPage />} />
         <Route path="reportes" element={<ReportsPage />} />

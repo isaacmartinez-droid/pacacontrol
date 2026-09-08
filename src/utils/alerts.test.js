@@ -35,6 +35,26 @@ test('el recordatorio de entrega se activa al cumplir 24 horas, incluso sin nuev
   assert.equal(buildAlerts(data, undefined, now)[0].to, '/ventas?venta=sale-1')
 })
 
+test('la deuda avisa a las 24 horas y repite su revisión cada 5 horas', () => {
+  const debtSale = sale({ paymentStatus: 'partial', deliveryStatus: 'to_prepare', balance: 150, lastPaymentAt: '2026-09-06T18:00:00Z' })
+  assert.equal(buildAlerts(store({ sales: [debtSale] }), undefined, now - 1).length, 0)
+  const first = buildAlerts(store({ sales: [debtSale] }), undefined, now)[0]
+  assert.equal(first.id, 'debt:customer-1')
+  assert.equal(first.revision, 'overdue-0')
+  assert.equal(first.to, '/clientes/customer-1')
+  const repeated = buildAlerts(store({ sales: [debtSale] }), undefined, now + 5 * 3600000)[0]
+  assert.equal(repeated.revision, 'overdue-1')
+  assert.equal(buildAlerts(store({ sales: [{ ...debtSale, balance: 0, paymentStatus: 'paid' }] }), undefined, now).some((alert) => alert.type === 'debt'), false)
+})
+
+test('agrupa en una alerta todas las deudas activas del mismo cliente', () => {
+  const debts = [sale({ balance: 100, paymentStatus: 'partial', lastPaymentAt: '2026-09-06T18:00:00Z' }), sale({ id: 'sale-2', balance: 75, paymentStatus: 'pending', lastPaymentAt: '2026-09-07T17:00:00Z' })]
+  const alerts = buildAlerts(store({ sales: debts }), undefined, now)
+  assert.equal(alerts.length, 1)
+  assert.match(alerts[0].description, /175/)
+  assert.match(alerts[0].detail, /2 pedidos/)
+})
+
 test('despachar o entregar resuelve la alerta; mostrador, esquema antiguo y fechas inválidas no avisan', () => {
   for (const changes of [
     { deliveryStatus: 'ready' }, { deliveryStatus: 'on_the_way' }, { deliveryStatus: 'delivered' }, { paymentStatus: 'pending' },

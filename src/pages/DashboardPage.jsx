@@ -38,7 +38,7 @@ function DashboardPage() {
 
   const summary = {
     sales: data.sales.reduce((total, sale) => total + sale.total, 0),
-    estimatedProfit: data.sales.reduce((total, sale) => total + sale.total, 0) - data.bales.reduce((total, bale) => total + bale.purchaseCost + bale.acquisitionTransport + bale.otherExpenses, 0),
+    estimatedProfit: data.sales.reduce((total, sale) => total + sale.estimatedProfit, 0),
     availablePieces: data.categories.reduce((total, category) => total + category.availablePieces, 0),
     damagedPieces: data.bales.reduce((total, bale) => total + bale.damagedPieces, 0),
   }

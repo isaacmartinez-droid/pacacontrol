@@ -41,15 +41,14 @@ export function makePushPlan(data, subscription, now = Date.now()) {
   const notified = reconcileAlertReads(previous, alerts)
   const fresh = alerts.filter((alert) => notified[alert.id] !== alert.revision)
   for (const alert of fresh) notified[alert.id] = alert.revision
-  return {
-    notified,
-    payload: fresh.length ? {
-      title: 'PacaControl',
-      body: `${fresh.length} ${fresh.length === 1 ? 'alerta nueva necesita' : 'alertas nuevas necesitan'} tu atención. Abre la aplicación para revisar inventario, entregas o pacas.`,
-      url: '/alertas',
-      tag: 'pacacontrol-alertas',
-    } : null,
-  }
+  return { notified, payloads: fresh.map((alert) => ({
+    title: alert.type === 'debt' ? 'Cobro pendiente' : 'PacaControl',
+    body: alert.type === 'debt'
+      ? 'Un cliente tiene un pago pendiente desde hace más de 24 horas. Abre la aplicación para revisar el historial.'
+      : 'Una alerta necesita tu atención. Abre la aplicación para revisar los detalles.',
+    url: alert.to,
+    tag: `pacacontrol-${alert.id.replace(':', '-')}`,
+  })) }
 }
 
 export async function sendPush(subscription, payload) {
@@ -84,14 +83,16 @@ export async function loadOwnerAlertsData(admin, ownerId, deadline) {
     categories: categories.map((row) => ({ id: row.category_id, name: row.name, receivedPieces: row.received_pieces, availablePieces: row.available_pieces })),
     bales: bales.map((row) => ({ id: row.id, code: row.code, receivedPieces: row.received_pieces, soldPieces: row.sold_pieces, damagedPieces: row.damaged_pieces, availablePieces: row.available_pieces })),
     sales: sales.map((row) => ({ id: row.id, customerId: row.customer_id, customerName: row.customer?.name ?? 'Cliente', soldAt: row.sold_at,
-      dateLabel: '', hasDeliveryStatus: ['to_prepare', 'ready', 'on_the_way', 'delivered'].includes(row.delivery_status), deliveryStatus: row.delivery_status, paymentStatus: row.payment_status ?? 'paid' })),
+      dateLabel: '', hasDeliveryStatus: ['to_prepare', 'ready', 'on_the_way', 'delivered'].includes(row.delivery_status), deliveryStatus: row.delivery_status,
+      paymentStatus: row.payment_status ?? 'paid', balance: Math.max(0, Number(row.total) - Number(row.paid_amount)),
+      lastPaymentAt: row.second_payment_at ?? row.first_payment_at ?? row.sold_at })),
   }
 }
 
 export async function processPushSubscription(admin, subscription, data, send = sendPush) {
   const plan = makePushPlan(data, subscription)
   try {
-    if (plan.payload) await send(subscription, plan.payload)
+    for (const payload of plan.payloads) await send(subscription, payload)
   } catch (error) {
     if (error.statusCode === 404 || error.statusCode === 410 || !validPushEndpoint(subscription.endpoint)) {
       const { error: deleteError } = await admin.from('push_subscriptions').delete().eq('id', subscription.id)
@@ -105,5 +106,5 @@ export async function processPushSubscription(admin, subscription, data, send = 
     .update({ notified: plan.notified, last_checked_at: new Date().toISOString() })
     .eq('id', subscription.id)
   if (error) throw error
-  return plan.payload ? 'sent' : 'unchanged'
+  return plan.payloads.length ? 'sent' : 'unchanged'
 }

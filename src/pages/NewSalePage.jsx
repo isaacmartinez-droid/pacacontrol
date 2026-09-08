@@ -1,423 +1,148 @@
 import { useEffect, useMemo, useState } from 'react'
-import { CircleCheck, CreditCard, PackageCheck, PackageX, ShoppingBag, Users } from 'lucide-react'
+import { CircleCheck, CreditCard, PackageCheck, PackageX, ShoppingBag, Truck, Users } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import EmptyState from '../components/common/EmptyState'
 import PageHeader from '../components/common/PageHeader'
 import { formatCurrency } from '../utils/currency'
 import { usePacaData } from '../context/PacaDataContext'
 
-const paymentMethods = [
+export const paymentMethods = [
   { id: 'cash', label: 'Efectivo' },
   { id: 'transfer', label: 'Transferencia' },
+  { id: 'card', label: 'Tarjeta' },
+  { id: 'other', label: 'Otro' },
 ]
 
 function NewSalePage() {
-  const { data, registerSale, isLoading, error } = usePacaData()
-  const clothingCategories = data.categories.filter((category) => category.availablePieces > 0)
-  const customers = data.customers
+  const { data, registerSale, createCustomer, isLoading, error } = usePacaData()
+  const categories = data.categories.filter((category) => category.availablePieces > 0)
   const [form, setForm] = useState({
-    categoryId: '',
-    quantity: 1,
-    unitPrice: 180,
-    customerId: 'walk-in',
-    paymentMethod: 'cash',
-    paymentStatus: 'paid',
-    paidAmount: '',
-    baleInventoryId: 'auto',
+    categoryId: '', baleInventoryId: '', quantity: 1, unitPrice: 180,
+    customerId: 'walk-in', newCustomerName: '', newCustomerPhone: '',
+    deliveryCost: 0, deliveryCharge: 0,
+    paymentStatus: 'paid', paymentMethod: 'cash', paidAmount: '',
   })
   const [formError, setFormError] = useState('')
   const [completedSale, setCompletedSale] = useState(null)
   const [isSaving, setIsSaving] = useState(false)
 
   useEffect(() => {
-    const firstAvailableCategory = clothingCategories.find((category) => category.availablePieces > 0)
-    const selectedCategoryIsAvailable = clothingCategories.some(
-      (category) => category.id === form.categoryId && category.availablePieces > 0,
-    )
-
-    if (firstAvailableCategory && !selectedCategoryIsAvailable) {
-      setForm((current) => ({ ...current, categoryId: firstAvailableCategory.id }))
+    if (categories.length && !categories.some((category) => category.id === form.categoryId)) {
+      setForm((current) => ({ ...current, categoryId: categories[0].id, baleInventoryId: '' }))
     }
-  }, [clothingCategories, form.categoryId])
+  }, [categories, form.categoryId])
 
-  const selectedCategory = useMemo(
-    () => clothingCategories.find((category) => category.id === form.categoryId),
-    [clothingCategories, form.categoryId],
-  )
+  const selectedCategory = categories.find((category) => category.id === form.categoryId)
   const baleOptions = useMemo(
     () => data.baleInventory.filter((inventory) => inventory.categoryId === form.categoryId),
     [data.baleInventory, form.categoryId],
   )
-  const selectedBaleInventory = baleOptions.find((inventory) => inventory.id === form.baleInventoryId)
-  const availablePieces = Math.max(
-    0,
-    selectedBaleInventory?.availablePieces ?? selectedCategory?.availablePieces ?? 0,
-  )
+  const selectedInventory = baleOptions.find((inventory) => inventory.id === form.baleInventoryId)
   const quantity = Number(form.quantity) || 0
   const unitPrice = Number(form.unitPrice) || 0
-  const total = quantity * unitPrice
-  const selectedCustomer = customers.find((customer) => customer.id === form.customerId)
-  const customerName = selectedCustomer?.name ?? 'Venta de mostrador'
-  const paymentLabel = paymentMethods.find((method) => method.id === form.paymentMethod)?.label
-  const paymentStatusLabels = { pending: 'Pendiente', partial: 'Parcial', paid: 'Pagado' }
+  const merchandiseTotal = quantity * unitPrice
+  const hasDelivery = form.customerId !== 'walk-in'
+  const deliveryCost = hasDelivery ? Number(form.deliveryCost) || 0 : 0
+  const deliveryCharge = hasDelivery ? Number(form.deliveryCharge) || 0 : 0
+  const total = merchandiseTotal + deliveryCharge
+  const firstPayment = form.paymentStatus === 'paid' ? total : form.paymentStatus === 'pending' ? 0 : Number(form.paidAmount) || 0
+  const balance = Math.max(0, total - firstPayment)
+  const merchandiseCost = quantity * (selectedInventory?.estimatedUnitCost ?? 0)
+  const estimatedProfit = total - merchandiseCost - deliveryCost
+  const selectedCustomer = data.customers.find((customer) => customer.id === form.customerId)
+  const customerName = form.customerId === 'new' ? form.newCustomerName.trim() || 'Cliente nuevo' : selectedCustomer?.name ?? 'Venta de mostrador'
 
-  function updateForm(field, value) {
-    setForm((currentForm) => ({
-      ...currentForm,
+  function update(field, value) {
+    setForm((current) => ({
+      ...current,
       [field]: value,
-      ...(field === 'categoryId' ? { baleInventoryId: 'auto' } : {}),
+      ...(field === 'categoryId' ? { baleInventoryId: '' } : {}),
+      ...(field === 'customerId' && value === 'walk-in' ? { deliveryCost: 0, deliveryCharge: 0 } : {}),
     }))
     setFormError('')
   }
 
   async function handleSubmit(event) {
     event.preventDefault()
-
-    if (!selectedCategory) {
-      setFormError('Primero registra una paca con inventario disponible.')
-      return
-    }
-
-    if (quantity < 1) {
-      setFormError('Ingresa al menos una pieza para continuar.')
-      return
-    }
-
-    if (quantity > availablePieces) {
-      setFormError(`Solo hay ${availablePieces} piezas disponibles en esta categoría.`)
-      return
-    }
-
-    if (unitPrice <= 0) {
-      setFormError('Ingresa un precio válido por pieza.')
-      return
-    }
-    const paidAmount = form.paymentStatus === 'paid' ? total : form.paymentStatus === 'pending' ? 0 : Number(form.paidAmount)
-    if (form.paymentStatus !== 'paid' && form.customerId === 'walk-in') {
-      setFormError('Elige un cliente para dejar un pago pendiente o parcial.')
-      return
-    }
-    if (form.paymentStatus === 'partial' && (!(paidAmount > 0) || paidAmount >= total)) {
-      setFormError('El pago parcial debe ser mayor que cero y menor que el total.')
-      return
-    }
+    if (!selectedCategory) return setFormError('Primero registra una paca con inventario disponible.')
+    if (!selectedInventory) return setFormError('Selecciona la paca exacta de donde salieron las prendas.')
+    if (quantity < 1 || quantity > selectedInventory.availablePieces) return setFormError(`Esta paca tiene ${selectedInventory.availablePieces} piezas disponibles de esta categoría.`)
+    if (unitPrice <= 0) return setFormError('Ingresa un precio válido por pieza.')
+    if (form.customerId === 'new' && !form.newCustomerName.trim()) return setFormError('Escribe el nombre del cliente nuevo.')
+    if (hasDelivery && deliveryCost <= 0) return setFormError('El costo real del delivery es obligatorio para ventas a clientes.')
+    if (deliveryCharge < 0) return setFormError('El cobro de delivery no puede ser negativo.')
+    if (form.paymentStatus !== 'paid' && !hasDelivery) return setFormError('Elige un cliente para dejar un saldo pendiente.')
+    if (form.paymentStatus === 'partial' && (!(firstPayment > 0) || firstPayment >= total)) return setFormError('El primer pago debe ser mayor que cero y menor que el total.')
 
     setIsSaving(true)
     try {
-      await registerSale({ categoryId: form.categoryId, quantity, unitPrice, paymentMethod: form.paymentMethod, customerId: form.customerId, baleInventoryId: form.baleInventoryId === 'auto' ? null : form.baleInventoryId, paymentStatus: form.paymentStatus, paidAmount })
-      setCompletedSale({ categoryName: selectedCategory.name, customerName, paymentLabel, paymentStatus: paymentStatusLabels[form.paymentStatus], pieces: quantity, total, baleCode: selectedBaleInventory?.baleCode ?? 'Asignación automática' })
-    } catch (error) {
-      setFormError(error.message || 'No fue posible registrar la venta.')
-    } finally {
-      setIsSaving(false)
-    }
+      let customerId = form.customerId
+      if (customerId === 'new') {
+        const customer = await createCustomer({ name: form.newCustomerName, phone: form.newCustomerPhone, isPriority: false })
+        customerId = customer.id
+      }
+      await registerSale({
+        categoryId: form.categoryId, baleInventoryId: form.baleInventoryId,
+        quantity, unitPrice, customerId, deliveryCost, deliveryCharge,
+        paymentStatus: form.paymentStatus, paymentMethod: form.paymentMethod,
+        paidAmount: firstPayment,
+      })
+      setCompletedSale({ customerName, baleCode: selectedInventory.baleCode, quantity, total, firstPayment, balance, paymentMethod: paymentMethods.find((method) => method.id === form.paymentMethod)?.label, estimatedProfit })
+    } catch (saveError) {
+      setFormError(saveError.message || 'No fue posible registrar la venta.')
+    } finally { setIsSaving(false) }
   }
 
-  function registerAnotherSale() {
-    setCompletedSale(null)
-    setForm((currentForm) => ({ ...currentForm, quantity: 1, unitPrice: 180 }))
-  }
+  if (completedSale) return <div><PageHeader eyebrow="Salida de inventario" title="Registrar venta" backTo="/ventas" /><div className="page-content py-6"><SaleConfirmation sale={completedSale} onAgain={() => setCompletedSale(null)} /></div></div>
+  const hasInventory = categories.length > 0
 
-  const hasAvailableInventory = clothingCategories.some((category) => category.availablePieces > 0)
-
-  return (
-    <div>
-      <PageHeader
-        eyebrow="Salida de inventario"
-        title="Registrar venta"
-        description="Elige las prendas, asigna el cliente y confirma el cobro en unos pocos pasos."
-        backTo="/ventas"
-      />
-      <div className="page-content py-6 md:py-8">
-        {!isLoading && !error && !hasAvailableInventory ? (
-          <EmptyState
-            icon={PackageX}
-            title="No hay piezas disponibles para vender"
-            description="Registra primero una paca. Cuando tenga inventario, podrás crear la venta desde aquí."
-            action={{ to: '/pacas/nueva', label: 'Registrar una paca' }}
-          />
-        ) : completedSale ? (
-          <SaleConfirmation sale={completedSale} onRegisterAnother={registerAnotherSale} />
-        ) : (
-          <form className="grid items-start gap-5 lg:grid-cols-[minmax(0,1.35fr)_minmax(19rem,0.65fr)] lg:gap-8" onSubmit={handleSubmit}>
-            <div className="space-y-5">
-              <section className="rounded-3xl bg-white p-5 shadow-soft ring-1 ring-slate-100 sm:p-6">
-                <div className="flex items-start gap-3">
-                  <span className="grid size-11 shrink-0 place-items-center rounded-2xl bg-brand-50 text-brand-700">
-                    <ShoppingBag aria-hidden="true" size={21} />
-                  </span>
-                  <div>
-                    <h2 className="text-lg font-extrabold tracking-tight text-slate-900">Prendas de la venta</h2>
-                    <p className="mt-1 text-sm leading-6 text-slate-500">
-                      Selecciona una categoría y define cuántas piezas se llevarán.
-                    </p>
-                  </div>
-                </div>
-
-                <div className="mt-6 grid gap-4 sm:grid-cols-2">
-                  <Field label="Categoría" htmlFor="sale-category" className="sm:col-span-2">
-                    <select
-                      id="sale-category"
-                      value={form.categoryId}
-                      onChange={(event) => updateForm('categoryId', event.target.value)}
-                      className="sale-input"
-                    >
-                      {isLoading && <option value="">Cargando categorías…</option>}
-                      {clothingCategories.map((category) => {
-                        const categoryAvailable = Math.max(
-                          0,
-                          category.availablePieces,
-                        )
-
-                        return (
-                          <option key={category.id} value={category.id} disabled={categoryAvailable === 0}>
-                            {category.name} · {categoryAvailable} disponibles
-                          </option>
-                        )
-                      })}
-                    </select>
-                  </Field>
-
-                  <Field label="Paca de origen" htmlFor="sale-bale" className="sm:col-span-2">
-                    <select id="sale-bale" value={form.baleInventoryId} onChange={(event) => updateForm('baleInventoryId', event.target.value)} className="sale-input">
-                      <option value="auto">Automática · paca más antigua disponible</option>
-                      {baleOptions.map((inventory) => <option key={inventory.id} value={inventory.id}>{inventory.baleCode} · {inventory.availablePieces} disponibles</option>)}
-                    </select>
-                    <p className="mt-2 text-xs text-slate-500">Elige una paca solo si físicamente tomaste prendas de esa compra.</p>
-                  </Field>
-
-                  <Field label="Cantidad" htmlFor="sale-quantity">
-                    <input
-                      id="sale-quantity"
-                      type="number"
-                      min="1"
-                      max={availablePieces}
-                      inputMode="numeric"
-                      value={form.quantity}
-                      onChange={(event) => updateForm('quantity', event.target.value)}
-                      className="sale-input"
-                    />
-                    <p className="mt-2 text-xs font-medium text-brand-700">
-                      {availablePieces} piezas disponibles
-                    </p>
-                  </Field>
-
-                  <Field label="Precio por pieza" htmlFor="sale-price">
-                    <div className="relative">
-                      <span className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-4 text-sm font-bold text-slate-400">
-                        C$
-                      </span>
-                      <input
-                        id="sale-price"
-                        type="number"
-                        min="1"
-                        step="1"
-                        inputMode="decimal"
-                        value={form.unitPrice}
-                        onChange={(event) => updateForm('unitPrice', event.target.value)}
-                        className="sale-input sale-input--currency"
-                      />
-                    </div>
-                  </Field>
-                </div>
-              </section>
-
-              <section className="rounded-3xl bg-white p-5 shadow-soft ring-1 ring-slate-100 sm:p-6">
-                <div className="flex items-start gap-3">
-                  <span className="grid size-11 shrink-0 place-items-center rounded-2xl bg-sky-50 text-sky-700">
-                    <Users aria-hidden="true" size={21} />
-                  </span>
-                  <div>
-                    <h2 className="text-lg font-extrabold tracking-tight text-slate-900">Cliente y cobro</h2>
-                    <p className="mt-1 text-sm leading-6 text-slate-500">
-                      Puedes asociar la venta a un cliente o registrarla como venta de mostrador.
-                    </p>
-                  </div>
-                </div>
-
-                <div className="mt-6 grid gap-5">
-                  <Field label="Cliente" htmlFor="sale-customer">
-                    <select
-                      id="sale-customer"
-                      value={form.customerId}
-                      onChange={(event) => updateForm('customerId', event.target.value)}
-                      className="sale-input"
-                    >
-                      <option value="walk-in">Venta de mostrador</option>
-                      {customers.map((customer) => (
-                        <option key={customer.id} value={customer.id}>
-                          {customer.name}
-                        </option>
-                      ))}
-                    </select>
-                    <Link
-                      to="/clientes/nuevo"
-                      className="mt-2 inline-flex min-h-8 items-center text-xs font-bold text-brand-700 hover:underline"
-                    >
-                      Registrar un cliente nuevo
-                    </Link>
-                  </Field>
-
-                  <fieldset>
-                    <legend className="mb-2 text-sm font-bold text-slate-700">Método de pago</legend>
-                    <div className="grid grid-cols-2 gap-3">
-                      {paymentMethods.map((method) => {
-                        const isSelected = form.paymentMethod === method.id
-
-                        return (
-                          <button
-                            key={method.id}
-                            type="button"
-                            aria-pressed={isSelected}
-                            onClick={() => updateForm('paymentMethod', method.id)}
-                            className={`flex min-h-12 items-center justify-center rounded-xl border px-3 text-sm font-bold transition active:scale-[0.98] ${
-                              isSelected
-                                ? 'border-brand-700 bg-brand-50 text-brand-800 ring-1 ring-brand-700'
-                                : 'border-slate-200 bg-white text-slate-600 hover:border-brand-200 hover:bg-brand-50/50'
-                            }`}
-                          >
-                            {method.label}
-                          </button>
-                        )
-                      })}
-                    </div>
-                  </fieldset>
-
-                  <Field label="Estado de pago" htmlFor="sale-payment-status">
-                    <select id="sale-payment-status" value={form.paymentStatus} onChange={(event) => updateForm('paymentStatus', event.target.value)} className="sale-input">
-                      <option value="paid">Pagado completo</option>
-                      <option value="partial">Pago parcial</option>
-                      <option value="pending">Pendiente de pago</option>
-                    </select>
-                  </Field>
-                  {form.paymentStatus === 'partial' && (
-                    <Field label="Monto recibido" htmlFor="sale-paid-amount">
-                      <input id="sale-paid-amount" type="number" min="1" max={Math.max(0, total - 1)} value={form.paidAmount} onChange={(event) => updateForm('paidAmount', event.target.value)} className="sale-input" />
-                    </Field>
-                  )}
-                </div>
-              </section>
+  return <div>
+    <PageHeader eyebrow="Salida de inventario" title="Registrar venta" description="Registra las prendas, el delivery y el primer pago del cliente." backTo="/ventas" />
+    <div className="page-content py-6 md:py-8">
+      {!isLoading && !error && !hasInventory ? <EmptyState icon={PackageX} title="No hay piezas disponibles para vender" description="Registra primero una paca con inventario." action={{ to: '/pacas/nueva', label: 'Registrar una paca' }} /> :
+      <form className="grid items-start gap-5 lg:grid-cols-[minmax(0,1.35fr)_minmax(19rem,0.65fr)] lg:gap-8" onSubmit={handleSubmit}>
+        <div className="space-y-5">
+          <FormSection icon={ShoppingBag} title="Prendas de la venta" description="Selecciona la categoría y la paca física exacta.">
+            <div className="grid gap-4 sm:grid-cols-2">
+              <Field label="Categoría" htmlFor="sale-category"><select id="sale-category" value={form.categoryId} onChange={(event) => update('categoryId', event.target.value)} className="sale-input">{categories.map((category) => <option key={category.id} value={category.id}>{category.name} · {category.availablePieces} disponibles</option>)}</select></Field>
+              <Field label="Paca de origen" htmlFor="sale-bale"><select id="sale-bale" required value={form.baleInventoryId} onChange={(event) => update('baleInventoryId', event.target.value)} className="sale-input"><option value="">Selecciona una paca</option>{baleOptions.map((inventory) => <option key={inventory.id} value={inventory.id}>{inventory.baleCode} · {inventory.availablePieces} disponibles</option>)}</select></Field>
+              <Field label="Cantidad" htmlFor="sale-quantity"><input id="sale-quantity" type="number" min="1" max={selectedInventory?.availablePieces ?? undefined} value={form.quantity} onChange={(event) => update('quantity', event.target.value)} className="sale-input" /></Field>
+              <MoneyField label="Precio por pieza" id="sale-price" min="1" value={form.unitPrice} onChange={(value) => update('unitPrice', value)} />
             </div>
+          </FormSection>
 
-            <aside className="rounded-3xl bg-brand-950 p-5 text-white shadow-lg shadow-brand-950/15 lg:sticky lg:top-8 sm:p-6">
-              <div className="flex items-center gap-3">
-                <span className="grid size-11 place-items-center rounded-2xl bg-white/10 text-brand-100">
-                  <CreditCard aria-hidden="true" size={21} />
-                </span>
-                <div>
-                  <p className="text-sm font-bold">Resumen de cobro</p>
-                  <p className="mt-0.5 text-xs text-brand-200">Revisa los datos antes de confirmar</p>
-                </div>
-              </div>
+          <FormSection icon={Users} title="Cliente" description="Elige uno existente o créalo sin salir de la venta.">
+            <Field label="Cliente" htmlFor="sale-customer"><select id="sale-customer" value={form.customerId} onChange={(event) => update('customerId', event.target.value)} className="sale-input"><option value="walk-in">Venta de mostrador</option><option value="new">+ Crear cliente nuevo</option>{data.customers.map((customer) => <option key={customer.id} value={customer.id}>{customer.name}</option>)}</select></Field>
+            {form.customerId === 'new' && <div className="mt-4 grid gap-4 sm:grid-cols-2"><Field label="Nombre completo" htmlFor="new-customer-name"><input id="new-customer-name" value={form.newCustomerName} onChange={(event) => update('newCustomerName', event.target.value)} className="sale-input" /></Field><Field label="Teléfono" htmlFor="new-customer-phone"><input id="new-customer-phone" type="tel" value={form.newCustomerPhone} onChange={(event) => update('newCustomerPhone', event.target.value)} className="sale-input" /></Field></div>}
+          </FormSection>
 
-              <dl className="mt-6 space-y-4 border-y border-white/10 py-5 text-sm">
-                <SummaryRow label="Categoría" value={selectedCategory?.name ?? 'Sin seleccionar'} />
-                <SummaryRow label="Origen" value={selectedBaleInventory?.baleCode ?? 'Automático'} />
-                <SummaryRow label="Piezas" value={`${quantity || 0} prendas`} />
-                <SummaryRow label="Cliente" value={customerName} />
-                <SummaryRow label="Pago" value={paymentLabel} />
-                <SummaryRow label="Estado" value={paymentStatusLabels[form.paymentStatus]} />
-              </dl>
+          {hasDelivery && <FormSection icon={Truck} title="Delivery" description="El costo real siempre se descuenta de la ganancia.">
+            <div className="grid gap-4 sm:grid-cols-2"><MoneyField label="Costo real del delivery" id="delivery-cost" min="1" value={form.deliveryCost} onChange={(value) => update('deliveryCost', value)} required /><MoneyField label="Cobro de delivery al cliente" id="delivery-charge" min="0" value={form.deliveryCharge} onChange={(value) => update('deliveryCharge', value)} /></div>
+          </FormSection>}
 
-              <div className="mt-5">
-                <p className="text-xs font-bold uppercase tracking-[0.14em] text-brand-200">Total a cobrar</p>
-                <p className="mt-1 text-3xl font-extrabold tracking-tight">{formatCurrency(total)}</p>
-              </div>
+          <FormSection icon={CreditCard} title="Primer pago" description="Puede quedar pendiente, pagarse una parte o completarse de una vez.">
+            <Field label="Estado" htmlFor="payment-status"><select id="payment-status" value={form.paymentStatus} onChange={(event) => update('paymentStatus', event.target.value)} className="sale-input"><option value="paid">Pago completo</option><option value="partial">Primer pago parcial</option><option value="pending">Sin pago inicial</option></select></Field>
+            {form.paymentStatus !== 'pending' && <><fieldset className="mt-4"><legend className="mb-2 text-sm font-bold text-slate-700">Método</legend><div className="grid grid-cols-2 gap-2 sm:grid-cols-4">{paymentMethods.map((method) => <button key={method.id} type="button" aria-pressed={form.paymentMethod === method.id} onClick={() => update('paymentMethod', method.id)} className={`min-h-11 rounded-xl border px-3 text-sm font-bold ${form.paymentMethod === method.id ? 'border-brand-700 bg-brand-50 text-brand-800' : 'border-slate-200 text-slate-600'}`}>{method.label}</button>)}</div></fieldset>{form.paymentStatus === 'partial' && <div className="mt-4"><MoneyField label="Monto del primer pago" id="first-payment" min="1" value={form.paidAmount} onChange={(value) => update('paidAmount', value)} required /></div>}</>}
+          </FormSection>
+        </div>
 
-              {formError && (
-                <p role="alert" className="mt-4 rounded-xl bg-coral-500/15 px-3 py-2 text-sm font-semibold text-coral-100">
-                  {formError}
-                </p>
-              )}
-
-              <button
-                type="submit"
-                disabled={isSaving || isLoading}
-                className="mt-6 flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-white px-5 text-sm font-extrabold text-brand-950 transition hover:bg-brand-50 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                <PackageCheck aria-hidden="true" size={19} />
-                {isSaving ? 'Guardando…' : 'Registrar venta'}
-              </button>
-              <p className="mt-3 text-center text-xs leading-5 text-brand-200">
-                El inventario disponible se ajustará al confirmar la venta.
-              </p>
-            </aside>
-          </form>
-        )}
-      </div>
+        <aside className="rounded-3xl bg-brand-950 p-5 text-white shadow-lg shadow-brand-950/15 lg:sticky lg:top-8 sm:p-6">
+          <h2 className="flex items-center gap-2 font-extrabold"><PackageCheck size={20} />Resumen financiero</h2>
+          <dl className="mt-5 space-y-3 border-y border-white/10 py-5 text-sm"><SummaryRow label="Paca" value={selectedInventory?.baleCode ?? 'Sin seleccionar'} /><SummaryRow label="Prendas" value={formatCurrency(merchandiseTotal)} /><SummaryRow label="Cobro delivery" value={formatCurrency(deliveryCharge)} /><SummaryRow label="Total a cobrar" value={formatCurrency(total)} /><SummaryRow label="Primer pago" value={formatCurrency(firstPayment)} /><SummaryRow label="Saldo" value={formatCurrency(balance)} /><SummaryRow label="Costo prendas" value={formatCurrency(merchandiseCost)} /><SummaryRow label="Costo delivery" value={formatCurrency(deliveryCost)} /></dl>
+          <p className="mt-5 text-xs font-bold uppercase tracking-wider text-brand-200">Ganancia estimada</p><p className={`mt-1 text-3xl font-extrabold ${estimatedProfit < 0 ? 'text-coral-200' : 'text-white'}`}>{formatCurrency(estimatedProfit)}</p>
+          {formError && <p role="alert" className="mt-4 rounded-xl bg-coral-500/15 p-3 text-sm font-semibold text-coral-100">{formError}</p>}
+          <button type="submit" disabled={isSaving || isLoading} className="mt-6 flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-white px-5 text-sm font-extrabold text-brand-950 disabled:opacity-50"><PackageCheck size={19} />{isSaving ? 'Guardando…' : 'Registrar venta'}</button>
+        </aside>
+      </form>}
     </div>
-  )
+  </div>
 }
 
-function Field({ label, htmlFor, children, className = '' }) {
-  return (
-    <div className={className}>
-      <label htmlFor={htmlFor} className="mb-2 block text-sm font-bold text-slate-700">
-        {label}
-      </label>
-      {children}
-    </div>
-  )
-}
-
-function SummaryRow({ label, value }) {
-  return (
-    <div className="flex items-start justify-between gap-4">
-      <dt className="text-brand-200">{label}</dt>
-      <dd className="max-w-[60%] text-right font-bold text-white">{value}</dd>
-    </div>
-  )
-}
-
-function SaleConfirmation({ sale, onRegisterAnother }) {
-  return (
-    <section className="mx-auto max-w-3xl rounded-3xl bg-white p-5 text-center shadow-soft ring-1 ring-slate-100 sm:p-8">
-      <span className="mx-auto grid size-14 place-items-center rounded-2xl bg-emerald-50 text-emerald-700">
-        <CircleCheck aria-hidden="true" size={28} />
-      </span>
-      <p className="mt-5 text-sm font-bold text-emerald-700">Venta registrada</p>
-      <h2 className="mt-1 text-2xl font-extrabold tracking-tight text-slate-900 sm:text-3xl">
-        {formatCurrency(sale.total)} cobrados
-      </h2>
-      <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-slate-500">
-        Registraste {sale.pieces} {sale.pieces === 1 ? 'pieza' : 'piezas'} de {sale.categoryName} para{' '}
-        {sale.customerName} por {sale.paymentLabel.toLowerCase()}.
-      </p>
-
-      <dl className="mx-auto mt-6 grid max-w-xl gap-px overflow-hidden rounded-2xl bg-slate-100 text-left sm:grid-cols-2 lg:grid-cols-4">
-        <ConfirmationDetail label="Categoría" value={sale.categoryName} />
-        <ConfirmationDetail label="Cliente" value={sale.customerName} />
-        <ConfirmationDetail label="Pago" value={sale.paymentLabel} />
-        <ConfirmationDetail label="Estado" value={sale.paymentStatus} />
-        <ConfirmationDetail label="Paca" value={sale.baleCode} />
-      </dl>
-
-      <div className="mt-6 flex flex-col justify-center gap-3 sm:flex-row">
-        <button
-          type="button"
-          onClick={onRegisterAnother}
-          className="inline-flex min-h-12 items-center justify-center rounded-xl bg-brand-950 px-5 text-sm font-extrabold text-white transition hover:bg-brand-900 active:scale-[0.98]"
-        >
-          Registrar otra venta
-        </button>
-        <Link
-          to="/ventas"
-          className="inline-flex min-h-12 items-center justify-center rounded-xl border border-slate-200 px-5 text-sm font-extrabold text-brand-800 transition hover:bg-brand-50 active:scale-[0.98]"
-        >
-          Ver ventas recientes
-        </Link>
-      </div>
-    </section>
-  )
-}
-
-function ConfirmationDetail({ label, value }) {
-  return (
-    <div className="bg-white px-4 py-3">
-      <dt className="text-xs font-medium text-slate-500">{label}</dt>
-      <dd className="mt-1 truncate text-sm font-extrabold text-slate-900">{value}</dd>
-    </div>
-  )
-}
+function FormSection({ icon: Icon, title, description, children }) { return <section className="rounded-3xl bg-white p-5 shadow-soft ring-1 ring-slate-100 sm:p-6"><div className="mb-5 flex items-start gap-3"><span className="grid size-11 shrink-0 place-items-center rounded-2xl bg-brand-50 text-brand-700"><Icon size={21} /></span><div><h2 className="text-lg font-extrabold text-slate-900">{title}</h2><p className="mt-1 text-sm text-slate-500">{description}</p></div></div>{children}</section> }
+function Field({ label, htmlFor, children }) { return <div><label htmlFor={htmlFor} className="mb-2 block text-sm font-bold text-slate-700">{label}</label>{children}</div> }
+function MoneyField({ label, id, min = 0, value, onChange, required = false }) { return <Field label={label} htmlFor={id}><div className="relative"><span className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-4 text-sm font-bold text-slate-400">C$</span><input id={id} type="number" min={min} step="0.01" required={required} value={value} onChange={(event) => onChange(event.target.value)} className="sale-input sale-input--currency" /></div></Field> }
+function SummaryRow({ label, value }) { return <div className="flex justify-between gap-4"><dt className="text-brand-200">{label}</dt><dd className="text-right font-bold">{value}</dd></div> }
+function SaleConfirmation({ sale, onAgain }) { return <section className="mx-auto max-w-3xl rounded-3xl bg-white p-6 text-center shadow-soft"><span className="mx-auto grid size-14 place-items-center rounded-2xl bg-emerald-50 text-emerald-700"><CircleCheck size={28} /></span><h2 className="mt-4 text-2xl font-extrabold">Venta registrada</h2><p className="mt-2 text-slate-600">{sale.customerName} · {sale.baleCode} · {sale.quantity} piezas</p><dl className="mx-auto mt-5 grid max-w-xl gap-2 text-left sm:grid-cols-2"><ConfirmationRow label="Total" value={formatCurrency(sale.total)} /><ConfirmationRow label="Primer pago" value={`${formatCurrency(sale.firstPayment)}${sale.firstPayment ? ` · ${sale.paymentMethod}` : ''}`} /><ConfirmationRow label="Saldo" value={formatCurrency(sale.balance)} /><ConfirmationRow label="Ganancia estimada" value={formatCurrency(sale.estimatedProfit)} /></dl><div className="mt-6 flex flex-col justify-center gap-3 sm:flex-row"><button type="button" onClick={onAgain} className="min-h-12 rounded-xl bg-brand-950 px-5 text-sm font-extrabold text-white">Registrar otra</button><Link to="/ventas" className="inline-flex min-h-12 items-center justify-center rounded-xl border px-5 text-sm font-extrabold text-brand-800">Ver ventas</Link></div></section> }
+function ConfirmationRow({ label, value }) { return <div className="rounded-2xl bg-slate-50 p-4"><dt className="text-xs text-slate-500">{label}</dt><dd className="mt-1 font-extrabold text-slate-900">{value}</dd></div> }
 
 export default NewSalePage

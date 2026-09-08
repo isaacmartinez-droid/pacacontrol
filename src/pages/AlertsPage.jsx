@@ -72,6 +72,7 @@ export default function AlertsPage() {
             <Rule label="Revisar entregas" enabled={draft.deliveryEnabled} onToggle={(value) => change('deliveryEnabled', value)} description="Ventas con cliente que siguen en “Pagado” después de estas horas desde su registro. Excluye ventas de mostrador; confirma si requieren envío.">
               <Limit label="Horas desde el registro" id="alert-delivery" value={draft.deliveryHours} min={1} max={720} onChange={(value) => change('deliveryHours', value)} />
             </Rule>
+            <Rule label="Cobros pendientes" enabled={draft.debtEnabled} onToggle={(value) => change('debtEnabled', value)} description="Avisa al cumplir 24 horas sin completar el pago y vuelve a notificar cada 5 horas mientras exista saldo." />
             <Rule label="Daños por paca" enabled={draft.damageEnabled} onToggle={(value) => change('damageEnabled', value)} description="Avisa cuando las piezas dañadas alcanzan este porcentaje del total recibido en una paca.">
               <Limit label="Porcentaje de daños" id="alert-damage" value={draft.damagePercent} min={1} max={100} onChange={(value) => change('damagePercent', value)} />
             </Rule>

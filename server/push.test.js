@@ -37,28 +37,28 @@ test('no hace peticiones a localhost, IPs ni hosts que imitan servicios push', (
 
 test('envía un resumen y no vuelve a avisar por un cambio menor de stock', () => {
   const first = makePushPlan(data, subscription)
-  assert.match(first.payload.body, /1 alerta nueva/)
-  assert.equal(first.payload.url, '/alertas')
+  assert.equal(first.payloads.length, 1)
+  assert.equal(first.payloads[0].url, '/inventario?categoria=cat')
   const nextData = { ...data, categories: [{ ...data.categories[0], availablePieces: 4 }] }
-  assert.equal(makePushPlan(nextData, { ...subscription, notified: first.notified }).payload, null)
+  assert.equal(makePushPlan(nextData, { ...subscription, notified: first.notified }).payloads.length, 0)
   const empty = makePushPlan({ ...data, categories: [{ ...data.categories[0], availablePieces: 0 }] }, { ...subscription, notified: first.notified })
-  assert.ok(empty.payload)
+  assert.equal(empty.payloads.length, 1)
 })
 
 test('resolver y volver a caer por debajo del límite crea un nuevo aviso', () => {
   const first = makePushPlan(data, subscription)
   const resolved = makePushPlan({ ...data, categories: [{ ...data.categories[0], availablePieces: 50 }] }, { ...subscription, notified: first.notified })
   assert.deepEqual(resolved.notified, {})
-  assert.equal(resolved.payload, null)
-  assert.ok(makePushPlan(data, { ...subscription, notified: resolved.notified }).payload)
+  assert.equal(resolved.payloads.length, 0)
+  assert.equal(makePushPlan(data, { ...subscription, notified: resolved.notified }).payloads.length, 1)
 })
 
 test('cada dispositivo conserva sus propios límites y el mensaje no contiene datos del cliente', () => {
-  assert.equal(makePushPlan(data, { ...subscription, settings: { stockEnabled: false } }).payload, null)
+  assert.equal(makePushPlan(data, { ...subscription, settings: { stockEnabled: false } }).payloads.length, 0)
   const withCustomer = { ...data, sales: [{ id: 'sale', customerId: 'customer', customerName: 'Nombre privado', soldAt: '2026-09-01T00:00:00Z', dateLabel: '1 sept', hasDeliveryStatus: true, paymentStatus: 'paid', deliveryStatus: 'to_prepare' }] }
   const plan = makePushPlan(withCustomer, subscription, Date.parse('2026-09-07T00:00:00Z'))
-  assert.match(plan.payload.body, /2 alertas/)
-  assert.doesNotMatch(JSON.stringify(plan.payload), /Nombre privado|customer|Camisas/)
+  assert.equal(plan.payloads.length, 2)
+  assert.doesNotMatch(JSON.stringify(plan.payloads), /Nombre privado|Camisas/)
 })
 
 function fakeAdmin() {
@@ -103,7 +103,7 @@ test('la biblioteca genera una petición Web Push cifrada sin enviarla a la red'
   const receiver = createECDH('prime256v1')
   receiver.generateKeys()
   const receiverSubscription = { endpoint: subscription.endpoint, keys: { p256dh: receiver.getPublicKey().toString('base64url'), auth: randomBytes(16).toString('base64url') } }
-  const payload = JSON.stringify(makePushPlan(data, subscription).payload)
+  const payload = JSON.stringify(makePushPlan(data, subscription).payloads[0])
   const request = webpush.generateRequestDetails(receiverSubscription, payload, {
     vapidDetails: { subject: 'https://example.com', publicKey: vapid.publicKey, privateKey: vapid.privateKey }, TTL: 300,
   })

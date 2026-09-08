@@ -89,7 +89,8 @@ function CustomersPage() {
             ) : (
           <div className="max-w-5xl space-y-3 sm:grid sm:grid-cols-2 sm:gap-4 sm:space-y-0">
             {filteredCustomers.map((customer) => (
-              <article
+              <Link
+                to={`/clientes/${customer.id}`}
                 key={customer.id}
                 className="rounded-3xl bg-white p-4 shadow-soft ring-1 ring-slate-100"
               >
@@ -112,13 +113,10 @@ function CustomersPage() {
                       )}
                     </div>
                     {customer.phone ? (
-                      <a
-                        href={`tel:${customer.phone.replaceAll(' ', '')}`}
-                        className="mt-1 inline-flex min-h-8 items-center gap-1.5 text-xs font-semibold text-brand-700 hover:underline"
-                      >
+                      <span className="mt-1 inline-flex min-h-8 items-center gap-1.5 text-xs font-semibold text-brand-700">
                         <Phone aria-hidden="true" size={13} />
                         {customer.phone}
-                      </a>
+                      </span>
                     ) : (
                       <p className="mt-1 text-xs text-slate-400">Sin teléfono</p>
                     )}
@@ -135,7 +133,7 @@ function CustomersPage() {
                     <p className="text-right text-xs text-slate-500">Total <strong className="text-slate-800">{formatCurrency(customer.totalSpent)}</strong></p>
                   )}
                 </div>
-              </article>
+              </Link>
             ))}
           </div>
             )}
