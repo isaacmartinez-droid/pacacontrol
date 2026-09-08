@@ -1,10 +1,11 @@
 import { useEffect, useMemo, useState } from 'react'
-import { AlertTriangle, CircleCheck, CreditCard, PackageCheck, PackageX, ShoppingBag, Truck, Users } from 'lucide-react'
+import { AlertTriangle, CircleCheck, CreditCard, PackageCheck, PackageX, Plus, ShoppingBag, Trash2, Truck, Users } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import EmptyState from '../components/common/EmptyState'
 import PageHeader from '../components/common/PageHeader'
 import { formatCurrency } from '../utils/currency'
 import { usePacaData } from '../context/PacaDataContext'
+import { summarizePriceLines } from '../utils/pricing'
 
 export const paymentMethods = [
   { id: 'cash', label: 'Efectivo' },
@@ -13,14 +14,23 @@ export const paymentMethods = [
   { id: 'other', label: 'Otro' },
 ]
 
+const blankPriceLine = (unitPrice = '') => ({ id: crypto.randomUUID(), quantity: 1, unitPrice })
+
 function NewSalePage() {
   const { data, registerSale, createCustomer, isLoading, error } = usePacaData()
   const categories = data.categories.filter((category) => category.availablePieces > 0)
   const [form, setForm] = useState({
-    categoryId: '', baleInventoryId: '', quantity: 1, unitPrice: '',
-    customerId: 'walk-in', newCustomerName: '', newCustomerPhone: '',
-    deliveryCost: 0, deliveryCharge: 0,
-    paymentStatus: 'paid', paymentMethod: 'cash', paidAmount: '',
+    categoryId: '',
+    baleInventoryId: '',
+    priceLines: [blankPriceLine()],
+    customerId: 'walk-in',
+    newCustomerName: '',
+    newCustomerPhone: '',
+    deliveryCost: 0,
+    deliveryCharge: 0,
+    paymentStatus: 'paid',
+    paymentMethod: 'cash',
+    paidAmount: '',
   })
   const [formError, setFormError] = useState('')
   const [completedSale, setCompletedSale] = useState(null)
@@ -28,7 +38,7 @@ function NewSalePage() {
 
   useEffect(() => {
     if (categories.length && !categories.some((category) => category.id === form.categoryId)) {
-      setForm((current) => ({ ...current, categoryId: categories[0].id, baleInventoryId: '' }))
+      setForm((current) => ({ ...current, categoryId: categories[0].id, baleInventoryId: '', priceLines: [blankPriceLine()] }))
     }
   }, [categories, form.categoryId])
 
@@ -38,9 +48,12 @@ function NewSalePage() {
     [data.baleInventory, form.categoryId],
   )
   const selectedInventory = baleOptions.find((inventory) => inventory.id === form.baleInventoryId)
-  const quantity = Number(form.quantity) || 0
-  const unitPrice = Number(form.unitPrice) || 0
-  const merchandiseTotal = quantity * unitPrice
+  const priceLines = form.priceLines.map((line) => ({
+    ...line,
+    quantity: Number(line.quantity) || 0,
+    unitPrice: Number(line.unitPrice) || 0,
+  }))
+  const { quantity, merchandiseTotal } = summarizePriceLines(priceLines)
   const hasDelivery = form.customerId !== 'walk-in'
   const deliveryCost = hasDelivery ? Number(form.deliveryCost) || 0 : 0
   const deliveryCharge = hasDelivery ? Number(form.deliveryCharge) || 0 : 0
@@ -49,8 +62,8 @@ function NewSalePage() {
   const balance = Math.max(0, total - firstPayment)
   const merchandiseCost = quantity * (selectedInventory?.estimatedUnitCost ?? 0)
   const estimatedProfit = total - merchandiseCost - deliveryCost
-  const isBelowCost = Boolean(selectedInventory && unitPrice > 0 && unitPrice < selectedInventory.estimatedUnitCost)
-  const isBelowRecommended = Boolean(selectedInventory && unitPrice >= selectedInventory.estimatedUnitCost && unitPrice < selectedInventory.recommendedUnitPrice)
+  const hasPriceBelowCost = priceLines.some((line) => line.unitPrice > 0 && line.unitPrice < (selectedInventory?.estimatedUnitCost ?? 0))
+  const hasPriceBelowRecommended = priceLines.some((line) => line.unitPrice >= (selectedInventory?.estimatedUnitCost ?? 0) && line.unitPrice < (selectedInventory?.recommendedUnitPrice ?? 0))
   const selectedCustomer = data.customers.find((customer) => customer.id === form.customerId)
   const customerName = form.customerId === 'new' ? form.newCustomerName.trim() || 'Cliente nuevo' : selectedCustomer?.name ?? 'Venta de mostrador'
 
@@ -58,21 +71,43 @@ function NewSalePage() {
     setForm((current) => ({
       ...current,
       [field]: value,
-      ...(field === 'categoryId' ? { baleInventoryId: '', unitPrice: '' } : {}),
+      ...(field === 'categoryId' ? { baleInventoryId: '', priceLines: [blankPriceLine()] } : {}),
       ...(field === 'baleInventoryId' ? {
-        unitPrice: data.baleInventory.find((inventory) => inventory.id === value)?.recommendedUnitPrice || '',
+        priceLines: [blankPriceLine(data.baleInventory.find((inventory) => inventory.id === value)?.recommendedUnitPrice || '')],
       } : {}),
       ...(field === 'customerId' && value === 'walk-in' ? { deliveryCost: 0, deliveryCharge: 0 } : {}),
     }))
     setFormError('')
   }
 
+  function updatePriceLine(id, field, value) {
+    setForm((current) => ({
+      ...current,
+      priceLines: current.priceLines.map((line) => line.id === id ? { ...line, [field]: value } : line),
+    }))
+    setFormError('')
+  }
+
+  function addPriceLine() {
+    setForm((current) => ({
+      ...current,
+      priceLines: [...current.priceLines, blankPriceLine(selectedInventory?.recommendedUnitPrice || '')],
+    }))
+  }
+
+  function removePriceLine(id) {
+    setForm((current) => current.priceLines.length === 1 ? current : {
+      ...current,
+      priceLines: current.priceLines.filter((line) => line.id !== id),
+    })
+  }
+
   async function handleSubmit(event) {
     event.preventDefault()
     if (!selectedCategory) return setFormError('Primero registra una paca con inventario disponible.')
     if (!selectedInventory) return setFormError('Selecciona la paca exacta de donde salieron las prendas.')
-    if (quantity < 1 || quantity > selectedInventory.availablePieces) return setFormError(`Esta paca tiene ${selectedInventory.availablePieces} piezas disponibles de esta categoría.`)
-    if (unitPrice <= 0) return setFormError('Ingresa un precio válido por pieza.')
+    if (priceLines.some((line) => !Number.isInteger(line.quantity) || line.quantity < 1 || line.unitPrice <= 0)) return setFormError('Cada renglón necesita una cantidad entera y un precio mayores que cero.')
+    if (quantity > selectedInventory.availablePieces) return setFormError(`Esta paca tiene ${selectedInventory.availablePieces} piezas disponibles de esta categoría.`)
     if (form.customerId === 'new' && !form.newCustomerName.trim()) return setFormError('Escribe el nombre del cliente nuevo.')
     if (hasDelivery && deliveryCost <= 0) return setFormError('El costo real del delivery es obligatorio para ventas a clientes.')
     if (deliveryCharge < 0) return setFormError('El cobro de delivery no puede ser negativo.')
@@ -87,22 +122,39 @@ function NewSalePage() {
         customerId = customer.id
       }
       await registerSale({
-        categoryId: form.categoryId, baleInventoryId: form.baleInventoryId,
-        quantity, unitPrice, customerId, deliveryCost, deliveryCharge,
-        paymentStatus: form.paymentStatus, paymentMethod: form.paymentMethod,
+        categoryId: form.categoryId,
+        baleInventoryId: form.baleInventoryId,
+        priceLines,
+        customerId,
+        deliveryCost,
+        deliveryCharge,
+        paymentStatus: form.paymentStatus,
+        paymentMethod: form.paymentMethod,
         paidAmount: firstPayment,
       })
-      setCompletedSale({ customerName, baleCode: selectedInventory.baleCode, quantity, total, firstPayment, balance, paymentMethod: paymentMethods.find((method) => method.id === form.paymentMethod)?.label, estimatedProfit })
+      setCompletedSale({
+        customerName,
+        baleCode: selectedInventory.baleCode,
+        quantity,
+        priceLines,
+        total,
+        firstPayment,
+        balance,
+        paymentMethod: paymentMethods.find((method) => method.id === form.paymentMethod)?.label,
+        estimatedProfit,
+      })
     } catch (saveError) {
       setFormError(saveError.message || 'No fue posible registrar la venta.')
-    } finally { setIsSaving(false) }
+    } finally {
+      setIsSaving(false)
+    }
   }
 
   if (completedSale) return <div><PageHeader eyebrow="Salida de inventario" title="Registrar venta" backTo="/ventas" /><div className="page-content py-6"><SaleConfirmation sale={completedSale} onAgain={() => setCompletedSale(null)} /></div></div>
   const hasInventory = categories.length > 0
 
   return <div>
-    <PageHeader eyebrow="Salida de inventario" title="Registrar venta" description="Registra las prendas, el delivery y el primer pago del cliente." backTo="/ventas" />
+    <PageHeader eyebrow="Salida de inventario" title="Registrar venta" description="Registra uno o varios precios, el delivery y el primer pago del cliente." backTo="/ventas" />
     <div className="page-content py-6 md:py-8">
       {!isLoading && !error && !hasInventory ? <EmptyState icon={PackageX} title="No hay piezas disponibles para vender" description="Registra primero una paca con inventario." action={{ to: '/pacas/nueva', label: 'Registrar una paca' }} /> :
       <form className="grid items-start gap-5 lg:grid-cols-[minmax(0,1.35fr)_minmax(19rem,0.65fr)] lg:gap-8" onSubmit={handleSubmit}>
@@ -111,12 +163,27 @@ function NewSalePage() {
             <div className="grid gap-4 sm:grid-cols-2">
               <Field label="Categoría" htmlFor="sale-category"><select id="sale-category" value={form.categoryId} onChange={(event) => update('categoryId', event.target.value)} className="sale-input">{categories.map((category) => <option key={category.id} value={category.id}>{category.name} · {category.availablePieces} disponibles</option>)}</select></Field>
               <Field label="Paca de origen" htmlFor="sale-bale"><select id="sale-bale" required value={form.baleInventoryId} onChange={(event) => update('baleInventoryId', event.target.value)} className="sale-input"><option value="">Selecciona una paca</option>{baleOptions.map((inventory) => <option key={inventory.id} value={inventory.id}>{inventory.baleCode} · {inventory.availablePieces} disponibles · sugerido {formatCurrency(inventory.recommendedUnitPrice)}</option>)}</select></Field>
-              <Field label="Cantidad" htmlFor="sale-quantity"><input id="sale-quantity" type="number" min="1" max={selectedInventory?.availablePieces ?? undefined} value={form.quantity} onChange={(event) => update('quantity', event.target.value)} className="sale-input" /></Field>
-              <MoneyField label="Precio por pieza" id="sale-price" min="1" value={form.unitPrice} onChange={(value) => update('unitPrice', value)} />
             </div>
-            {selectedInventory && <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-2xl bg-brand-50 p-4 text-sm"><div><p className="font-bold text-brand-950">Costo real: {formatCurrency(selectedInventory.estimatedUnitCost)}</p><p className="mt-1 text-brand-700">Recomendado para esta categoría: <b>{formatCurrency(selectedInventory.recommendedUnitPrice)}</b> · margen base {selectedInventory.targetMargin}%</p></div><button type="button" onClick={() => update('unitPrice', selectedInventory.recommendedUnitPrice)} className="rounded-xl bg-brand-900 px-4 py-2 font-bold text-white">Usar recomendado</button></div>}
-            {isBelowCost && <p role="alert" className="mt-3 flex items-start gap-2 rounded-xl bg-red-50 p-3 text-sm font-bold text-red-700"><AlertTriangle className="mt-0.5 shrink-0" size={17} />Este precio es menor que el costo de la pieza y produciría una pérdida antes del delivery.</p>}
-            {isBelowRecommended && <p className="mt-3 flex items-start gap-2 rounded-xl bg-amber-50 p-3 text-sm font-semibold text-amber-800"><AlertTriangle className="mt-0.5 shrink-0" size={17} />El precio es rentable, pero está debajo del recomendado para alcanzar el margen elegido.</p>}
+
+            {selectedInventory && <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-2xl bg-brand-50 p-4 text-sm"><div><p className="font-bold text-brand-950">Costo real: {formatCurrency(selectedInventory.estimatedUnitCost)}</p><p className="mt-1 text-brand-700">Precio recomendado: <b>{formatCurrency(selectedInventory.recommendedUnitPrice)}</b> · margen base {selectedInventory.targetMargin}%</p></div><button type="button" onClick={() => setForm((current) => ({ ...current, priceLines: current.priceLines.map((line) => ({ ...line, unitPrice: selectedInventory.recommendedUnitPrice })) }))} className="rounded-xl bg-brand-900 px-4 py-2 font-bold text-white">Aplicar a todos</button></div>}
+
+            <div className="mt-5 flex items-center justify-between gap-3"><div><h3 className="text-sm font-extrabold text-slate-900">Cantidades y precios</h3><p className="mt-1 text-xs text-slate-500">Agrupa las piezas que tengan el mismo precio.</p></div><button type="button" onClick={addPriceLine} className="inline-flex min-h-10 items-center gap-1 rounded-xl bg-brand-50 px-3 text-xs font-extrabold text-brand-800"><Plus size={16} />Otro precio</button></div>
+            <div className="mt-3 space-y-3">{form.priceLines.map((line, index) => {
+              const numericQuantity = Number(line.quantity) || 0
+              const numericPrice = Number(line.unitPrice) || 0
+              const belowCost = selectedInventory && numericPrice > 0 && numericPrice < selectedInventory.estimatedUnitCost
+              const belowRecommended = selectedInventory && numericPrice >= selectedInventory.estimatedUnitCost && numericPrice < selectedInventory.recommendedUnitPrice
+              return <div key={line.id} className={`rounded-2xl border p-4 ${belowCost ? 'border-red-200 bg-red-50/40' : belowRecommended ? 'border-amber-200 bg-amber-50/40' : 'border-slate-200'}`}>
+                <div className="mb-3 flex items-center justify-between"><b className="text-sm text-slate-700">Precio {index + 1}</b>{form.priceLines.length > 1 && <button type="button" onClick={() => removePriceLine(line.id)} className="text-coral-600" aria-label={`Quitar precio ${index + 1}`}><Trash2 size={18} /></button>}</div>
+                <div className="grid items-end gap-3 sm:grid-cols-[0.65fr_1fr_0.8fr]">
+                  <Field label="Cantidad" htmlFor={`sale-quantity-${line.id}`}><input id={`sale-quantity-${line.id}`} type="number" min="1" value={line.quantity} onChange={(event) => updatePriceLine(line.id, 'quantity', event.target.value)} className="sale-input" /></Field>
+                  <MoneyField label="Precio por pieza" id={`sale-price-${line.id}`} min="1" value={line.unitPrice} onChange={(value) => updatePriceLine(line.id, 'unitPrice', value)} />
+                  <div className="rounded-xl bg-slate-50 p-3 text-right"><p className="text-xs text-slate-500">Subtotal</p><p className="mt-1 font-extrabold text-slate-900">{formatCurrency(numericQuantity * numericPrice)}</p></div>
+                </div>
+                {belowCost && <p className="mt-2 flex items-center gap-2 text-xs font-bold text-red-700"><AlertTriangle size={15} />Este grupo produciría pérdida antes del delivery.</p>}
+                {belowRecommended && <p className="mt-2 flex items-center gap-2 text-xs font-semibold text-amber-800"><AlertTriangle size={15} />Este grupo está debajo del margen recomendado.</p>}
+              </div>
+            })}</div>
           </FormSection>
 
           <FormSection icon={Users} title="Cliente" description="Elige uno existente o créalo sin salir de la venta.">
@@ -124,9 +191,7 @@ function NewSalePage() {
             {form.customerId === 'new' && <div className="mt-4 grid gap-4 sm:grid-cols-2"><Field label="Nombre completo" htmlFor="new-customer-name"><input id="new-customer-name" value={form.newCustomerName} onChange={(event) => update('newCustomerName', event.target.value)} className="sale-input" /></Field><Field label="Teléfono" htmlFor="new-customer-phone"><input id="new-customer-phone" type="tel" value={form.newCustomerPhone} onChange={(event) => update('newCustomerPhone', event.target.value)} className="sale-input" /></Field></div>}
           </FormSection>
 
-          {hasDelivery && <FormSection icon={Truck} title="Delivery" description="El costo real siempre se descuenta de la ganancia.">
-            <div className="grid gap-4 sm:grid-cols-2"><MoneyField label="Costo real del delivery" id="delivery-cost" min="1" value={form.deliveryCost} onChange={(value) => update('deliveryCost', value)} required /><MoneyField label="Cobro de delivery al cliente" id="delivery-charge" min="0" value={form.deliveryCharge} onChange={(value) => update('deliveryCharge', value)} /></div>
-          </FormSection>}
+          {hasDelivery && <FormSection icon={Truck} title="Delivery" description="El costo real siempre se descuenta de la ganancia."><div className="grid gap-4 sm:grid-cols-2"><MoneyField label="Costo real del delivery" id="delivery-cost" min="1" value={form.deliveryCost} onChange={(value) => update('deliveryCost', value)} required /><MoneyField label="Cobro de delivery al cliente" id="delivery-charge" min="0" value={form.deliveryCharge} onChange={(value) => update('deliveryCharge', value)} /></div></FormSection>}
 
           <FormSection icon={CreditCard} title="Primer pago" description="Puede quedar pendiente, pagarse una parte o completarse de una vez.">
             <Field label="Estado" htmlFor="payment-status"><select id="payment-status" value={form.paymentStatus} onChange={(event) => update('paymentStatus', event.target.value)} className="sale-input"><option value="paid">Pago completo</option><option value="partial">Primer pago parcial</option><option value="pending">Sin pago inicial</option></select></Field>
@@ -136,8 +201,9 @@ function NewSalePage() {
 
         <aside className="rounded-3xl bg-brand-950 p-5 text-white shadow-lg shadow-brand-950/15 lg:sticky lg:top-8 sm:p-6">
           <h2 className="flex items-center gap-2 font-extrabold"><PackageCheck size={20} />Resumen financiero</h2>
-          <dl className="mt-5 space-y-3 border-y border-white/10 py-5 text-sm"><SummaryRow label="Paca" value={selectedInventory?.baleCode ?? 'Sin seleccionar'} /><SummaryRow label="Precio recomendado" value={selectedInventory ? formatCurrency(selectedInventory.recommendedUnitPrice) : '—'} /><SummaryRow label="Prendas" value={formatCurrency(merchandiseTotal)} /><SummaryRow label="Cobro delivery" value={formatCurrency(deliveryCharge)} /><SummaryRow label="Total a cobrar" value={formatCurrency(total)} /><SummaryRow label="Primer pago" value={formatCurrency(firstPayment)} /><SummaryRow label="Saldo" value={formatCurrency(balance)} /><SummaryRow label="Costo prendas" value={formatCurrency(merchandiseCost)} /><SummaryRow label="Costo delivery" value={formatCurrency(deliveryCost)} /></dl>
+          <dl className="mt-5 space-y-3 border-y border-white/10 py-5 text-sm"><SummaryRow label="Paca" value={selectedInventory?.baleCode ?? 'Sin seleccionar'} /><SummaryRow label="Piezas totales" value={quantity} /><SummaryRow label="Total prendas" value={formatCurrency(merchandiseTotal)} /><SummaryRow label="Cobro delivery" value={formatCurrency(deliveryCharge)} /><SummaryRow label="Total a cobrar" value={formatCurrency(total)} /><SummaryRow label="Primer pago" value={formatCurrency(firstPayment)} /><SummaryRow label="Saldo" value={formatCurrency(balance)} /><SummaryRow label="Costo prendas" value={formatCurrency(merchandiseCost)} /><SummaryRow label="Costo delivery" value={formatCurrency(deliveryCost)} /></dl>
           <p className="mt-5 text-xs font-bold uppercase tracking-wider text-brand-200">Ganancia estimada</p><p className={`mt-1 text-3xl font-extrabold ${estimatedProfit < 0 ? 'text-coral-200' : 'text-white'}`}>{formatCurrency(estimatedProfit)}</p>
+          {(hasPriceBelowCost || hasPriceBelowRecommended) && <p className="mt-3 text-xs font-semibold text-amber-100">Revisa los precios marcados antes de registrar.</p>}
           {formError && <p role="alert" className="mt-4 rounded-xl bg-coral-500/15 p-3 text-sm font-semibold text-coral-100">{formError}</p>}
           <button type="submit" disabled={isSaving || isLoading} className="mt-6 flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-white px-5 text-sm font-extrabold text-brand-950 disabled:opacity-50"><PackageCheck size={19} />{isSaving ? 'Guardando…' : 'Registrar venta'}</button>
         </aside>
@@ -150,7 +216,11 @@ function FormSection({ icon: Icon, title, description, children }) { return <sec
 function Field({ label, htmlFor, children }) { return <div><label htmlFor={htmlFor} className="mb-2 block text-sm font-bold text-slate-700">{label}</label>{children}</div> }
 function MoneyField({ label, id, min = 0, value, onChange, required = false }) { return <Field label={label} htmlFor={id}><div className="relative"><span className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-4 text-sm font-bold text-slate-400">C$</span><input id={id} type="number" min={min} step="0.01" required={required} value={value} onChange={(event) => onChange(event.target.value)} className="sale-input sale-input--currency" /></div></Field> }
 function SummaryRow({ label, value }) { return <div className="flex justify-between gap-4"><dt className="text-brand-200">{label}</dt><dd className="text-right font-bold">{value}</dd></div> }
-function SaleConfirmation({ sale, onAgain }) { return <section className="mx-auto max-w-3xl rounded-3xl bg-white p-6 text-center shadow-soft"><span className="mx-auto grid size-14 place-items-center rounded-2xl bg-emerald-50 text-emerald-700"><CircleCheck size={28} /></span><h2 className="mt-4 text-2xl font-extrabold">Venta registrada</h2><p className="mt-2 text-slate-600">{sale.customerName} · {sale.baleCode} · {sale.quantity} piezas</p><dl className="mx-auto mt-5 grid max-w-xl gap-2 text-left sm:grid-cols-2"><ConfirmationRow label="Total" value={formatCurrency(sale.total)} /><ConfirmationRow label="Primer pago" value={`${formatCurrency(sale.firstPayment)}${sale.firstPayment ? ` · ${sale.paymentMethod}` : ''}`} /><ConfirmationRow label="Saldo" value={formatCurrency(sale.balance)} /><ConfirmationRow label="Ganancia estimada" value={formatCurrency(sale.estimatedProfit)} /></dl><div className="mt-6 flex flex-col justify-center gap-3 sm:flex-row"><button type="button" onClick={onAgain} className="min-h-12 rounded-xl bg-brand-950 px-5 text-sm font-extrabold text-white">Registrar otra</button><Link to="/ventas" className="inline-flex min-h-12 items-center justify-center rounded-xl border px-5 text-sm font-extrabold text-brand-800">Ver ventas</Link></div></section> }
+
+function SaleConfirmation({ sale, onAgain }) {
+  return <section className="mx-auto max-w-3xl rounded-3xl bg-white p-6 text-center shadow-soft"><span className="mx-auto grid size-14 place-items-center rounded-2xl bg-emerald-50 text-emerald-700"><CircleCheck size={28} /></span><h2 className="mt-4 text-2xl font-extrabold">Venta registrada</h2><p className="mt-2 text-slate-600">{sale.customerName} · {sale.baleCode} · {sale.quantity} piezas</p><div className="mx-auto mt-4 max-w-xl space-y-2 rounded-2xl bg-slate-50 p-4 text-left">{sale.priceLines.map((line, index) => <p key={line.id ?? index} className="flex justify-between text-sm"><span>{line.quantity} {line.quantity === 1 ? 'pieza' : 'piezas'} × {formatCurrency(line.unitPrice)}</span><b>{formatCurrency(line.quantity * line.unitPrice)}</b></p>)}</div><dl className="mx-auto mt-5 grid max-w-xl gap-2 text-left sm:grid-cols-2"><ConfirmationRow label="Total" value={formatCurrency(sale.total)} /><ConfirmationRow label="Primer pago" value={`${formatCurrency(sale.firstPayment)}${sale.firstPayment ? ` · ${sale.paymentMethod}` : ''}`} /><ConfirmationRow label="Saldo" value={formatCurrency(sale.balance)} /><ConfirmationRow label="Ganancia estimada" value={formatCurrency(sale.estimatedProfit)} /></dl><div className="mt-6 flex flex-col justify-center gap-3 sm:flex-row"><button type="button" onClick={onAgain} className="min-h-12 rounded-xl bg-brand-950 px-5 text-sm font-extrabold text-white">Registrar otra</button><Link to="/ventas" className="inline-flex min-h-12 items-center justify-center rounded-xl border px-5 text-sm font-extrabold text-brand-800">Ver ventas</Link></div></section>
+}
+
 function ConfirmationRow({ label, value }) { return <div className="rounded-2xl bg-slate-50 p-4"><dt className="text-xs text-slate-500">{label}</dt><dd className="mt-1 font-extrabold text-slate-900">{value}</dd></div> }
 
 export default NewSalePage

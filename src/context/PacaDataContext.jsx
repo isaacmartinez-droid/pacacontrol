@@ -83,6 +83,12 @@ function mapBale(row, currentRevenue = 0) {
 function mapSale(row) {
   const items = row.sale_items ?? []
   const primaryItem = items[0]
+  const priceLines = items.map((item) => ({
+    quantity: item.quantity,
+    unitPrice: asNumber(item.unit_price),
+    referenceUnitCost: asNumber(item.reference_unit_cost),
+    recommendedUnitPrice: asNumber(item.recommended_unit_price),
+  })).sort((a, b) => a.unitPrice - b.unitPrice)
   const baleCodes = [...new Set(items.flatMap((item) => (
     (item.sale_item_allocations ?? []).map((allocation) => allocation.inventory?.bale?.code).filter(Boolean)
   )))]
@@ -124,6 +130,7 @@ function mapSale(row) {
     unitPrice: asNumber(primaryItem?.unit_price),
     referenceUnitCost: asNumber(primaryItem?.reference_unit_cost),
     recommendedUnitPrice: asNumber(primaryItem?.recommended_unit_price),
+    priceLines,
   }
 }
 
@@ -315,11 +322,10 @@ function AccountPacaDataProvider({ userId, children }) {
     }
   }, [refresh])
 
-  const registerSale = useCallback(async ({ categoryId, quantity, unitPrice, paymentMethod, customerId, baleInventoryId, paymentStatus = 'paid', paidAmount = null, deliveryCost = 0, deliveryCharge = 0 }) => {
-    const { error } = await getSupabaseClient().rpc('register_sale', {
+  const registerSale = useCallback(async ({ categoryId, priceLines, paymentMethod, customerId, baleInventoryId, paymentStatus = 'paid', paidAmount = null, deliveryCost = 0, deliveryCharge = 0 }) => {
+    const { error } = await getSupabaseClient().rpc('register_sale_with_prices', {
       p_category_id: categoryId,
-      p_quantity: quantity,
-      p_unit_price: unitPrice,
+      p_price_lines: priceLines.map((line) => ({ quantity: line.quantity, unit_price: line.unitPrice })),
       p_payment_method: paymentMethod,
       p_customer_id: customerId === 'walk-in' ? null : customerId,
       p_bale_inventory_id: baleInventoryId || null,

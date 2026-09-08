@@ -4,6 +4,7 @@ import {
   calculateBaseRecommendedPrice,
   calculatePriceMargin,
   calculateRecommendedPrice,
+  summarizePriceLines,
 } from './pricing.js'
 
 test('calcula el precio base usando margen real y redondea hacia arriba', () => {
@@ -18,4 +19,11 @@ test('aplica niveles y respeta un precio personalizado', () => {
 
 test('calcula el margen real sobre el precio de venta', () => {
   assert.equal(calculatePriceMargin(120, 72), 40)
+})
+
+test('suma cantidades con precios distintos dentro de una venta', () => {
+  assert.deepEqual(summarizePriceLines([
+    { quantity: 1, unitPrice: 60 },
+    { quantity: 2, unitPrice: 90 },
+  ]), { quantity: 3, merchandiseTotal: 240 })
 })

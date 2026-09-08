@@ -43,3 +43,14 @@ export function calculatePriceMargin(price, unitCost) {
   if (safePrice <= 0) return 0
   return ((safePrice - Math.max(0, toNumber(unitCost))) / safePrice) * 100
 }
+
+export function summarizePriceLines(lines = []) {
+  return lines.reduce((summary, line) => {
+    const quantity = Math.max(0, toNumber(line.quantity))
+    const unitPrice = Math.max(0, toNumber(line.unitPrice))
+    return {
+      quantity: summary.quantity + quantity,
+      merchandiseTotal: summary.merchandiseTotal + quantity * unitPrice,
+    }
+  }, { quantity: 0, merchandiseTotal: 0 })
+}

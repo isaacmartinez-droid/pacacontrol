@@ -77,15 +77,16 @@ Si tienes más de una, usa **Ver otra paca** para cambiar entre ellas. Una alert
 2. En **Categoría**, selecciona la prenda vendida. Solo se muestran categorías con existencias reales.
 3. En **Paca de origen**, selecciona obligatoriamente la paca física de la que tomaste las prendas. Esto conserva el control correcto de la inversión y la ganancia.
 4. Al seleccionar la paca, el sistema completa el **precio recomendado** para esa categoría. Puedes modificarlo manualmente.
-5. Revisa el costo real mostrado. Si cobras menos que el costo, aparecerá una advertencia de pérdida; si cobras menos que la recomendación, se indicará que no alcanzarás el margen elegido.
-6. Selecciona el cliente o **Venta de mostrador**.
-7. Para una venta a cliente, escribe el **costo real del delivery**. Este dato es obligatorio. Si también cobras el envío al cliente, registra ese monto por separado.
-8. Selecciona el método de pago.
-9. Selecciona el estado de pago:
+5. Escribe la cantidad de piezas que tienen ese precio. Si otras piezas de la misma categoría tienen un precio diferente, pulsa **Otro precio** y agrega otro grupo. Por ejemplo: `1 × C$60` y `2 × C$90`.
+6. Revisa el costo real mostrado. Cada grupo que quede debajo del costo o de la recomendación mostrará su propia advertencia.
+7. Selecciona el cliente o **Venta de mostrador**.
+8. Para una venta a cliente, escribe el **costo real del delivery**. Este dato es obligatorio. Si también cobras el envío al cliente, registra ese monto por separado.
+9. Selecciona el método de pago.
+10. Selecciona el estado de pago:
    - **Pagado completo:** se recibió todo el dinero.
    - **Pago parcial:** escribe cuánto recibiste. Debe ser menor al total.
    - **Pendiente de pago:** no se recibió dinero todavía.
-10. Pulsa **Registrar venta**.
+11. Pulsa **Registrar venta**.
 
 Los pagos parciales y pendientes requieren seleccionar un cliente. De esa manera sabes a quién corresponde el saldo.
 
