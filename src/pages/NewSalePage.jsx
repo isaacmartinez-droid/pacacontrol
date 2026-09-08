@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { CircleCheck, CreditCard, PackageCheck, PackageX, ShoppingBag, Truck, Users } from 'lucide-react'
+import { AlertTriangle, CircleCheck, CreditCard, PackageCheck, PackageX, ShoppingBag, Truck, Users } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import EmptyState from '../components/common/EmptyState'
 import PageHeader from '../components/common/PageHeader'
@@ -17,7 +17,7 @@ function NewSalePage() {
   const { data, registerSale, createCustomer, isLoading, error } = usePacaData()
   const categories = data.categories.filter((category) => category.availablePieces > 0)
   const [form, setForm] = useState({
-    categoryId: '', baleInventoryId: '', quantity: 1, unitPrice: 180,
+    categoryId: '', baleInventoryId: '', quantity: 1, unitPrice: '',
     customerId: 'walk-in', newCustomerName: '', newCustomerPhone: '',
     deliveryCost: 0, deliveryCharge: 0,
     paymentStatus: 'paid', paymentMethod: 'cash', paidAmount: '',
@@ -34,7 +34,7 @@ function NewSalePage() {
 
   const selectedCategory = categories.find((category) => category.id === form.categoryId)
   const baleOptions = useMemo(
-    () => data.baleInventory.filter((inventory) => inventory.categoryId === form.categoryId),
+    () => data.baleInventory.filter((inventory) => inventory.categoryId === form.categoryId && inventory.availablePieces > 0),
     [data.baleInventory, form.categoryId],
   )
   const selectedInventory = baleOptions.find((inventory) => inventory.id === form.baleInventoryId)
@@ -49,6 +49,8 @@ function NewSalePage() {
   const balance = Math.max(0, total - firstPayment)
   const merchandiseCost = quantity * (selectedInventory?.estimatedUnitCost ?? 0)
   const estimatedProfit = total - merchandiseCost - deliveryCost
+  const isBelowCost = Boolean(selectedInventory && unitPrice > 0 && unitPrice < selectedInventory.estimatedUnitCost)
+  const isBelowRecommended = Boolean(selectedInventory && unitPrice >= selectedInventory.estimatedUnitCost && unitPrice < selectedInventory.recommendedUnitPrice)
   const selectedCustomer = data.customers.find((customer) => customer.id === form.customerId)
   const customerName = form.customerId === 'new' ? form.newCustomerName.trim() || 'Cliente nuevo' : selectedCustomer?.name ?? 'Venta de mostrador'
 
@@ -56,7 +58,10 @@ function NewSalePage() {
     setForm((current) => ({
       ...current,
       [field]: value,
-      ...(field === 'categoryId' ? { baleInventoryId: '' } : {}),
+      ...(field === 'categoryId' ? { baleInventoryId: '', unitPrice: '' } : {}),
+      ...(field === 'baleInventoryId' ? {
+        unitPrice: data.baleInventory.find((inventory) => inventory.id === value)?.recommendedUnitPrice || '',
+      } : {}),
       ...(field === 'customerId' && value === 'walk-in' ? { deliveryCost: 0, deliveryCharge: 0 } : {}),
     }))
     setFormError('')
@@ -105,10 +110,13 @@ function NewSalePage() {
           <FormSection icon={ShoppingBag} title="Prendas de la venta" description="Selecciona la categoría y la paca física exacta.">
             <div className="grid gap-4 sm:grid-cols-2">
               <Field label="Categoría" htmlFor="sale-category"><select id="sale-category" value={form.categoryId} onChange={(event) => update('categoryId', event.target.value)} className="sale-input">{categories.map((category) => <option key={category.id} value={category.id}>{category.name} · {category.availablePieces} disponibles</option>)}</select></Field>
-              <Field label="Paca de origen" htmlFor="sale-bale"><select id="sale-bale" required value={form.baleInventoryId} onChange={(event) => update('baleInventoryId', event.target.value)} className="sale-input"><option value="">Selecciona una paca</option>{baleOptions.map((inventory) => <option key={inventory.id} value={inventory.id}>{inventory.baleCode} · {inventory.availablePieces} disponibles</option>)}</select></Field>
+              <Field label="Paca de origen" htmlFor="sale-bale"><select id="sale-bale" required value={form.baleInventoryId} onChange={(event) => update('baleInventoryId', event.target.value)} className="sale-input"><option value="">Selecciona una paca</option>{baleOptions.map((inventory) => <option key={inventory.id} value={inventory.id}>{inventory.baleCode} · {inventory.availablePieces} disponibles · sugerido {formatCurrency(inventory.recommendedUnitPrice)}</option>)}</select></Field>
               <Field label="Cantidad" htmlFor="sale-quantity"><input id="sale-quantity" type="number" min="1" max={selectedInventory?.availablePieces ?? undefined} value={form.quantity} onChange={(event) => update('quantity', event.target.value)} className="sale-input" /></Field>
               <MoneyField label="Precio por pieza" id="sale-price" min="1" value={form.unitPrice} onChange={(value) => update('unitPrice', value)} />
             </div>
+            {selectedInventory && <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-2xl bg-brand-50 p-4 text-sm"><div><p className="font-bold text-brand-950">Costo real: {formatCurrency(selectedInventory.estimatedUnitCost)}</p><p className="mt-1 text-brand-700">Recomendado para esta categoría: <b>{formatCurrency(selectedInventory.recommendedUnitPrice)}</b> · margen base {selectedInventory.targetMargin}%</p></div><button type="button" onClick={() => update('unitPrice', selectedInventory.recommendedUnitPrice)} className="rounded-xl bg-brand-900 px-4 py-2 font-bold text-white">Usar recomendado</button></div>}
+            {isBelowCost && <p role="alert" className="mt-3 flex items-start gap-2 rounded-xl bg-red-50 p-3 text-sm font-bold text-red-700"><AlertTriangle className="mt-0.5 shrink-0" size={17} />Este precio es menor que el costo de la pieza y produciría una pérdida antes del delivery.</p>}
+            {isBelowRecommended && <p className="mt-3 flex items-start gap-2 rounded-xl bg-amber-50 p-3 text-sm font-semibold text-amber-800"><AlertTriangle className="mt-0.5 shrink-0" size={17} />El precio es rentable, pero está debajo del recomendado para alcanzar el margen elegido.</p>}
           </FormSection>
 
           <FormSection icon={Users} title="Cliente" description="Elige uno existente o créalo sin salir de la venta.">
@@ -128,7 +136,7 @@ function NewSalePage() {
 
         <aside className="rounded-3xl bg-brand-950 p-5 text-white shadow-lg shadow-brand-950/15 lg:sticky lg:top-8 sm:p-6">
           <h2 className="flex items-center gap-2 font-extrabold"><PackageCheck size={20} />Resumen financiero</h2>
-          <dl className="mt-5 space-y-3 border-y border-white/10 py-5 text-sm"><SummaryRow label="Paca" value={selectedInventory?.baleCode ?? 'Sin seleccionar'} /><SummaryRow label="Prendas" value={formatCurrency(merchandiseTotal)} /><SummaryRow label="Cobro delivery" value={formatCurrency(deliveryCharge)} /><SummaryRow label="Total a cobrar" value={formatCurrency(total)} /><SummaryRow label="Primer pago" value={formatCurrency(firstPayment)} /><SummaryRow label="Saldo" value={formatCurrency(balance)} /><SummaryRow label="Costo prendas" value={formatCurrency(merchandiseCost)} /><SummaryRow label="Costo delivery" value={formatCurrency(deliveryCost)} /></dl>
+          <dl className="mt-5 space-y-3 border-y border-white/10 py-5 text-sm"><SummaryRow label="Paca" value={selectedInventory?.baleCode ?? 'Sin seleccionar'} /><SummaryRow label="Precio recomendado" value={selectedInventory ? formatCurrency(selectedInventory.recommendedUnitPrice) : '—'} /><SummaryRow label="Prendas" value={formatCurrency(merchandiseTotal)} /><SummaryRow label="Cobro delivery" value={formatCurrency(deliveryCharge)} /><SummaryRow label="Total a cobrar" value={formatCurrency(total)} /><SummaryRow label="Primer pago" value={formatCurrency(firstPayment)} /><SummaryRow label="Saldo" value={formatCurrency(balance)} /><SummaryRow label="Costo prendas" value={formatCurrency(merchandiseCost)} /><SummaryRow label="Costo delivery" value={formatCurrency(deliveryCost)} /></dl>
           <p className="mt-5 text-xs font-bold uppercase tracking-wider text-brand-200">Ganancia estimada</p><p className={`mt-1 text-3xl font-extrabold ${estimatedProfit < 0 ? 'text-coral-200' : 'text-white'}`}>{formatCurrency(estimatedProfit)}</p>
           {formError && <p role="alert" className="mt-4 rounded-xl bg-coral-500/15 p-3 text-sm font-semibold text-coral-100">{formError}</p>}
           <button type="submit" disabled={isSaving || isLoading} className="mt-6 flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-white px-5 text-sm font-extrabold text-brand-950 disabled:opacity-50"><PackageCheck size={19} />{isSaving ? 'Guardando…' : 'Registrar venta'}</button>

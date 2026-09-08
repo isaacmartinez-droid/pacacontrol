@@ -9,6 +9,7 @@ import {
 } from '../utils/calculations'
 import { formatCurrency } from '../utils/currency'
 import { formatShortDate } from '../utils/dates'
+import { getPricingLevel } from '../utils/pricing'
 
 function BalesPage() {
   const { data } = usePacaData()
@@ -18,6 +19,7 @@ function BalesPage() {
   if (selectedId && !activeBale) return <div><PageHeader title="Pacas" description="Revisión de la paca seleccionada." /><div className="page-content py-5"><p className="mb-3 text-sm text-slate-600">La paca seleccionada no está disponible en los datos cargados.</p><Link to="/pacas" className="font-bold text-brand-800 underline">Ver mis pacas</Link></div></div>
   if (!activeBale) return <div><PageHeader eyebrow="Compras e inversión" title="Pacas" description="Consulta el avance de cada compra y cuánto inventario continúa disponible." /><div className="page-content py-5"><Link to="/pacas/nueva" className="inline-flex min-h-12 items-center rounded-2xl bg-brand-900 px-5 text-sm font-bold text-white">Registrar una paca</Link></div></div>
   const percentage = Math.round(getSoldPercentage(activeBale))
+  const activeInventory = data.baleInventory.filter((inventory) => inventory.baleId === activeBale.id)
 
   return (
     <div>
@@ -81,6 +83,9 @@ function BalesPage() {
               <DetailRow label="Piezas vendidas" value={activeBale.soldPieces} />
               <DetailRow label="Piezas disponibles" value={getAvailablePieces(activeBale)} />
               <DetailRow label="Piezas dañadas" value={activeBale.damagedPieces} warning />
+              <DetailRow label="Costo real por pieza" value={formatCurrency(activeBale.estimatedUnitCost)} />
+              <DetailRow label="Margen deseado" value={`${activeBale.targetMargin}%`} />
+              <DetailRow label="Precio base recomendado" value={formatCurrency(activeBale.baseRecommendedPrice)} emphasized />
             </dl>
             <div className="border-t border-slate-100 p-5">
               <div className="mb-2 flex justify-between text-xs font-bold">
@@ -95,6 +100,11 @@ function BalesPage() {
               />
             </div>
           </article>
+
+          <section className="mt-5 overflow-hidden rounded-3xl bg-white shadow-soft ring-1 ring-slate-100">
+            <div className="border-b border-slate-100 p-5"><h3 className="font-extrabold text-slate-900">Precios por categoría</h3><p className="mt-1 text-sm text-slate-500">Los precios se actualizan si cambian las piezas dañadas.</p></div>
+            {activeInventory.map((inventory, index) => <div key={inventory.id} className={`flex flex-wrap items-center justify-between gap-3 px-5 py-4 ${index > 0 ? 'border-t border-slate-100' : ''}`}><div><p className="font-bold text-slate-900">{inventory.categoryName}</p><p className="mt-1 text-xs text-slate-500">{getPricingLevel(inventory.priceLevel).label} · {inventory.availablePieces} disponibles</p></div><div className="text-right"><p className="text-xs text-slate-500">Precio recomendado</p><p className="text-lg font-extrabold text-brand-800">{formatCurrency(inventory.recommendedUnitPrice)}</p></div></div>)}
+          </section>
         </section>
       </div>
     </div>

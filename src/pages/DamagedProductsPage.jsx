@@ -7,15 +7,16 @@ function DamagedProductsPage() {
   const { data, registerDamage } = usePacaData()
   const damagedProducts = data.damagedProducts
   const damagedTotal = damagedProducts.reduce((total, item) => total + item.quantity, 0)
-  const [inventoryId, setInventoryId] = useState(data.baleInventory[0]?.id ?? '')
+  const availableInventory = data.baleInventory.filter((inventory) => inventory.availablePieces > 0)
+  const [inventoryId, setInventoryId] = useState(availableInventory[0]?.id ?? '')
   const [quantity, setQuantity] = useState(1)
   const [reason, setReason] = useState('Daño descubierto después de registrar la paca')
   const [error, setError] = useState('')
   const [saving, setSaving] = useState(false)
 
   useEffect(() => {
-    if (!inventoryId && data.baleInventory[0]) setInventoryId(data.baleInventory[0].id)
-  }, [data.baleInventory, inventoryId])
+    if (!availableInventory.some((inventory) => inventory.id === inventoryId)) setInventoryId(availableInventory[0]?.id ?? '')
+  }, [availableInventory, inventoryId])
 
   async function handleSubmit(event) {
     event.preventDefault()
@@ -51,12 +52,12 @@ function DamagedProductsPage() {
           <h2 className="text-lg font-extrabold text-slate-900">Registrar daño descubierto</h2>
           <p className="mt-1 text-sm text-slate-500">Elige la paca física para descontar las piezas correctas.</p>
           <div className="mt-4 grid gap-3 sm:grid-cols-3">
-            <label className="text-sm font-bold text-slate-700">Paca<select value={inventoryId} onChange={(event) => setInventoryId(event.target.value)} className="sale-input mt-2">{data.baleInventory.map((inventory) => <option key={inventory.id} value={inventory.id}>{inventory.baleCode} · {inventory.categoryName} · {inventory.availablePieces} disponibles</option>)}</select></label>
+            <label className="text-sm font-bold text-slate-700">Paca<select value={inventoryId} onChange={(event) => setInventoryId(event.target.value)} className="sale-input mt-2">{availableInventory.map((inventory) => <option key={inventory.id} value={inventory.id}>{inventory.baleCode} · {inventory.categoryName} · {inventory.availablePieces} disponibles</option>)}</select></label>
             <label className="text-sm font-bold text-slate-700">Cantidad<input type="number" min="1" value={quantity} onChange={(event) => setQuantity(event.target.value)} className="sale-input mt-2" /></label>
             <label className="text-sm font-bold text-slate-700">Motivo<input value={reason} onChange={(event) => setReason(event.target.value)} className="sale-input mt-2" /></label>
           </div>
           {error && <p role="alert" className="mt-3 text-sm font-bold text-coral-600">{error}</p>}
-          <button disabled={saving || data.baleInventory.length === 0} className="mt-4 min-h-11 rounded-xl bg-amber-600 px-4 text-sm font-extrabold text-white disabled:opacity-60">{saving ? 'Guardando…' : 'Registrar daño'}</button>
+          <button disabled={saving || availableInventory.length === 0} className="mt-4 min-h-11 rounded-xl bg-amber-600 px-4 text-sm font-extrabold text-white disabled:opacity-60">{saving ? 'Guardando…' : 'Registrar daño'}</button>
         </form>
 
         <section aria-labelledby="damaged-list-title" className="max-w-3xl">

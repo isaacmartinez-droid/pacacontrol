@@ -2,6 +2,8 @@ import { PackageCheck } from 'lucide-react'
 import { Link, useSearchParams } from 'react-router-dom'
 import PageHeader from '../components/common/PageHeader'
 import { usePacaData } from '../context/PacaDataContext'
+import { formatCurrency } from '../utils/currency'
+import { getPricingLevel } from '../utils/pricing'
 
 function InventoryPage() {
   const { data } = usePacaData()
@@ -41,24 +43,16 @@ function InventoryPage() {
           </h2>
           <div className="overflow-hidden rounded-3xl bg-white shadow-soft ring-1 ring-slate-100">
             {selectedId && visibleCategories.length === 0 && <p className="p-5 text-sm text-slate-600">La categoría seleccionada no está disponible en los datos cargados.</p>}
-            {visibleCategories.map((category, index) => (
-              <div
-                key={category.id}
-                className={`flex min-h-14 items-center justify-between gap-4 px-5 py-3 ${
-                  index > 0 ? 'border-t border-slate-100' : ''
-                }`}
-              >
-                <div className="flex min-w-0 items-center gap-3">
-                  <span className="grid size-9 shrink-0 place-items-center rounded-xl bg-brand-50 text-sm font-extrabold text-brand-700">
-                    {category.name.charAt(0)}
-                  </span>
-                  <p className="truncate text-sm font-semibold text-slate-700">{category.name}</p>
+            {visibleCategories.map((category, index) => {
+              const categoryInventory = data.baleInventory.filter((inventory) => inventory.categoryId === category.id && inventory.availablePieces > 0)
+              return <div key={category.id} className={index > 0 ? 'border-t border-slate-100' : ''}>
+                <div className="flex min-h-14 items-center justify-between gap-4 px-5 py-3">
+                  <div className="flex min-w-0 items-center gap-3"><span className="grid size-9 shrink-0 place-items-center rounded-xl bg-brand-50 text-sm font-extrabold text-brand-700">{category.name.charAt(0)}</span><p className="truncate text-sm font-semibold text-slate-700">{category.name}</p></div>
+                  <p className="shrink-0 text-sm font-extrabold text-slate-900">{category.availablePieces} <span className="font-medium text-slate-400">pzas.</span></p>
                 </div>
-                <p className="shrink-0 text-sm font-extrabold text-slate-900">
-                  {category.availablePieces} <span className="font-medium text-slate-400">pzas.</span>
-                </p>
+                {categoryInventory.length > 0 && <div className="space-y-2 bg-slate-50 px-5 py-3">{categoryInventory.map((inventory) => <div key={inventory.id} className="flex flex-wrap items-center justify-between gap-3 rounded-xl bg-white px-4 py-3 ring-1 ring-slate-100"><div><p className="text-sm font-bold text-slate-800">{inventory.baleCode} · {inventory.availablePieces} disponibles</p><p className="mt-0.5 text-xs text-slate-500">Costo {formatCurrency(inventory.estimatedUnitCost)} · {getPricingLevel(inventory.priceLevel).label}</p></div><div className="text-right"><p className="text-xs text-slate-500">Sugerido</p><p className="font-extrabold text-brand-800">{formatCurrency(inventory.recommendedUnitPrice)}</p></div></div>)}</div>}
               </div>
-            ))}
+            })}
           </div>
         </section>
       </div>

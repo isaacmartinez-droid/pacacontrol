@@ -2,6 +2,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useRef, use
 import { useAuth } from './AuthContext'
 import { getSupabaseClient } from '../lib/supabaseClient'
 import { formatShortDate } from '../utils/dates'
+import { calculateBaseRecommendedPrice, DEFAULT_TARGET_MARGIN } from '../utils/pricing'
 
 const PacaDataContext = createContext(null)
 
@@ -54,6 +55,12 @@ async function findOrCreateCategory(supabase, categoryName) {
 }
 
 function mapBale(row, currentRevenue = 0) {
+  const receivedPieces = row.received_pieces
+  const damagedPieces = row.damaged_pieces
+  const sellablePieces = Math.max(0, receivedPieces - damagedPieces)
+  const totalInvestment = asNumber(row.purchase_cost) + asNumber(row.transport_cost) + asNumber(row.other_expenses)
+  const estimatedUnitCost = sellablePieces > 0 ? totalInvestment / sellablePieces : 0
+  const targetMargin = asNumber(row.target_margin_percent) || DEFAULT_TARGET_MARGIN
   return {
     id: row.id,
     code: row.code,
@@ -61,17 +68,21 @@ function mapBale(row, currentRevenue = 0) {
     purchaseCost: asNumber(row.purchase_cost),
     acquisitionTransport: asNumber(row.transport_cost),
     otherExpenses: asNumber(row.other_expenses),
-    receivedPieces: row.received_pieces,
+    receivedPieces,
     soldPieces: row.sold_pieces,
-    damagedPieces: row.damaged_pieces,
+    damagedPieces,
     availablePieces: row.available_pieces,
     currentRevenue,
+    targetMargin,
+    estimatedUnitCost,
+    baseRecommendedPrice: calculateBaseRecommendedPrice(estimatedUnitCost, targetMargin),
     status: row.available_pieces > 0 ? 'En venta' : row.sold_pieces > 0 ? 'Agotada' : 'Sin piezas vendibles',
   }
 }
 
 function mapSale(row) {
   const items = row.sale_items ?? []
+  const primaryItem = items[0]
   const baleCodes = [...new Set(items.flatMap((item) => (
     (item.sale_item_allocations ?? []).map((allocation) => allocation.inventory?.bale?.code).filter(Boolean)
   )))]
@@ -110,6 +121,9 @@ function mapSale(row) {
     secondPaymentAt: row.second_payment_at,
     lastPaymentAt: row.second_payment_at ?? row.first_payment_at ?? row.sold_at,
     baleCodes,
+    unitPrice: asNumber(primaryItem?.unit_price),
+    referenceUnitCost: asNumber(primaryItem?.reference_unit_cost),
+    recommendedUnitPrice: asNumber(primaryItem?.recommended_unit_price),
   }
 }
 
@@ -173,13 +187,13 @@ function AccountPacaDataProvider({ userId, children }) {
       const [categories, bales, sales, customers, expenses, damagedProducts, allocations, dailySummaries, baleInventory] = await Promise.all([
         supabase.from('inventory_summary').select('category_id, name, received_pieces, available_pieces').order('name'),
         supabase.from('bale_summary').select('*').order('purchase_date', { ascending: false }),
-        supabase.from('sales').select('*, customer:customers(name), sale_items(quantity, sale_item_allocations(quantity, inventory:bale_inventory(bale:bales(code))))').order('sold_at', { ascending: false }),
+        supabase.from('sales').select('*, customer:customers(name), sale_items(quantity, unit_price, reference_unit_cost, recommended_unit_price, sale_item_allocations(quantity, inventory:bale_inventory(bale:bales(code))))').order('sold_at', { ascending: false }),
         supabase.from('customer_summary').select('id, name, phone, is_priority, purchases, total_spent').order('name'),
         supabase.from('expenses').select('id, concept, amount, expense_date').order('expense_date', { ascending: false }),
         supabase.from('damaged_products').select('id, quantity, reason, reported_at, inventory:bale_inventory(category:categories(name), bale:bales(code))').order('reported_at', { ascending: false }),
         supabase.from('sale_item_allocations').select('quantity, sale_item:sale_items(unit_price), inventory:bale_inventory(bale_id)'),
         supabase.from('daily_summaries').select('*').order('summary_date', { ascending: false }).limit(14),
-        supabase.from('bale_inventory').select('id, bale_id, category_id, available_quantity, bale:bales(code), category:categories(name)').gt('available_quantity', 0),
+        supabase.from('bale_inventory_pricing').select('*').order('bale_code'),
       ])
       const failed = [categories, bales, sales, customers, expenses, damagedProducts, allocations, dailySummaries, baleInventory].find((result) => result.error)
       if (failed) throw failed.error
@@ -191,7 +205,6 @@ function AccountPacaDataProvider({ userId, children }) {
         if (baleId) revenueByBale.set(baleId, (revenueByBale.get(baleId) ?? 0) + row.quantity * asNumber(row.sale_item?.unit_price))
       })
       const mappedBales = bales.data.map((row) => mapBale(row, revenueByBale.get(row.id) ?? 0))
-      const balesById = new Map(mappedBales.map((bale) => [bale.id, bale]))
       lastRefreshAt.current = Date.now()
       setState({
         isLoading: false,
@@ -204,12 +217,23 @@ function AccountPacaDataProvider({ userId, children }) {
           customers: customers.data.map(mapCustomer),
           expenses: expenses.data.map((row) => ({ id: row.id, concept: row.concept, dateLabel: formatShortDate(row.expense_date), amount: asNumber(row.amount) })),
           dailySummaries: dailySummaries.data.map(mapDailySummary),
-          baleInventory: baleInventory.data.map((row) => {
-            const bale = balesById.get(row.bale_id)
-            const sellablePieces = Math.max(0, (bale?.receivedPieces ?? 0) - (bale?.damagedPieces ?? 0))
-            const investment = (bale?.purchaseCost ?? 0) + (bale?.acquisitionTransport ?? 0) + (bale?.otherExpenses ?? 0)
-            return { id: row.id, baleId: row.bale_id, baleCode: row.bale?.code ?? 'Paca', categoryId: row.category_id, categoryName: row.category?.name ?? 'Categoría', availablePieces: row.available_quantity, estimatedUnitCost: sellablePieces > 0 ? investment / sellablePieces : 0 }
-          }),
+          baleInventory: baleInventory.data.map((row) => ({
+            id: row.id,
+            baleId: row.bale_id,
+            baleCode: row.bale_code ?? 'Paca',
+            categoryId: row.category_id,
+            categoryName: row.category_name ?? 'Categoría',
+            receivedPieces: row.received_quantity,
+            soldPieces: row.sold_quantity,
+            damagedPieces: row.damaged_quantity,
+            availablePieces: row.available_quantity,
+            priceLevel: row.price_level,
+            customRecommendedPrice: asNumber(row.custom_recommended_price),
+            targetMargin: asNumber(row.target_margin_percent) || DEFAULT_TARGET_MARGIN,
+            estimatedUnitCost: asNumber(row.estimated_unit_cost),
+            baseRecommendedPrice: asNumber(row.base_recommended_price),
+            recommendedUnitPrice: asNumber(row.recommended_unit_price),
+          })),
           damagedProducts: damagedProducts.data.map((row) => ({ id: row.id, baleCode: row.inventory?.bale?.code ?? 'Paca', category: row.inventory?.category?.name ?? 'Sin categoría', quantity: row.quantity, reason: row.reason })),
         },
       })
@@ -249,10 +273,11 @@ function AccountPacaDataProvider({ userId, children }) {
     transportCost,
     otherExpenses,
     receivedPieces,
+    targetMargin,
     categoryEntries,
   }) => {
     const supabase = getSupabaseClient()
-    const { data: bale, error: baleError } = await supabase.from('bales').insert({ purchase_date: purchaseDate, purchase_cost: purchaseCost, transport_cost: transportCost, other_expenses: otherExpenses, received_pieces: receivedPieces }).select('*').single()
+    const { data: bale, error: baleError } = await supabase.from('bales').insert({ purchase_date: purchaseDate, purchase_cost: purchaseCost, transport_cost: transportCost, other_expenses: otherExpenses, received_pieces: receivedPieces, target_margin_percent: targetMargin }).select('*').single()
     if (baleError) throw baleError
 
     const categoryNames = []
@@ -260,7 +285,11 @@ function AccountPacaDataProvider({ userId, children }) {
     for (const entry of categoryEntries) {
       const category = await findOrCreateCategory(supabase, entry.name)
       const { data: inventory, error: inventoryError } = await supabase.from('bale_inventory').insert({
-        bale_id: bale.id, category_id: category.id, received_quantity: entry.quantity,
+        bale_id: bale.id,
+        category_id: category.id,
+        received_quantity: entry.quantity,
+        price_level: entry.priceLevel,
+        custom_recommended_price: entry.priceLevel === 'custom' ? entry.customRecommendedPrice : null,
       }).select('id').single()
       if (inventoryError) throw inventoryError
       categoryNames.push(category.name)
@@ -280,6 +309,7 @@ function AccountPacaDataProvider({ userId, children }) {
         sold_pieces: 0,
         damaged_pieces: damagedPieces,
         available_pieces: receivedPieces - damagedPieces,
+        target_margin_percent: targetMargin,
       }),
       categoryNames,
     }
