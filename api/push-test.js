@@ -18,7 +18,7 @@ export default async function handler(req, res) {
       .select('*').maybeSingle()
     if (error) throw error
     if (!subscription) return res.status(429).json({ error: 'Espera un minuto entre pruebas y comprueba que este dispositivo esté activado.' })
-    await sendPush(subscription, { title: 'PacaControl', body: 'Los avisos de este dispositivo están funcionando.', url: '/alertas', tag: 'pacacontrol-prueba' })
+    await sendPush(subscription, { title: 'Tienda J&F', body: 'Los avisos de este dispositivo están funcionando.', url: '/alertas', tag: 'pacacontrol-prueba' })
     return res.status(200).json({ sent: true })
   } catch { return res.status(503).json({ error: 'No se pudo enviar la prueba. Revisa la configuración del servicio o vuelve a activar este dispositivo.' }) }
 }

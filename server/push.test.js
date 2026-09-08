@@ -2,7 +2,7 @@ import assert from 'node:assert/strict'
 import test from 'node:test'
 import { createECDH, randomBytes } from 'node:crypto'
 import webpush from 'web-push'
-import { makePushPlan, processPushSubscription, pushConfigured, validCronAuthorization, validPushEndpoint } from './push.js'
+import { makePushPlan, processPushSubscription, pushConfigured, validCronAuthorization, validPushEndpoint, validVapidKeyPair } from './push.js'
 import dispatchHandler from '../api/push-dispatch.js'
 
 const data = {
@@ -13,9 +13,18 @@ const subscription = { id: 'sub', endpoint: 'https://fcm.googleapis.com/fcm/send
 
 test('el servicio necesita todas las variables de servidor', () => {
   assert.equal(pushConfigured({}), false)
-  const env = { SUPABASE_URL: 'https://example.supabase.co', SUPABASE_SERVICE_ROLE_KEY: 'server-key', VAPID_PUBLIC_KEY: 'public', VAPID_PRIVATE_KEY: 'private', VAPID_SUBJECT: 'https://example.com', PUSH_CRON_SECRET: 'secret' }
+  const vapid = webpush.generateVAPIDKeys()
+  const env = { SUPABASE_URL: 'https://example.supabase.co', SUPABASE_SERVICE_ROLE_KEY: 'server-key', VAPID_PUBLIC_KEY: vapid.publicKey, VAPID_PRIVATE_KEY: vapid.privateKey, VAPID_SUBJECT: 'https://example.com', PUSH_CRON_SECRET: 'x'.repeat(64) }
   assert.equal(pushConfigured(env), true)
   for (const key of Object.keys(env)) assert.equal(pushConfigured({ ...env, [key]: '' }), false, key)
+})
+
+test('rechaza claves VAPID dañadas o que no pertenecen a la misma pareja', () => {
+  const first = webpush.generateVAPIDKeys()
+  const second = webpush.generateVAPIDKeys()
+  assert.equal(validVapidKeyPair(first.publicKey, first.privateKey), true)
+  assert.equal(validVapidKeyPair(first.publicKey, second.privateKey), false)
+  assert.equal(validVapidKeyPair('public', 'private'), false)
 })
 
 test('el emisor exige el secreto completo y no acepta credenciales públicas', () => {
@@ -109,5 +118,5 @@ test('la biblioteca genera una petición Web Push cifrada sin enviarla a la red'
   })
   assert.equal(request.method, 'POST')
   assert.equal(request.headers['Content-Encoding'], 'aes128gcm')
-  assert.equal(request.body.includes(Buffer.from('PacaControl')), false)
+  assert.equal(request.body.includes(Buffer.from('Tienda J&F')), false)
 })

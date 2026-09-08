@@ -7,7 +7,7 @@ export function pushAvailability() {
   const installed = window.matchMedia('(display-mode: standalone)').matches || navigator.standalone === true
   if (isAppleMobile && !installed) return {
     supported: false,
-    reason: 'En iPhone o iPad, usa Compartir → Añadir a pantalla de inicio. Abre PacaControl desde ese icono y activa los avisos allí. Requiere iOS/iPadOS 16.4 o posterior.',
+    reason: 'En iPhone o iPad, usa Compartir → Añadir a pantalla de inicio. Abre Tienda J&F desde ese icono y activa los avisos allí. Requiere iOS/iPadOS 16.4 o posterior.',
   }
   if (!window.isSecureContext || !('serviceWorker' in navigator) || !('PushManager' in window) || !('Notification' in window)) {
     return { supported: false, reason: 'Este navegador no permite notificaciones push. Abre la aplicación con HTTPS en un navegador compatible.' }
@@ -17,6 +17,23 @@ export function pushAvailability() {
 
 export function readPushBinding() {
   try { return JSON.parse(window.localStorage.getItem(bindingKey)) } catch { return null }
+}
+
+export function getDevicePushErrorMessage(error) {
+  const message = String(error?.message ?? '')
+  if (/registration failed\s*-?\s*push service error/i.test(message)) {
+    return 'El navegador no pudo conectarse con su servicio de notificaciones. Revisa Internet, desactiva temporalmente VPN o bloqueadores y vuelve a intentarlo. Si continúa, prueba Chrome o Edge actualizado.'
+  }
+  if (error?.name === 'NotAllowedError' || /permission|permiso|denied/i.test(message)) {
+    return 'Las notificaciones están bloqueadas. Permítelas en la configuración de este sitio y vuelve a intentarlo.'
+  }
+  if (error?.name === 'InvalidAccessError' || /applicationServerKey|clave.*válida/i.test(message)) {
+    return 'La configuración de notificaciones del servidor no es válida. Revisa las claves VAPID en Vercel y vuelve a desplegar.'
+  }
+  if (error?.name === 'AbortError') {
+    return 'El servicio de notificaciones del navegador no respondió. Revisa la conexión y vuelve a intentarlo en unos minutos.'
+  }
+  return message || 'No se pudieron activar las notificaciones en este dispositivo.'
 }
 
 function decodePublicKey(key) {

@@ -8,6 +8,14 @@ const dateKeyFormatter = new Intl.DateTimeFormat('en-CA', {
 
 const toNumber = (value) => Number(value) || 0
 
+function getBaleInvestment(bale) {
+  return (
+    toNumber(bale.purchaseCost) +
+    toNumber(bale.acquisitionTransport) +
+    toNumber(bale.otherExpenses)
+  )
+}
+
 export function getBusinessDateKey(value) {
   if (typeof value === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(value)) return value
   const date = value instanceof Date ? value : new Date(value)
@@ -46,11 +54,13 @@ export function calculateDashboardFinancials(data, period = 'month', now = new D
     return sum + firstPayment + secondPayment
   }, 0)
   const receivables = data.sales.reduce((sum, sale) => sum + Math.max(0, toNumber(sale.balance)), 0)
+  const baleInvestment = (data.bales ?? []).reduce((sum, bale) => sum + getBaleInvestment(bale), 0)
 
   return {
     netResult: grossResult - operatingExpenses,
     collected,
     receivables,
     operatingExpenses,
+    baleInvestment,
   }
 }

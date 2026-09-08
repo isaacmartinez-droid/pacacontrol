@@ -1,11 +1,25 @@
-import { timingSafeEqual } from 'node:crypto'
+import { createECDH, timingSafeEqual } from 'node:crypto'
 import { createClient } from '@supabase/supabase-js'
 import webpush from 'web-push'
 import { buildAlerts, normalizeAlertSettings, reconcileAlertReads } from '../src/utils/alerts.js'
 
+export function validVapidKeyPair(publicKey, privateKey) {
+  try {
+    if (!/^[A-Za-z0-9_-]+$/.test(publicKey) || !/^[A-Za-z0-9_-]+$/.test(privateKey)) return false
+    const publicBytes = Buffer.from(publicKey, 'base64url')
+    const privateBytes = Buffer.from(privateKey, 'base64url')
+    if (publicBytes.length !== 65 || publicBytes[0] !== 4 || privateBytes.length !== 32) return false
+    const curve = createECDH('prime256v1')
+    curve.setPrivateKey(privateBytes)
+    const derivedPublicKey = curve.getPublicKey()
+    return derivedPublicKey.length === publicBytes.length && timingSafeEqual(derivedPublicKey, publicBytes)
+  } catch { return false }
+}
+
 export function pushConfigured(env = process.env) {
   return Boolean((env.SUPABASE_URL || env.VITE_SUPABASE_URL) && env.SUPABASE_SERVICE_ROLE_KEY
-    && env.VAPID_PUBLIC_KEY && env.VAPID_PRIVATE_KEY && env.VAPID_SUBJECT && env.PUSH_CRON_SECRET)
+    && validVapidKeyPair(env.VAPID_PUBLIC_KEY, env.VAPID_PRIVATE_KEY)
+    && env.VAPID_SUBJECT && env.PUSH_CRON_SECRET?.length >= 32)
 }
 
 export function getPushAdmin() {
@@ -42,7 +56,7 @@ export function makePushPlan(data, subscription, now = Date.now()) {
   const fresh = alerts.filter((alert) => notified[alert.id] !== alert.revision)
   for (const alert of fresh) notified[alert.id] = alert.revision
   return { notified, payloads: fresh.map((alert) => ({
-    title: alert.type === 'debt' ? 'Cobro pendiente' : 'PacaControl',
+    title: alert.type === 'debt' ? 'Cobro pendiente' : 'Tienda J&F',
     body: alert.type === 'debt'
       ? 'Un cliente tiene un pago pendiente desde hace más de 24 horas. Abre la aplicación para revisar el historial.'
       : 'Una alerta necesita tu atención. Abre la aplicación para revisar los detalles.',

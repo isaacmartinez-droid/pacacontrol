@@ -1,7 +1,7 @@
 {
   "id": "/",
-  "name": "PacaControl",
-  "short_name": "PacaControl",
+  "name": "Tienda J&F",
+  "short_name": "Tienda J&F",
   "description": "Inventario, ventas y alertas de tu tienda.",
   "lang": "es",
   "start_url": "/",

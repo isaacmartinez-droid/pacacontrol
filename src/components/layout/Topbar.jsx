@@ -1,8 +1,9 @@
 import { useEffect, useRef, useState } from 'react'
-import { ArrowLeft, Bell, CheckCheck, Store } from 'lucide-react'
+import { ArrowLeft, Bell, CheckCheck } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { useAlerts } from '../../context/AlertsContext'
 import AlertItem from '../common/AlertItem'
+import BrandLogo from '../common/BrandLogo'
 
 function Topbar({ eyebrow, title, description, backTo }) {
   const [showNotifications, setShowNotifications] = useState(false)
@@ -40,8 +41,8 @@ function Topbar({ eyebrow, title, description, backTo }) {
                 <ArrowLeft aria-hidden="true" size={20} />
               </Link>
             ) : (
-              <span className="grid size-10 shrink-0 place-items-center rounded-2xl bg-white/12 ring-1 ring-white/15">
-                <Store aria-hidden="true" size={20} strokeWidth={2.2} />
+              <span className="size-10 shrink-0 overflow-hidden rounded-2xl bg-white ring-1 ring-white/15">
+                <BrandLogo />
               </span>
             )}
             <div className="min-w-0">

@@ -6,6 +6,7 @@ import {
   ShoppingBag,
   TrendingUp,
   TriangleAlert,
+  WalletCards,
 } from 'lucide-react'
 import ActiveBaleCard from '../components/dashboard/ActiveBaleCard'
 import QuickAction from '../components/dashboard/QuickAction'
@@ -88,7 +89,7 @@ function DashboardPage() {
             </h2>
             <span className="text-xs font-semibold text-slate-400">{period.label}</span>
           </div>
-          <div className="grid grid-cols-[repeat(auto-fit,minmax(min(100%,10rem),1fr))] gap-3 md:grid-cols-4 md:gap-4">
+          <div className="grid grid-cols-[repeat(auto-fit,minmax(min(100%,10rem),1fr))] gap-3 md:grid-cols-3 md:gap-4 xl:grid-cols-5">
             <SummaryCard
               icon={hasProfit ? TrendingUp : TriangleAlert}
               label={`${hasProfit ? 'Ganancia neta' : 'Pérdida neta'} ${period.resultSuffix}`}
@@ -104,6 +105,15 @@ function DashboardPage() {
               detail={financials.receivables > 0 ? `Por cobrar: ${formatCurrency(financials.receivables)}` : 'Sin saldos pendientes'}
               badge="Cobros"
               tone={financials.receivables > 0 ? 'warning' : 'positive'}
+            />
+            <SummaryCard
+              icon={WalletCards}
+              label="Inversión total en pacas"
+              value={formatCurrency(financials.baleInvestment)}
+              detail={`${data.bales.length} ${data.bales.length === 1 ? 'paca registrada' : 'pacas registradas'}`}
+              badge="Capital"
+              tone="neutral"
+              to="/pacas"
             />
             <SummaryCard
               icon={PackageCheck}

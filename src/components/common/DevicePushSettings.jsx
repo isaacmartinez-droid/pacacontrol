@@ -3,7 +3,7 @@ import { BellRing, Smartphone } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext'
 import { useAlerts } from '../../context/AlertsContext'
 import { getSupabaseClient } from '../../lib/supabaseClient'
-import { disableDevicePush, enableDevicePush, pushAvailability, readPushBinding } from '../../lib/devicePush'
+import { disableDevicePush, enableDevicePush, getDevicePushErrorMessage, pushAvailability, readPushBinding } from '../../lib/devicePush'
 
 export default function DevicePushSettings() {
   const { user } = useAuth()
@@ -50,7 +50,7 @@ export default function DevicePushSettings() {
       setSubscriptionId(id)
       setPermission(Notification.permission)
       setMessage('Este dispositivo quedó activado. Puedes enviar una prueba.')
-    } catch (error) { setMessage(error.message); setPermission(Notification.permission) }
+    } catch (error) { setMessage(getDevicePushErrorMessage(error)); setPermission(Notification.permission) }
     finally { setBusy(false) }
   }
 

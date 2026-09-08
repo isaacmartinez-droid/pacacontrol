@@ -1,8 +1,8 @@
-# Guía completa de PacaControl
+# Guía completa de Tienda J&F
 
-Bienvenido a PacaControl. Esta guía explica cómo usar el sistema para controlar compras de pacas, inventario, ventas, cobros, entregas, mermas y resultados.
+Bienvenido a Tienda J&F. Esta guía explica cómo usar el sistema para controlar compras de pacas, inventario, ventas, cobros, entregas, mermas y resultados.
 
-PacaControl funciona desde un navegador en computadora o teléfono. Necesitas conexión a Internet para guardar los cambios.
+Tienda J&F funciona desde un navegador en computadora o teléfono. Necesitas conexión a Internet para guardar los cambios.
 
 ## 1. Primer acceso
 
@@ -35,6 +35,7 @@ El panel separa dos cifras financieras importantes:
 
 - **Ganancia o pérdida neta:** ventas del período menos costo de prendas, delivery y gastos operativos.
 - **Dinero cobrado:** pagos que realmente ingresaron durante el período, aunque correspondan a una venta anterior. También muestra el saldo pendiente por cobrar.
+- **Inversión total en pacas:** suma el costo de compra, transporte y otros gastos de todas las pacas registradas. Puedes pulsar la tarjeta para revisar cada compra.
 
 Puedes cambiar entre **Hoy**, **Esta semana** y **Este mes**. En Ventas recientes se muestran solamente los dos últimos pedidos; pulsa **Ver más** para abrir el historial completo.
 
@@ -147,7 +148,7 @@ En **Inventario** ves las existencias por categoría. El número disponible ya d
 - pedidos registrados;
 - prendas dañadas.
 
-Cuando una categoría llega al límite configurado, PacaControl puede crear una alerta de inventario bajo. Cuando una paca llega a cero piezas vendibles, se marca como agotada.
+Cuando una categoría llega al límite configurado, Tienda J&F puede crear una alerta de inventario bajo. Cuando una paca llega a cero piezas vendibles, se marca como agotada.
 
 ## 9. Clientes y gastos
 

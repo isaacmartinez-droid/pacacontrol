@@ -23,7 +23,7 @@ test('el service worker muestra un aviso y tolera datos malformados', async () =
   let pending
   harness.listeners.push({ data: { json() { throw new Error('invalid json') } }, waitUntil(promise) { pending = promise } })
   await pending
-  assert.equal(harness.notifications[0].title, 'PacaControl')
+  assert.equal(harness.notifications[0].title, 'Tienda J&F')
   assert.equal(harness.notifications[0].options.data.url, '/alertas')
 })
 

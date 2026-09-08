@@ -5,7 +5,7 @@ self.addEventListener('activate', (event) => event.waitUntil(self.clients.claim(
 self.addEventListener('push', (event) => {
   let payload = {}
   try { payload = event.data?.json() ?? {} } catch { /* Mensaje sin JSON: aviso genérico. */ }
-  event.waitUntil(self.registration.showNotification('PacaControl', {
+  event.waitUntil(self.registration.showNotification('Tienda J&F', {
     body: typeof payload.body === 'string' ? payload.body.slice(0, 240) : 'Tienes avisos pendientes en tu tienda.',
     icon: '/icons/icon-192.png',
     badge: '/icons/badge-96.png',

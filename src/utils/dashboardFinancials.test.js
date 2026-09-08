@@ -29,6 +29,9 @@ test('separa resultado del período, cobros reales y cuentas por cobrar', () => 
       },
     ],
     expenses: [{ expenseDate: '2026-09-07', amount: 20 }],
+    bales: [
+      { purchaseCost: 10000, acquisitionTransport: 300, otherExpenses: 160 },
+    ],
   }
 
   assert.deepEqual(calculateDashboardFinancials(data, 'month', new Date('2026-09-10T18:00:00Z')), {
@@ -36,5 +39,6 @@ test('separa resultado del período, cobros reales y cuentas por cobrar', () => 
     collected: 100,
     receivables: 200,
     operatingExpenses: 20,
+    baleInvestment: 10460,
   })
 })
