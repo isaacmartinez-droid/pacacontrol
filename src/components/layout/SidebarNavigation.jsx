@@ -1,8 +1,7 @@
-import { CircleCheck, LogOut, UserRound } from 'lucide-react'
+import { CircleCheck, LogOut, Store, UserRound } from 'lucide-react'
 import { Link, useLocation } from 'react-router-dom'
 import { isNavigationItemActive, navigationItems } from './navigation'
 import { useAuth } from '../../context/AuthContext'
-import BrandLogo from '../common/BrandLogo'
 
 function SidebarNavigation() {
   const { pathname } = useLocation()
@@ -16,8 +15,8 @@ function SidebarNavigation() {
         aria-label="Tienda J&F, inicio"
         className="flex min-h-14 items-center justify-center gap-3 rounded-2xl px-0 focus-visible:outline-offset-2 xl:justify-start xl:px-2"
       >
-        <span className="size-11 shrink-0 overflow-hidden rounded-2xl bg-white shadow-lg shadow-black/10">
-          <BrandLogo />
+        <span className="grid size-11 shrink-0 place-items-center rounded-2xl bg-white text-brand-950 shadow-lg shadow-black/10">
+          <Store aria-hidden="true" size={22} />
         </span>
         <span className="hidden xl:block">
           <span className="block text-lg font-extrabold tracking-tight text-white">Tienda J&amp;F</span>

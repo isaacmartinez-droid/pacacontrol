@@ -5,7 +5,7 @@ const toneClasses = {
   warning: 'bg-amber-400/15 text-amber-100',
 }
 
-function SummaryCard({ icon: Icon, label, value, detail, badge, tone = 'brand', to }) {
+function SummaryCard({ icon: Icon, label, value, detail, badge, tone = 'brand', to, className = '' }) {
   const content = (
     <>
       <span aria-hidden="true" className="absolute -right-6 -top-8 size-24 rounded-full bg-white/5" />
@@ -21,15 +21,15 @@ function SummaryCard({ icon: Icon, label, value, detail, badge, tone = 'brand', 
       </div>
       <p className="relative mt-5 truncate text-xs font-bold text-brand-100">{label}</p>
       <p className="relative mt-1 truncate text-2xl font-extrabold tracking-tight text-white">{value}</p>
-      <p className="relative mt-3 inline-flex rounded-lg bg-white/10 px-2 py-1 text-[0.68rem] font-bold text-brand-100">
+      <p className="relative mt-auto self-start rounded-lg bg-white/10 px-2 py-1 text-[0.68rem] font-bold text-brand-100">
         {detail}
       </p>
     </>
   )
 
-  const className = `relative block min-w-0 overflow-hidden rounded-2xl border border-brand-800 bg-brand-900 p-4 text-white shadow-lg shadow-brand-950/15 sm:p-5 ${to ? 'transition hover:-translate-y-0.5 hover:bg-brand-800 focus:outline-none focus-visible:ring-4 focus-visible:ring-brand-300 active:translate-y-0' : ''}`
-  if (to) return <Link to={to} className={className} aria-label={`${label}: ${value}. Ver detalle`}>{content}</Link>
-  return <article className={className}>{content}</article>
+  const cardClassName = `relative flex min-h-44 min-w-0 flex-col overflow-hidden rounded-2xl border border-brand-800 bg-brand-900 p-4 text-white shadow-lg shadow-brand-950/15 sm:p-5 ${className} ${to ? 'transition hover:-translate-y-0.5 hover:bg-brand-800 focus:outline-none focus-visible:ring-4 focus-visible:ring-brand-300 active:translate-y-0' : ''}`
+  if (to) return <Link to={to} className={cardClassName} aria-label={`${label}: ${value}. Ver detalle`}>{content}</Link>
+  return <article className={cardClassName}>{content}</article>
 }
 
 export default SummaryCard

@@ -89,7 +89,7 @@ function DashboardPage() {
             </h2>
             <span className="text-xs font-semibold text-slate-400">{period.label}</span>
           </div>
-          <div className="grid grid-cols-[repeat(auto-fit,minmax(min(100%,10rem),1fr))] gap-3 md:grid-cols-3 md:gap-4 xl:grid-cols-5">
+          <div className="grid grid-cols-1 gap-3 min-[380px]:grid-cols-2 md:grid-cols-3 md:gap-4 xl:grid-cols-5">
             <SummaryCard
               icon={hasProfit ? TrendingUp : TriangleAlert}
               label={`${hasProfit ? 'Ganancia neta' : 'Pérdida neta'} ${period.resultSuffix}`}
@@ -114,6 +114,7 @@ function DashboardPage() {
               badge="Capital"
               tone="neutral"
               to="/pacas"
+              className="min-[380px]:col-span-2 md:col-span-1"
             />
             <SummaryCard
               icon={PackageCheck}
