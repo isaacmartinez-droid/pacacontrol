@@ -8,7 +8,7 @@ function AppShell() {
   const { error, isLoading, refresh } = usePacaData()
 
   return (
-    <div className="app-shell relative overflow-x-hidden bg-[#edf3f1] lg:flex lg:overflow-visible">
+    <div className="app-shell relative overflow-x-hidden bg-brand-50 lg:flex lg:overflow-visible">
       <SidebarNavigation />
       <main className="app-content min-w-0 flex-1">
         {error && (

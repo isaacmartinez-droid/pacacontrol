@@ -11,7 +11,7 @@ function ProtectedRoute() {
 
   if (isLoading) {
     return (
-      <div className="grid min-h-dvh place-items-center bg-[#edf3f1] px-4 text-center text-sm font-bold text-brand-800">
+      <div className="grid min-h-dvh place-items-center bg-brand-50 px-4 text-center text-sm font-bold text-brand-800">
         Cargando tu tienda…
       </div>
     )

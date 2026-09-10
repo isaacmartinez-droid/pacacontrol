@@ -2,29 +2,29 @@
 @import "tailwindcss";
 
 @theme {
-  --color-brand-50: #eef8f6;
-  --color-brand-100: #d7eeea;
-  --color-brand-200: #b1ddd6;
-  --color-brand-300: #7fc4ba;
-  --color-brand-400: #4ba59a;
-  --color-brand-500: #2f887e;
-  --color-brand-600: #246d65;
-  --color-brand-700: #205852;
-  --color-brand-800: #1c4944;
-  --color-brand-900: #123f3a;
-  --color-brand-950: #092725;
+  --color-brand-50: #eff8fe;
+  --color-brand-100: #c0e6fd;
+  --color-brand-200: #a1c8eb;
+  --color-brand-300: #80aad3;
+  --color-brand-400: #6e98c4;
+  --color-brand-500: #5b86b6;
+  --color-brand-600: #3f6593;
+  --color-brand-700: #315176;
+  --color-brand-800: #1b3554;
+  --color-brand-900: #1b3554;
+  --color-brand-950: #000f22;
   --color-coral-50: #fff6f1;
   --color-coral-100: #ffe8dc;
   --color-coral-500: #e77850;
   --color-coral-600: #cf5e38;
-  --shadow-soft: 0 8px 30px rgba(22, 54, 50, 0.07);
-  --shadow-nav: 0 -8px 30px rgba(22, 54, 50, 0.08);
+  --shadow-soft: 0 8px 30px rgba(0, 15, 34, 0.08);
+  --shadow-nav: 0 -8px 30px rgba(0, 15, 34, 0.1);
   --font-sans: "Manrope", ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
 }
 
 :root {
-  color: #172522;
-  background: #e9efed;
+  color: #000f22;
+  background: #eff8fe;
   font-family: var(--font-sans);
   font-synthesis: none;
   text-rendering: optimizeLegibility;
@@ -35,7 +35,7 @@
 }
 
 html {
-  background: #e9efed;
+  background: #eff8fe;
 }
 
 body {
@@ -54,7 +54,7 @@ button {
 }
 
 :focus-visible {
-  outline: 3px solid #e77850;
+  outline: 3px solid #5b86b6;
   outline-offset: 3px;
 }
 
@@ -90,11 +90,11 @@ button {
 .sale-input {
   width: 100%;
   min-height: 3rem;
-  border: 1px solid #dbe3e1;
+  border: 1px solid #cbddeb;
   border-radius: 0.75rem;
   background: #fff;
   padding: 0.75rem 1rem;
-  color: #172522;
+  color: #000f22;
   font: inherit;
   font-size: 0.875rem;
   font-weight: 600;
@@ -103,12 +103,12 @@ button {
 }
 
 .sale-input:hover {
-  border-color: #b1ddd6;
+  border-color: #80aad3;
 }
 
 .sale-input:focus {
-  border-color: #2f887e;
-  box-shadow: 0 0 0 3px rgba(47, 136, 126, 0.14);
+  border-color: #3f6593;
+  box-shadow: 0 0 0 3px rgba(63, 101, 147, 0.18);
 }
 
 .sale-input--currency {
@@ -133,23 +133,23 @@ button {
   overflow: hidden;
   border: 0;
   border-radius: 9999px;
-  background: #d7eeea;
+  background: #c0e6fd;
   appearance: none;
 }
 
 .bale-progress::-webkit-progress-bar {
   border-radius: 9999px;
-  background: #d7eeea;
+  background: #c0e6fd;
 }
 
 .bale-progress::-webkit-progress-value {
   border-radius: 9999px;
-  background: #2f887e;
+  background: #5b86b6;
 }
 
 .bale-progress::-moz-progress-bar {
   border-radius: 9999px;
-  background: #2f887e;
+  background: #5b86b6;
 }
 
 .bale-piece-grid {

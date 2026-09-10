@@ -52,7 +52,7 @@ function AuthPage() {
   }
 
   return (
-    <main className="grid min-h-dvh place-items-center bg-[#edf3f1] px-4 py-8">
+    <main className="grid min-h-dvh place-items-center bg-brand-50 px-4 py-8">
       <section className="w-full max-w-md overflow-hidden rounded-3xl bg-white shadow-soft ring-1 ring-slate-100">
         <div className="bg-brand-950 p-6 text-white sm:p-8">
           <span className="grid size-12 place-items-center rounded-2xl bg-white text-brand-950">

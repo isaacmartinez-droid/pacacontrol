@@ -80,7 +80,7 @@ function DashboardPage() {
   const visibleKpis = data.settings.dashboardKpis.map((id) => kpiCards[id]).filter(Boolean).slice(0, 4)
 
   return (
-    <div className="min-h-full bg-[#edf3f1]">
+    <div className="min-h-full bg-brand-50">
       <Topbar
         eyebrow="Mi tienda"
         title={`${greeting}${firstName ? ` ${firstName}` : ''}`}

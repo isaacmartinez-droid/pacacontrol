@@ -9,7 +9,10 @@ function SalesPage() {
   const { data, updateSaleDeliveryStatus, completeSalePayment } = usePacaData()
   const [searchParams] = useSearchParams()
   const selectedId = searchParams.get('venta')
-  const recentSales = selectedId ? data.sales.filter((sale) => sale.id === selectedId) : data.sales
+  const selectedSale = selectedId ? data.sales.find((sale) => sale.id === selectedId) : null
+  const recentSales = selectedSale
+    ? [selectedSale, ...data.sales.filter((sale) => sale.id !== selectedId)]
+    : data.sales
   const [updatingSaleId, setUpdatingSaleId] = useState('')
   const [statusError, setStatusError] = useState('')
 
@@ -50,7 +53,7 @@ function SalesPage() {
           Nueva venta
         </Link>
         <section aria-labelledby="sales-list-title" className="max-w-5xl">
-          {selectedId && <div className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-xl bg-brand-50 p-4 text-sm text-brand-800"><span>Pedido seleccionado desde la alerta</span><Link to="/ventas" className="font-bold underline">Ver todos los pedidos</Link></div>}
+          {selectedSale && <div className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-xl bg-brand-50 p-4 text-sm text-brand-800"><span>El pedido seleccionado aparece primero; los demás continúan debajo.</span><Link to="/ventas" className="font-bold underline">Quitar selección</Link></div>}
           <div className="mb-3">
             <h2 id="sales-list-title" className="text-lg font-extrabold text-slate-900">
               Todos los pedidos
@@ -65,7 +68,7 @@ function SalesPage() {
             </p>
           )}
           <div className="space-y-2.5 md:grid md:grid-cols-2 md:gap-4 md:space-y-0">
-            {selectedId && recentSales.length === 0 && <p className="rounded-2xl bg-white p-5 text-sm text-slate-600">La venta seleccionada no está disponible en los datos cargados.</p>}
+            {selectedId && !selectedSale && <p className="rounded-2xl bg-white p-5 text-sm text-slate-600">El pedido seleccionado ya no está disponible. Estos son todos los demás pedidos.</p>}
             {recentSales.map((sale) => (
               <RecentSaleCard
                 key={sale.id}

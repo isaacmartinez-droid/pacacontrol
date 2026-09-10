@@ -13,7 +13,7 @@ foreach ($target in $targets) {
   $pen = New-Object System.Drawing.Pen([System.Drawing.Color]::White, 18)
   try {
     $graphics.SmoothingMode = [System.Drawing.Drawing2D.SmoothingMode]::AntiAlias
-    $background = if ($target.Badge) { [System.Drawing.Color]::Transparent } else { [System.Drawing.ColorTranslator]::FromHtml('#123f3a') }
+    $background = if ($target.Badge) { [System.Drawing.Color]::Transparent } else { [System.Drawing.ColorTranslator]::FromHtml('#000f22') }
     $graphics.Clear($background)
     $graphics.ScaleTransform($target.Size / 512.0, $target.Size / 512.0)
     $pen.LineJoin = [System.Drawing.Drawing2D.LineJoin]::Round

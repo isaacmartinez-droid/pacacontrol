@@ -133,13 +133,13 @@ export default function EditSalePage() {
         deliveryCharge,
         notes: form.notes,
       })
-      navigate(`/ventas?venta=${encodeURIComponent(saleId)}`, { replace: true })
+      navigate('/ventas', { replace: true })
     } catch (error) { setMessage(error.message || 'No fue posible editar el pedido.') }
     finally { setIsSaving(false) }
   }
 
   return <div>
-    <PageHeader eyebrow="Corrección segura" title="Editar pedido" description="Cambia el cliente, los artículos o la entrega sin perder los pagos registrados." backTo={`/ventas?venta=${encodeURIComponent(saleId)}`} />
+    <PageHeader eyebrow="Corrección segura" title="Editar pedido" description="Cambia el cliente, los artículos o la entrega sin perder los pagos registrados." backTo="/ventas" />
     <div className="page-content py-6 md:py-8">
       <form onSubmit={submit} className="grid items-start gap-5 lg:grid-cols-[minmax(0,1.35fr)_minmax(19rem,0.65fr)] lg:gap-8">
         <div className="space-y-5">
