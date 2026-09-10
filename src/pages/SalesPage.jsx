@@ -37,9 +37,9 @@ function SalesPage() {
   return (
     <div>
       <PageHeader
-        eyebrow="Movimientos"
-        title="Ventas"
-        description="Revisa los movimientos recientes sin depender de tablas difíciles de leer."
+        eyebrow="Ventas y entregas"
+        title="Pedidos"
+        description="Consulta, edita y da seguimiento a todos los pedidos de la tienda."
       />
       <div className="page-content space-y-5 py-5 md:py-8">
         <Link
@@ -47,13 +47,13 @@ function SalesPage() {
           className="flex min-h-12 items-center justify-center gap-2 rounded-2xl bg-brand-900 px-5 text-sm font-bold text-white transition hover:bg-brand-800 active:scale-[0.98] sm:w-fit"
         >
           <ShoppingBag aria-hidden="true" size={19} />
-          Registrar venta
+          Nueva venta
         </Link>
         <section aria-labelledby="sales-list-title" className="max-w-5xl">
-          {selectedId && <div className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-xl bg-brand-50 p-4 text-sm text-brand-800"><span>Venta seleccionada desde la alerta</span><Link to="/ventas" className="font-bold underline">Ver todas las ventas</Link></div>}
+          {selectedId && <div className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-xl bg-brand-50 p-4 text-sm text-brand-800"><span>Pedido seleccionado desde la alerta</span><Link to="/ventas" className="font-bold underline">Ver todos los pedidos</Link></div>}
           <div className="mb-3">
             <h2 id="sales-list-title" className="text-lg font-extrabold text-slate-900">
-              Seguimiento de pedidos
+              Todos los pedidos
             </h2>
             <p className="mt-1 text-xs font-medium text-slate-500">
               El pago se confirma por separado; solo los pedidos pagados avanzan a preparación y entrega.

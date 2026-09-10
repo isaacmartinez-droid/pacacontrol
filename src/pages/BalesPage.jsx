@@ -82,7 +82,7 @@ function BalesPage() {
               <DetailRow label="Piezas disponibles" value={getAvailablePieces(activeBale)} />
               <DetailRow label="Piezas dañadas" value={activeBale.damagedPieces} warning />
               <DetailRow label="Costo real por pieza" value={formatCurrency(activeBale.estimatedUnitCost)} />
-              <DetailRow label="Margen deseado" value={`${activeBale.targetMargin}%`} />
+              <DetailRow label="Ganancia deseada" value={formatCurrency(activeBale.targetProfitAmount)} />
               <DetailRow label="Precio base recomendado" value={formatCurrency(activeBale.baseRecommendedPrice)} emphasized />
             </dl>
             <div className="border-t border-slate-100 p-5">

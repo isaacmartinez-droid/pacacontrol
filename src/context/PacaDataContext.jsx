@@ -2,7 +2,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useRef, use
 import { useAuth } from './AuthContext'
 import { getSupabaseClient } from '../lib/supabaseClient'
 import { formatShortDate } from '../utils/dates'
-import { calculateBaseRecommendedPrice, DEFAULT_TARGET_MARGIN } from '../utils/pricing'
+import { calculateBaseRecommendedPrice, DEFAULT_TARGET_PROFIT } from '../utils/pricing'
 import {
   businessSettingsToRow,
   defaultBusinessSettings,
@@ -66,7 +66,7 @@ function mapBale(row, currentRevenue = 0) {
   const sellablePieces = Math.max(0, receivedPieces - damagedPieces)
   const totalInvestment = asNumber(row.purchase_cost) + asNumber(row.transport_cost) + asNumber(row.other_expenses)
   const estimatedUnitCost = sellablePieces > 0 ? totalInvestment / sellablePieces : 0
-  const targetMargin = asNumber(row.target_margin_percent) || DEFAULT_TARGET_MARGIN
+  const targetProfitAmount = asNumber(row.target_profit_amount) || DEFAULT_TARGET_PROFIT
   return {
     id: row.id,
     code: row.code,
@@ -80,9 +80,9 @@ function mapBale(row, currentRevenue = 0) {
     damagedPieces,
     availablePieces: row.available_pieces,
     currentRevenue,
-    targetMargin,
+    targetProfitAmount,
     estimatedUnitCost,
-    baseRecommendedPrice: calculateBaseRecommendedPrice(estimatedUnitCost, targetMargin),
+    baseRecommendedPrice: calculateBaseRecommendedPrice(estimatedUnitCost, targetProfitAmount, sellablePieces),
     status: row.available_pieces > 0 ? 'En venta' : row.sold_pieces > 0 ? 'Agotada' : 'Sin piezas vendibles',
   }
 }
@@ -132,6 +132,7 @@ function mapSale(row) {
     estimatedProfit: total - estimatedMerchandiseCost - deliveryCost,
     dateLabel: formatShortDate(row.sold_at),
     soldAt: row.sold_at,
+    notes: row.notes ?? '',
     hasDeliveryStatus: deliveryStatuses.includes(row.delivery_status),
     deliveryStatus,
     paymentStatus,
@@ -268,7 +269,7 @@ function AccountPacaDataProvider({ userId, children }) {
             availablePieces: row.available_quantity,
             priceLevel: row.price_level,
             customRecommendedPrice: asNumber(row.custom_recommended_price),
-            targetMargin: asNumber(row.target_margin_percent) || DEFAULT_TARGET_MARGIN,
+            targetProfitAmount: asNumber(row.target_profit_amount) || DEFAULT_TARGET_PROFIT,
             estimatedUnitCost: asNumber(row.estimated_unit_cost),
             baseRecommendedPrice: asNumber(row.base_recommended_price),
             recommendedUnitPrice: asNumber(row.recommended_unit_price),
@@ -312,11 +313,11 @@ function AccountPacaDataProvider({ userId, children }) {
     transportCost,
     otherExpenses,
     receivedPieces,
-    targetMargin,
+    targetProfitAmount,
     categoryEntries,
   }) => {
     const supabase = getSupabaseClient()
-    const { data: bale, error: baleError } = await supabase.from('bales').insert({ purchase_date: purchaseDate, purchase_cost: purchaseCost, transport_cost: transportCost, other_expenses: otherExpenses, received_pieces: receivedPieces, target_margin_percent: targetMargin }).select('*').single()
+    const { data: bale, error: baleError } = await supabase.from('bales').insert({ purchase_date: purchaseDate, purchase_cost: purchaseCost, transport_cost: transportCost, other_expenses: otherExpenses, received_pieces: receivedPieces, target_profit_amount: targetProfitAmount }).select('*').single()
     if (baleError) throw baleError
 
     const categoryNames = []
@@ -348,7 +349,7 @@ function AccountPacaDataProvider({ userId, children }) {
         sold_pieces: 0,
         damaged_pieces: damagedPieces,
         available_pieces: receivedPieces - damagedPieces,
-        target_margin_percent: targetMargin,
+        target_profit_amount: targetProfitAmount,
       }),
       categoryNames,
     }
@@ -374,13 +375,13 @@ function AccountPacaDataProvider({ userId, children }) {
   }, [refresh])
 
   const updateBale = useCallback(async (baleId, values) => {
-    const { error } = await getSupabaseClient().rpc('update_bale_details', {
+    const { error } = await getSupabaseClient().rpc('update_bale_details_with_profit', {
       p_bale_id: baleId,
       p_purchase_date: values.purchaseDate,
       p_purchase_cost: values.purchaseCost,
       p_transport_cost: values.transportCost,
       p_other_expenses: values.otherExpenses,
-      p_target_margin: values.targetMargin,
+      p_target_profit_amount: values.targetProfitAmount,
       p_inventory_lines: values.inventoryLines.map((line) => ({
         bale_inventory_id: line.id,
         received_quantity: line.receivedPieces,
@@ -429,6 +430,24 @@ function AccountPacaDataProvider({ userId, children }) {
         )),
       },
     }))
+    await refresh()
+  }, [refresh])
+
+  const updateSaleOrder = useCallback(async (saleId, { items, customerId, fulfillmentMethod, deliveryCost = 0, deliveryCharge = 0, notes = '' }) => {
+    const { error } = await getSupabaseClient().rpc('update_sale_order', {
+      p_sale_id: saleId,
+      p_items: items.map((item) => ({
+        category_id: item.categoryId,
+        bale_inventory_id: item.baleInventoryId,
+        price_lines: item.priceLines.map((line) => ({ quantity: line.quantity, unit_price: line.unitPrice })),
+      })),
+      p_customer_id: customerId === 'walk-in' ? null : customerId,
+      p_fulfillment_method: fulfillmentMethod,
+      p_delivery_cost: deliveryCost,
+      p_delivery_charge: deliveryCharge,
+      p_notes: notes || null,
+    })
+    if (error) throw error
     await refresh()
   }, [refresh])
 
@@ -506,8 +525,8 @@ function AccountPacaDataProvider({ userId, children }) {
   }, [refresh])
 
   const value = useMemo(
-    () => ({ ...state, refresh, createBale, updateBale, deleteBale, createCustomer, updateCustomer, registerSale, registerDamage, updateSaleDeliveryStatus, updateSalePayment, completeSalePayment, saveBusinessSettings, saveCategoryPrices }),
-    [state, refresh, createBale, updateBale, deleteBale, createCustomer, updateCustomer, registerSale, registerDamage, updateSaleDeliveryStatus, updateSalePayment, completeSalePayment, saveBusinessSettings, saveCategoryPrices],
+    () => ({ ...state, refresh, createBale, updateBale, deleteBale, createCustomer, updateCustomer, registerSale, updateSaleOrder, registerDamage, updateSaleDeliveryStatus, updateSalePayment, completeSalePayment, saveBusinessSettings, saveCategoryPrices }),
+    [state, refresh, createBale, updateBale, deleteBale, createCustomer, updateCustomer, registerSale, updateSaleOrder, registerDamage, updateSaleDeliveryStatus, updateSalePayment, completeSalePayment, saveBusinessSettings, saveCategoryPrices],
   )
   return <PacaDataContext.Provider value={value}>{children}</PacaDataContext.Provider>
 }

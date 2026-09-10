@@ -7,7 +7,7 @@ import { usePacaData } from '../context/PacaDataContext'
 import {
   calculateBaseRecommendedPrice,
   calculateRecommendedPrice,
-  DEFAULT_TARGET_MARGIN,
+  DEFAULT_TARGET_PROFIT,
   pricingLevels,
 } from '../utils/pricing'
 
@@ -27,7 +27,7 @@ const initialForm = (settings = {}) => ({
   purchaseCost: '',
   transportCost: '0',
   otherExpenses: '0',
-  targetMargin: String(settings.defaultTargetMargin ?? DEFAULT_TARGET_MARGIN),
+  targetProfitAmount: String(settings.defaultTargetProfitAmount ?? DEFAULT_TARGET_PROFIT),
   entries: [blankEntry()],
 })
 
@@ -41,10 +41,10 @@ function NewBalePage() {
 
   useEffect(() => {
     if (!isLoading && !settingsApplied) {
-      setForm((current) => ({ ...current, targetMargin: String(data.settings.defaultTargetMargin) }))
+      setForm((current) => ({ ...current, targetProfitAmount: String(data.settings.defaultTargetProfitAmount) }))
       setSettingsApplied(true)
     }
-  }, [data.settings.defaultTargetMargin, isLoading, settingsApplied])
+  }, [data.settings.defaultTargetProfitAmount, isLoading, settingsApplied])
 
   const totals = useMemo(() => {
     const receivedPieces = form.entries.reduce((sum, entry) => sum + (Number(entry.quantity) || 0), 0)
@@ -52,15 +52,15 @@ function NewBalePage() {
     const totalInvestment = (Number(form.purchaseCost) || 0) + (Number(form.transportCost) || 0) + (Number(form.otherExpenses) || 0)
     const sellablePieces = Math.max(0, receivedPieces - damagedPieces)
     const costPerPiece = sellablePieces ? totalInvestment / sellablePieces : 0
-    const targetMargin = Number(form.targetMargin) || 0
+    const targetProfitAmount = Number(form.targetProfitAmount) || 0
     return {
       receivedPieces,
       damagedPieces,
       totalInvestment,
       sellablePieces,
       costPerPiece,
-      targetMargin,
-      baseRecommendedPrice: calculateBaseRecommendedPrice(costPerPiece, targetMargin),
+      targetProfitAmount,
+      baseRecommendedPrice: calculateBaseRecommendedPrice(costPerPiece, targetProfitAmount, sellablePieces),
     }
   }, [form])
 
@@ -68,7 +68,8 @@ function NewBalePage() {
     const category = data.categories.find((item) => clean(item.name).toLocaleLowerCase('es') === clean(entry.name).toLocaleLowerCase('es'))
     return calculateRecommendedPrice({
       unitCost: totals.costPerPiece,
-      targetMargin: totals.targetMargin,
+      targetProfit: totals.targetProfitAmount,
+      sellablePieces: totals.sellablePieces,
       priceLevel: entry.priceLevel,
       customPrice: entry.customRecommendedPrice,
       categoryPrices: category?.prices,
@@ -103,9 +104,9 @@ function NewBalePage() {
   async function submit(event) {
     event.preventDefault()
     const purchaseCost = Number(form.purchaseCost) || 0
-    const targetMargin = Number(form.targetMargin) || 0
+    const targetProfitAmount = Number(form.targetProfitAmount) || 0
     if (!form.purchaseDate || purchaseCost <= 0) return setFormError('Selecciona la fecha e ingresa el costo de compra.')
-    if (targetMargin < 1 || targetMargin > 90) return setFormError('El margen deseado debe estar entre 1% y 90%.')
+    if (targetProfitAmount < 0) return setFormError('La ganancia deseada no puede ser negativa.')
 
     const names = new Set()
     const categoryEntries = []
@@ -140,7 +141,7 @@ function NewBalePage() {
         transportCost: Number(form.transportCost) || 0,
         otherExpenses: Number(form.otherExpenses) || 0,
         receivedPieces: totals.receivedPieces,
-        targetMargin,
+        targetProfitAmount,
         categoryEntries,
       })
       setRegisteredBale({ ...bale, ...totals, categoryEntries })
@@ -165,7 +166,8 @@ function NewBalePage() {
               <Money label="Costo de compra" required value={form.purchaseCost} onChange={(event) => update('purchaseCost', event.target.value)} />
               <Money label="Transporte" value={form.transportCost} onChange={(event) => update('transportCost', event.target.value)} />
               <Money label="Otros gastos" value={form.otherExpenses} onChange={(event) => update('otherExpenses', event.target.value)} />
-              <Field label="Margen de ganancia deseado"><div className="relative"><input type="number" min="1" max="90" step="1" required value={form.targetMargin} onChange={(event) => update('targetMargin', event.target.value)} className="sale-input pr-12" /><span className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-4 font-bold text-slate-400">%</span></div><small className="mt-1 block font-normal text-slate-500">Se calcula como margen real sobre el precio de venta.</small></Field>
+              <Money label="Ganancia deseada para toda la paca" required value={form.targetProfitAmount} onChange={(event) => update('targetProfitAmount', event.target.value)} />
+              <p className="self-end pb-3 text-xs leading-5 text-slate-500">El sistema reparte este monto entre todas las piezas vendibles para recomendar el precio unitario.</p>
             </div>
           </section>
 
@@ -194,7 +196,7 @@ function NewBalePage() {
 
         <aside className="rounded-3xl bg-brand-950 p-5 text-white shadow-lg shadow-brand-950/15 lg:sticky lg:top-8 sm:p-6">
           <div className="flex items-center gap-3"><span className="grid size-11 place-items-center rounded-2xl bg-white/10"><BadgeDollarSign size={21} /></span><b>Resumen de inversión</b></div>
-          <dl className="mt-6 space-y-4 border-y border-white/10 py-5 text-sm"><Row label="Categorías" value={form.entries.length} /><Row label="Piezas recibidas" value={`${totals.receivedPieces} prendas`} /><Row label="Dañadas" value={`${totals.damagedPieces} prendas`} /><Row label="Disponibles" value={`${totals.sellablePieces} prendas`} /><Row label="Costo mínimo por pieza" value={totals.sellablePieces ? formatCurrency(totals.costPerPiece) : '—'} /><Row label={`Precio base (${totals.targetMargin || 0}%)`} value={totals.baseRecommendedPrice ? formatCurrency(totals.baseRecommendedPrice) : '—'} /><Row label="Venta proyectada" value={formatCurrency(projectedRevenue)} /><Row label="Ganancia estimada en córdobas" value={formatCurrency(projectedProfit)} /></dl>
+          <dl className="mt-6 space-y-4 border-y border-white/10 py-5 text-sm"><Row label="Categorías" value={form.entries.length} /><Row label="Piezas recibidas" value={`${totals.receivedPieces} prendas`} /><Row label="Dañadas" value={`${totals.damagedPieces} prendas`} /><Row label="Disponibles" value={`${totals.sellablePieces} prendas`} /><Row label="Costo mínimo por pieza" value={totals.sellablePieces ? formatCurrency(totals.costPerPiece) : '—'} /><Row label="Ganancia objetivo" value={formatCurrency(totals.targetProfitAmount)} /><Row label="Precio base recomendado" value={totals.baseRecommendedPrice ? formatCurrency(totals.baseRecommendedPrice) : '—'} /><Row label="Venta proyectada" value={formatCurrency(projectedRevenue)} /><Row label="Ganancia estimada en córdobas" value={formatCurrency(projectedProfit)} /></dl>
           <p className="mt-5 text-3xl font-extrabold">{formatCurrency(totals.totalInvestment)}</p>
           {formError && <p role="alert" className="mt-4 rounded-xl bg-coral-500/15 p-3 text-sm font-semibold">{formError}</p>}
           <button type="submit" disabled={isSaving || isLoading} className="mt-6 flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-white px-5 text-sm font-extrabold text-brand-950 disabled:opacity-60"><PackageCheck size={19} />{isSaving ? 'Guardando…' : 'Registrar paca'}</button>

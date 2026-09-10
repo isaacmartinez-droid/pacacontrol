@@ -7,20 +7,21 @@ import {
   summarizePriceLines,
 } from './pricing.js'
 
-test('calcula el precio base usando margen real y redondea hacia arriba', () => {
-  assert.equal(calculateBaseRecommendedPrice(72.22, 40), 125)
+test('distribuye la ganancia deseada entre las piezas y redondea hacia arriba', () => {
+  assert.equal(calculateBaseRecommendedPrice(100, 3_000, 100), 130)
 })
 
 test('aplica niveles y respeta un precio personalizado', () => {
-  assert.equal(calculateRecommendedPrice({ unitCost: 72.22, targetMargin: 40, priceLevel: 'standard' }), 150)
-  assert.equal(calculateRecommendedPrice({ unitCost: 72.22, targetMargin: 40, priceLevel: 'premium' }), 190)
-  assert.equal(calculateRecommendedPrice({ unitCost: 72.22, targetMargin: 40, priceLevel: 'custom', customPrice: 137 }), 137)
+  assert.equal(calculateRecommendedPrice({ unitCost: 100, targetProfit: 3_000, sellablePieces: 100, priceLevel: 'standard' }), 160)
+  assert.equal(calculateRecommendedPrice({ unitCost: 100, targetProfit: 3_000, sellablePieces: 100, priceLevel: 'premium' }), 195)
+  assert.equal(calculateRecommendedPrice({ unitCost: 100, targetProfit: 3_000, sellablePieces: 100, priceLevel: 'custom', customPrice: 137 }), 137)
 })
 
 test('una regla fija de categoría tiene prioridad sobre el cálculo automático', () => {
   assert.equal(calculateRecommendedPrice({
     unitCost: 72.22,
-    targetMargin: 40,
+    targetProfit: 3_000,
+    sellablePieces: 100,
     priceLevel: 'economic',
     categoryPrices: { economic: 180 },
   }), 180)

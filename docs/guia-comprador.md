@@ -52,7 +52,7 @@ Una paca puede contener diferentes tipos de prendas. No necesitas crear una paca
    - **Dañadas:** prendas que ya identificaste como no vendibles.
 5. Si la paca es variada, pulsa **Agregar** y registra otra categoría. Repite las veces necesarias.
 6. Si hay daños, escribe su motivo en la fila correspondiente: por ejemplo, “manchas”, “roturas” o “sin cierre”.
-7. Indica el **margen de ganancia deseado**. El sistema propone 40%, pero puedes ajustarlo entre 1% y 90%.
+7. Indica la **ganancia deseada para toda la paca** en córdobas. El sistema la distribuye entre las piezas vendibles para calcular el precio base recomendado.
 8. Elige el nivel de precio de cada categoría: **Económica**, **Normal**, **Premium** o **Precio personalizado**.
 9. Revisa el costo real y los precios recomendados; después pulsa **Registrar paca**.
 
@@ -64,7 +64,7 @@ El sistema suma todas las filas para obtener el total de la paca. También calcu
 - Puedes escribir una categoría nueva o reutilizar una existente. No hay una lista fija obligatoria.
 - Las prendas dañadas se descuentan de las piezas disponibles.
 - El costo real por pieza divide toda la inversión entre las prendas vendibles, no entre las recibidas.
-- El precio recomendado usa margen real y se redondea hacia arriba al siguiente múltiplo de C$5.
+- El precio recomendado suma la inversión y la ganancia deseada, divide ese total entre las piezas vendibles y redondea hacia arriba al siguiente múltiplo de C$5.
 - Los precios recomendados pueden cambiar si después registras nuevas prendas dañadas.
 - El código `PAC-0001`, `PAC-0002`, etc., se asigna automáticamente al guardar.
 
@@ -79,7 +79,7 @@ En **Pacas** puedes revisar cada compra:
 
 Si tienes más de una, usa **Ver otra paca** para cambiar entre ellas. Una alerta de paca agotada también abrirá el detalle de esa compra.
 
-Pulsa **Editar** para corregir la fecha, los costos, el margen, las cantidades recibidas o el nivel de precio de una categoría. Una cantidad nunca puede quedar por debajo de sus piezas ya vendidas o dañadas. También puedes borrar una paca que todavía no tenga ventas ni daños; si ya tiene movimientos, el sistema conserva la paca para proteger el historial contable.
+Pulsa **Editar** para corregir la fecha, los costos, la ganancia deseada en córdobas, las cantidades recibidas o el nivel de precio de una categoría. Una cantidad nunca puede quedar por debajo de sus piezas ya vendidas o dañadas. También puedes borrar una paca que todavía no tenga ventas ni daños; si ya tiene movimientos, el sistema conserva la paca para proteger el historial contable.
 
 ## 5. Registrar una venta
 
@@ -101,6 +101,12 @@ Pulsa **Editar** para corregir la fecha, los costos, el margen, las cantidades r
 Los pagos parciales y pendientes requieren seleccionar un cliente. De esa manera sabes a quién corresponde el saldo.
 
 > Registrar la venta aparta y descuenta las prendas del inventario, incluso si el cliente aún no ha terminado de pagar. Úsalo solo cuando el pedido ya esté confirmado.
+
+### Corregir un pedido
+
+Mientras el pedido no esté entregado, pulsa **Editar pedido** para cambiar el cliente, agregar o quitar artículos, corregir cantidades y precios, elegir otra paca o cambiar entre envío y retiro en tienda. El sistema devuelve primero las piezas anteriores y vuelve a descontar las nuevas dentro de una sola operación segura.
+
+Al cambiar de **Enviar al cliente** a **Recoge en tienda**, el costo y el cobro de delivery pasan automáticamente a C$0. Los pagos ya registrados nunca se borran ni se alteran. Por eso, el nuevo total no puede quedar por debajo de lo que el cliente ya pagó sin resolver antes la devolución correspondiente.
 
 ## 6. Cobros y entregas
 
@@ -194,10 +200,10 @@ En **Más → Preferencias del negocio** cada usuario puede adaptar el sistema a
 - elegir y ordenar entre uno y cuatro indicadores para el inicio;
 - escoger si el resumen abre en hoy, esta semana o este mes;
 - definir método y estado de pago habituales;
-- guardar el margen usado en nuevas pacas y los valores habituales de delivery;
+- guardar la ganancia deseada usada en nuevas pacas y los valores habituales de delivery;
 - activar o desactivar los avisos de precios debajo del costo o del recomendado.
 
-Un precio fijo por categoría tiene prioridad sobre el cálculo automático. Si el campo queda vacío, el programa continúa calculándolo según el costo real de la paca y el margen deseado. Todos estos valores son sugerencias iniciales y pueden cambiarse al registrar cada operación.
+Un precio fijo por categoría tiene prioridad sobre el cálculo automático. Si el campo queda vacío, el programa continúa calculándolo según el costo real de la paca y la ganancia deseada en córdobas. Todos estos valores son sugerencias iniciales y pueden cambiarse al registrar cada operación.
 
 ## 12. Reportes y ganancias
 

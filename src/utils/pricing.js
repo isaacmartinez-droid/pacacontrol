@@ -1,6 +1,6 @@
 const toNumber = (value) => Number(value) || 0
 
-export const DEFAULT_TARGET_MARGIN = 40
+export const DEFAULT_TARGET_PROFIT = 0
 export const PRICE_ROUNDING_STEP = 5
 
 export const pricingLevels = [
@@ -20,16 +20,18 @@ export function roundRecommendedPrice(value, step = PRICE_ROUNDING_STEP) {
   return Math.ceil(safeValue / safeStep) * safeStep
 }
 
-export function calculateBaseRecommendedPrice(unitCost, targetMargin = DEFAULT_TARGET_MARGIN) {
+export function calculateBaseRecommendedPrice(unitCost, targetProfit = DEFAULT_TARGET_PROFIT, sellablePieces = 1) {
   const safeCost = Math.max(0, toNumber(unitCost))
-  const safeMargin = Math.min(90, Math.max(0, toNumber(targetMargin)))
-  if (safeCost === 0) return 0
-  return roundRecommendedPrice(safeCost / (1 - safeMargin / 100))
+  const safeProfit = Math.max(0, toNumber(targetProfit))
+  const safePieces = Math.max(0, toNumber(sellablePieces))
+  if (safePieces === 0) return 0
+  return roundRecommendedPrice(safeCost + safeProfit / safePieces)
 }
 
 export function calculateRecommendedPrice({
   unitCost,
-  targetMargin = DEFAULT_TARGET_MARGIN,
+  targetProfit = DEFAULT_TARGET_PROFIT,
+  sellablePieces = 1,
   priceLevel = 'economic',
   customPrice = null,
   categoryPrices = null,
@@ -37,7 +39,7 @@ export function calculateRecommendedPrice({
   if (priceLevel === 'custom') return Math.max(0, toNumber(customPrice))
   const categoryPrice = toNumber(categoryPrices?.[priceLevel])
   if (categoryPrice > 0) return categoryPrice
-  const basePrice = calculateBaseRecommendedPrice(unitCost, targetMargin)
+  const basePrice = calculateBaseRecommendedPrice(unitCost, targetProfit, sellablePieces)
   return roundRecommendedPrice(basePrice * getPricingLevel(priceLevel).multiplier)
 }
 

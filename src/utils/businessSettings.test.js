@@ -10,8 +10,8 @@ test('limita, filtra y elimina KPI repetidos', () => {
 })
 
 test('restaura valores seguros cuando una preferencia no es válida', () => {
-  const settings = normalizeBusinessSettings({ dashboardKpis: [], dashboardPeriod: 'year', defaultTargetMargin: 100 })
+  const settings = normalizeBusinessSettings({ dashboardKpis: [], dashboardPeriod: 'year', defaultTargetProfitAmount: -100 })
   assert.deepEqual(settings.dashboardKpis, ['netResult', 'collected', 'baleInvestment', 'availablePieces'])
   assert.equal(settings.dashboardPeriod, 'month')
-  assert.equal(settings.defaultTargetMargin, 40)
+  assert.equal(settings.defaultTargetProfitAmount, 0)
 })

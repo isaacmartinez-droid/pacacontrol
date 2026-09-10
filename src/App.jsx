@@ -20,6 +20,7 @@ import AlertsPage from './pages/AlertsPage'
 import BusinessPreferencesPage from './pages/BusinessPreferencesPage'
 import EditBalePage from './pages/EditBalePage'
 import EditCustomerPage from './pages/EditCustomerPage'
+import EditSalePage from './pages/EditSalePage'
 
 function App() {
   return (
@@ -33,6 +34,7 @@ function App() {
         <Route path="pacas/:baleId/editar" element={<EditBalePage />} />
         <Route path="inventario" element={<InventoryPage />} />
         <Route path="ventas/nueva" element={<NewSalePage />} />
+        <Route path="ventas/:saleId/editar" element={<EditSalePage />} />
         <Route path="ventas" element={<SalesPage />} />
         <Route path="clientes/nuevo" element={<NewCustomerPage />} />
         <Route path="clientes" element={<CustomersPage />} />

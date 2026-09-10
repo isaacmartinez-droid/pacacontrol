@@ -162,12 +162,12 @@ function DashboardPage() {
           </section>
 
           <section aria-labelledby="recent-sales-title">
-            <SectionTitle title="Ventas recientes" linkTo="/ventas" linkLabel={data.sales.length > 2 ? `Ver ${data.sales.length - 2} más` : 'Ver todas'} />
+            <SectionTitle title="Pedidos recientes" linkTo="/ventas" linkLabel={data.sales.length > 2 ? `Ver ${data.sales.length - 2} más` : 'Ver todos'} />
             <div className="mt-3 space-y-2.5">
               {data.sales.slice(0, 2).map((sale) => (
                 <RecentSaleCard key={sale.id} sale={sale} />
               ))}
-              {!isLoading && data.sales.length === 0 && <p className="rounded-2xl bg-white p-5 text-sm font-semibold text-slate-500">Aún no hay ventas registradas.</p>}
+              {!isLoading && data.sales.length === 0 && <p className="rounded-2xl bg-white p-5 text-sm font-semibold text-slate-500">Aún no hay pedidos registrados.</p>}
             </div>
           </section>
         </div>
