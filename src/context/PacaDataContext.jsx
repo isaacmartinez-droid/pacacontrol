@@ -3,6 +3,12 @@ import { useAuth } from './AuthContext'
 import { getSupabaseClient } from '../lib/supabaseClient'
 import { formatShortDate } from '../utils/dates'
 import { calculateBaseRecommendedPrice, DEFAULT_TARGET_MARGIN } from '../utils/pricing'
+import {
+  businessSettingsToRow,
+  defaultBusinessSettings,
+  mapBusinessSettings,
+  normalizeBusinessSettings,
+} from '../utils/businessSettings'
 
 const PacaDataContext = createContext(null)
 
@@ -68,6 +74,7 @@ function mapBale(row, currentRevenue = 0) {
     purchaseCost: asNumber(row.purchase_cost),
     acquisitionTransport: asNumber(row.transport_cost),
     otherExpenses: asNumber(row.other_expenses),
+    notes: row.notes ?? '',
     receivedPieces,
     soldPieces: row.sold_pieces,
     damagedPieces,
@@ -83,12 +90,23 @@ function mapBale(row, currentRevenue = 0) {
 function mapSale(row) {
   const items = row.sale_items ?? []
   const primaryItem = items[0]
-  const priceLines = items.map((item) => ({
+  const saleItems = items.map((item) => ({
+    id: item.id,
+    categoryId: item.category_id,
+    categoryName: item.category?.name ?? 'Sin categoría',
+    baleInventoryId: item.sale_item_allocations?.[0]?.inventory?.id,
+    baleCode: item.sale_item_allocations?.[0]?.inventory?.bale?.code ?? 'Paca',
     quantity: item.quantity,
     unitPrice: asNumber(item.unit_price),
     referenceUnitCost: asNumber(item.reference_unit_cost),
     recommendedUnitPrice: asNumber(item.recommended_unit_price),
-  })).sort((a, b) => a.unitPrice - b.unitPrice)
+  })).sort((a, b) => a.categoryName.localeCompare(b.categoryName, 'es') || a.unitPrice - b.unitPrice)
+  const priceLines = saleItems.map((item) => ({
+    quantity: item.quantity,
+    unitPrice: item.unitPrice,
+    referenceUnitCost: item.referenceUnitCost,
+    recommendedUnitPrice: item.recommendedUnitPrice,
+  }))
   const baleCodes = [...new Set(items.flatMap((item) => (
     (item.sale_item_allocations ?? []).map((allocation) => allocation.inventory?.bale?.code).filter(Boolean)
   )))]
@@ -109,6 +127,7 @@ function mapSale(row) {
     merchandiseTotal,
     deliveryCost,
     deliveryCharge: asNumber(row.delivery_charge),
+    fulfillmentMethod: row.fulfillment_method ?? (deliveryCost > 0 ? 'delivery' : 'pickup'),
     estimatedMerchandiseCost,
     estimatedProfit: total - estimatedMerchandiseCost - deliveryCost,
     dateLabel: formatShortDate(row.sold_at),
@@ -131,6 +150,7 @@ function mapSale(row) {
     referenceUnitCost: asNumber(primaryItem?.reference_unit_cost),
     recommendedUnitPrice: asNumber(primaryItem?.recommended_unit_price),
     priceLines,
+    items: saleItems,
   }
 }
 
@@ -191,18 +211,19 @@ function AccountPacaDataProvider({ userId, children }) {
 
     try {
       const supabase = getSupabaseClient()
-      const [categories, bales, sales, customers, expenses, damagedProducts, allocations, dailySummaries, baleInventory] = await Promise.all([
-        supabase.from('inventory_summary').select('category_id, name, received_pieces, available_pieces').order('name'),
+      const [categories, bales, sales, customers, expenses, damagedProducts, allocations, dailySummaries, baleInventory, businessSettings] = await Promise.all([
+        supabase.from('inventory_summary').select('category_id, name, received_pieces, available_pieces, economic_price, standard_price, premium_price').order('name'),
         supabase.from('bale_summary').select('*').order('purchase_date', { ascending: false }),
-        supabase.from('sales').select('*, customer:customers(name), sale_items(quantity, unit_price, reference_unit_cost, recommended_unit_price, sale_item_allocations(quantity, inventory:bale_inventory(bale:bales(code))))').order('sold_at', { ascending: false }),
+        supabase.from('sales').select('*, customer:customers(name), sale_items(id, category_id, quantity, unit_price, reference_unit_cost, recommended_unit_price, category:categories(id, name), sale_item_allocations(quantity, inventory:bale_inventory(id, bale:bales(code))))').order('sold_at', { ascending: false }),
         supabase.from('customer_summary').select('id, name, phone, is_priority, purchases, total_spent').order('name'),
         supabase.from('expenses').select('id, concept, amount, expense_date').order('expense_date', { ascending: false }),
         supabase.from('damaged_products').select('id, quantity, reason, reported_at, inventory:bale_inventory(category:categories(name), bale:bales(code))').order('reported_at', { ascending: false }),
         supabase.from('sale_item_allocations').select('quantity, sale_item:sale_items(unit_price), inventory:bale_inventory(bale_id)'),
         supabase.from('daily_summaries').select('*').order('summary_date', { ascending: false }).limit(14),
         supabase.from('bale_inventory_pricing').select('*').order('bale_code'),
+        supabase.from('business_settings').select('*').maybeSingle(),
       ])
-      const failed = [categories, bales, sales, customers, expenses, damagedProducts, allocations, dailySummaries, baleInventory].find((result) => result.error)
+      const failed = [categories, bales, sales, customers, expenses, damagedProducts, allocations, dailySummaries, baleInventory, businessSettings].find((result) => result.error)
       if (failed) throw failed.error
       if (requestId !== latestRequest.current) return
 
@@ -218,7 +239,18 @@ function AccountPacaDataProvider({ userId, children }) {
         error: '',
         lastUpdatedAt: lastRefreshAt.current,
         data: {
-          categories: categories.data.map((row) => ({ id: row.category_id, name: row.name, receivedPieces: row.received_pieces, availablePieces: row.available_pieces })),
+          settings: mapBusinessSettings(businessSettings.data),
+          categories: categories.data.map((row) => ({
+            id: row.category_id,
+            name: row.name,
+            receivedPieces: row.received_pieces,
+            availablePieces: row.available_pieces,
+            prices: {
+              economic: asNumber(row.economic_price),
+              standard: asNumber(row.standard_price),
+              premium: asNumber(row.premium_price),
+            },
+          })),
           bales: mappedBales,
           sales: sales.data.map(mapSale),
           customers: customers.data.map(mapCustomer),
@@ -322,18 +354,47 @@ function AccountPacaDataProvider({ userId, children }) {
     }
   }, [refresh])
 
-  const registerSale = useCallback(async ({ categoryId, priceLines, paymentMethod, customerId, baleInventoryId, paymentStatus = 'paid', paidAmount = null, deliveryCost = 0, deliveryCharge = 0 }) => {
-    const { error } = await getSupabaseClient().rpc('register_sale_with_prices', {
-      p_category_id: categoryId,
-      p_price_lines: priceLines.map((line) => ({ quantity: line.quantity, unit_price: line.unitPrice })),
+  const registerSale = useCallback(async ({ items, paymentMethod, customerId, fulfillmentMethod = 'pickup', paymentStatus = 'paid', paidAmount = null, deliveryCost = 0, deliveryCharge = 0 }) => {
+    const { error } = await getSupabaseClient().rpc('register_sale_with_items', {
+      p_items: items.map((item) => ({
+        category_id: item.categoryId,
+        bale_inventory_id: item.baleInventoryId,
+        price_lines: item.priceLines.map((line) => ({ quantity: line.quantity, unit_price: line.unitPrice })),
+      })),
       p_payment_method: paymentMethod,
       p_customer_id: customerId === 'walk-in' ? null : customerId,
-      p_bale_inventory_id: baleInventoryId || null,
+      p_fulfillment_method: fulfillmentMethod,
       p_payment_status: paymentStatus,
       p_paid_amount: paidAmount,
       p_delivery_cost: deliveryCost,
       p_delivery_charge: deliveryCharge,
     })
+    if (error) throw error
+    await refresh()
+  }, [refresh])
+
+  const updateBale = useCallback(async (baleId, values) => {
+    const { error } = await getSupabaseClient().rpc('update_bale_details', {
+      p_bale_id: baleId,
+      p_purchase_date: values.purchaseDate,
+      p_purchase_cost: values.purchaseCost,
+      p_transport_cost: values.transportCost,
+      p_other_expenses: values.otherExpenses,
+      p_target_margin: values.targetMargin,
+      p_inventory_lines: values.inventoryLines.map((line) => ({
+        bale_inventory_id: line.id,
+        received_quantity: line.receivedPieces,
+        price_level: line.priceLevel,
+        custom_recommended_price: line.priceLevel === 'custom' ? line.customRecommendedPrice : null,
+      })),
+      p_notes: values.notes || null,
+    })
+    if (error) throw error
+    await refresh()
+  }, [refresh])
+
+  const deleteBale = useCallback(async (baleId) => {
+    const { error } = await getSupabaseClient().rpc('delete_empty_bale', { p_bale_id: baleId })
     if (error) throw error
     await refresh()
   }, [refresh])
@@ -407,15 +468,52 @@ function AccountPacaDataProvider({ userId, children }) {
     return mapCustomer(data)
   }, [refresh])
 
+  const updateCustomer = useCallback(async (customerId, { name, phone, isPriority }) => {
+    const { error } = await getSupabaseClient().from('customers').update({
+      name: name.trim(),
+      phone: phone.trim() || null,
+      is_priority: Boolean(isPriority),
+    }).eq('id', customerId)
+    if (error) throw error
+    await refresh()
+  }, [refresh])
+
+  const saveBusinessSettings = useCallback(async (settings) => {
+    const normalized = normalizeBusinessSettings(settings)
+    const { error } = await getSupabaseClient().from('business_settings').upsert({
+      owner_id: userId,
+      ...businessSettingsToRow(normalized),
+    }, { onConflict: 'owner_id' })
+    if (error) throw error
+    setState((current) => ({
+      ...current,
+      data: { ...current.data, settings: normalized },
+    }))
+    await refresh({ silent: true })
+  }, [refresh, userId])
+
+  const saveCategoryPrices = useCallback(async (rules) => {
+    const { error } = await getSupabaseClient().rpc('save_category_price_rules', {
+      p_rules: rules.map((rule) => ({
+        category_id: rule.categoryId,
+        economic_price: rule.economicPrice || null,
+        standard_price: rule.standardPrice || null,
+        premium_price: rule.premiumPrice || null,
+      })),
+    })
+    if (error) throw error
+    await refresh()
+  }, [refresh])
+
   const value = useMemo(
-    () => ({ ...state, refresh, createBale, createCustomer, registerSale, registerDamage, updateSaleDeliveryStatus, updateSalePayment, completeSalePayment }),
-    [state, refresh, createBale, createCustomer, registerSale, registerDamage, updateSaleDeliveryStatus, updateSalePayment, completeSalePayment],
+    () => ({ ...state, refresh, createBale, updateBale, deleteBale, createCustomer, updateCustomer, registerSale, registerDamage, updateSaleDeliveryStatus, updateSalePayment, completeSalePayment, saveBusinessSettings, saveCategoryPrices }),
+    [state, refresh, createBale, updateBale, deleteBale, createCustomer, updateCustomer, registerSale, registerDamage, updateSaleDeliveryStatus, updateSalePayment, completeSalePayment, saveBusinessSettings, saveCategoryPrices],
   )
   return <PacaDataContext.Provider value={value}>{children}</PacaDataContext.Provider>
 }
 
 function emptyData() {
-  return { categories: [], bales: [], sales: [], customers: [], expenses: [], damagedProducts: [], dailySummaries: [], baleInventory: [] }
+  return { categories: [], bales: [], sales: [], customers: [], expenses: [], damagedProducts: [], dailySummaries: [], baleInventory: [], settings: { ...defaultBusinessSettings, dashboardKpis: [...defaultBusinessSettings.dashboardKpis] } }
 }
 
 export function usePacaData() {

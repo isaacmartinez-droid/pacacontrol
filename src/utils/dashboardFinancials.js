@@ -44,17 +44,25 @@ export function calculateDashboardFinancials(data, period = 'month', now = new D
   }
 
   const periodSales = data.sales.filter((sale) => isInPeriod(sale.soldAt))
+  const ordersTotal = periodSales.reduce((sum, sale) => sum + toNumber(sale.total), 0)
   const grossResult = periodSales.reduce((sum, sale) => sum + toNumber(sale.estimatedProfit), 0)
   const operatingExpenses = data.expenses
     .filter((expense) => isInPeriod(expense.expenseDate))
     .reduce((sum, expense) => sum + toNumber(expense.amount), 0)
-  const collected = data.sales.reduce((sum, sale) => {
-    const firstPayment = isInPeriod(sale.firstPaymentAt) ? toNumber(sale.firstPaymentAmount) : 0
-    const secondPayment = isInPeriod(sale.secondPaymentAt) ? toNumber(sale.secondPaymentAmount) : 0
-    return sum + firstPayment + secondPayment
-  }, 0)
+  const payments = data.sales.flatMap((sale) => [
+    { amount: toNumber(sale.firstPaymentAmount), method: sale.firstPaymentMethod, at: sale.firstPaymentAt },
+    { amount: toNumber(sale.secondPaymentAmount), method: sale.secondPaymentMethod, at: sale.secondPaymentAt },
+  ]).filter((payment) => payment.amount > 0 && isInPeriod(payment.at))
+  const collected = payments.reduce((sum, payment) => sum + payment.amount, 0)
+  const cashCollected = payments.filter((payment) => payment.method === 'cash').reduce((sum, payment) => sum + payment.amount, 0)
+  const transferCollected = payments.filter((payment) => payment.method === 'transfer').reduce((sum, payment) => sum + payment.amount, 0)
   const receivables = data.sales.reduce((sum, sale) => sum + Math.max(0, toNumber(sale.balance)), 0)
   const baleInvestment = (data.bales ?? []).reduce((sum, bale) => sum + getBaleInvestment(bale), 0)
+  const inventoryValue = (data.baleInventory ?? []).reduce(
+    (sum, inventory) => sum + toNumber(inventory.availablePieces) * toNumber(inventory.estimatedUnitCost),
+    0,
+  )
+  const pendingDeliveries = data.sales.filter((sale) => sale.fulfillmentMethod === 'delivery' && sale.deliveryStatus !== 'delivered').length
 
   return {
     netResult: grossResult - operatingExpenses,
@@ -62,5 +70,10 @@ export function calculateDashboardFinancials(data, period = 'month', now = new D
     receivables,
     operatingExpenses,
     baleInvestment,
+    inventoryValue,
+    ordersTotal,
+    cashCollected,
+    transferCollected,
+    pendingDeliveries,
   }
 }

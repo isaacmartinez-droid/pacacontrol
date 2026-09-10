@@ -79,16 +79,18 @@ En **Pacas** puedes revisar cada compra:
 
 Si tienes más de una, usa **Ver otra paca** para cambiar entre ellas. Una alerta de paca agotada también abrirá el detalle de esa compra.
 
+Pulsa **Editar** para corregir la fecha, los costos, el margen, las cantidades recibidas o el nivel de precio de una categoría. Una cantidad nunca puede quedar por debajo de sus piezas ya vendidas o dañadas. También puedes borrar una paca que todavía no tenga ventas ni daños; si ya tiene movimientos, el sistema conserva la paca para proteger el historial contable.
+
 ## 5. Registrar una venta
 
 1. Abre **Registrar venta**.
-2. En **Categoría**, selecciona la prenda vendida. Solo se muestran categorías con existencias reales.
-3. En **Paca de origen**, selecciona obligatoriamente la paca física de la que tomaste las prendas. Esto conserva el control correcto de la inversión y la ganancia.
-4. Al seleccionar la paca, el sistema completa el **precio recomendado** para esa categoría. Puedes modificarlo manualmente.
-5. Escribe la cantidad de piezas que tienen ese precio. Si otras piezas de la misma categoría tienen un precio diferente, pulsa **Otro precio** y agrega otro grupo. Por ejemplo: `1 × C$60` y `2 × C$90`.
-6. Revisa el costo real mostrado. Cada grupo que quede debajo del costo o de la recomendación mostrará su propia advertencia.
+2. En el primer artículo, selecciona la **categoría** y la **paca de origen**. Esto conserva el control correcto de la inversión y la ganancia.
+3. Al seleccionar la paca, el sistema completa el **precio recomendado**. Puedes modificarlo manualmente.
+4. Escribe la cantidad de piezas que tienen ese precio. Si otras piezas del mismo artículo tienen un precio diferente, pulsa **Otro precio**.
+5. Pulsa **Agregar artículo** para incluir otras categorías o prendas de otras pacas dentro del mismo pedido. Cada artículo queda visible por separado en el historial.
+6. Revisa el costo real mostrado. Cada precio que quede debajo del costo o de la recomendación mostrará su propia advertencia.
 7. Selecciona el cliente o **Venta de mostrador**.
-8. Para una venta a cliente, escribe el **costo real del delivery**. Este dato es obligatorio. Si también cobras el envío al cliente, registra ese monto por separado.
+8. Elige **Recoge en tienda** o **Enviar al cliente**. El costo real del delivery solamente es obligatorio cuando eliges envío. Si también cobras el envío al cliente, registra ese monto por separado.
 9. Selecciona el método de pago.
 10. Selecciona el estado de pago:
    - **Pagado completo:** se recibió todo el dinero.
@@ -118,7 +120,7 @@ El historial conserva los pagos aunque la deuda ya esté cancelada. La ganancia 
 
 ### Entrega
 
-Un pedido pagado puede avanzar por estos pasos:
+Un pedido pagado con envío puede avanzar por estos pasos:
 
 1. **Preparar:** reúne y revisa las prendas.
 2. **Listo:** el pedido está empacado o disponible.
@@ -126,6 +128,8 @@ Un pedido pagado puede avanzar por estos pasos:
 4. **Entregado:** el cliente lo recibió.
 
 No es posible avanzar una entrega si el pedido no está pagado por completo. Esto evita marcar una entrega como terminada por error.
+
+Cuando el cliente recoge en tienda, el recorrido es más corto: **Preparar → Listo → Retirado**. Estos pedidos no generan alertas de envío ni exigen costo de delivery.
 
 ## 7. Registrar daños descubiertos después
 
@@ -154,7 +158,7 @@ Cuando una categoría llega al límite configurado, Tienda J&F puede crear una a
 
 ### Clientes
 
-Registra clientes cuando vendes fiado, aceptas pago parcial o haces entregas. Puedes guardar nombre, teléfono y prioridad. Pulsa una tarjeta para consultar todas sus compras, primer y segundo pago, métodos utilizados, delivery, saldo y ganancia o pérdida estimada.
+Registra clientes cuando vendes fiado, aceptas pago parcial o haces entregas. Puedes guardar nombre, teléfono y prioridad. Pulsa una tarjeta para consultar todas sus compras, artículos individuales, primer y segundo pago, métodos utilizados, entrega, saldo y ganancia o pérdida estimada. Desde su historial puedes pulsar **Editar** para actualizar sus datos sin perder movimientos anteriores.
 
 ### Gastos
 
@@ -182,7 +186,20 @@ En la pantalla de Alertas puedes permitir notificaciones del navegador. Debes ac
 
 Si cambias de dispositivo, activa las notificaciones nuevamente en el dispositivo nuevo.
 
-## 11. Reportes y ganancias
+## 11. Preferencias del negocio
+
+En **Más → Preferencias del negocio** cada usuario puede adaptar el sistema a su forma de vender:
+
+- asignar precios fijos económico, normal y premium por categoría;
+- elegir y ordenar entre uno y cuatro indicadores para el inicio;
+- escoger si el resumen abre en hoy, esta semana o este mes;
+- definir método y estado de pago habituales;
+- guardar el margen usado en nuevas pacas y los valores habituales de delivery;
+- activar o desactivar los avisos de precios debajo del costo o del recomendado.
+
+Un precio fijo por categoría tiene prioridad sobre el cálculo automático. Si el campo queda vacío, el programa continúa calculándolo según el costo real de la paca y el margen deseado. Todos estos valores son sugerencias iniciales y pueden cambiarse al registrar cada operación.
+
+## 12. Reportes y ganancias
 
 En **Más → Reportes y ganancias** puedes revisar:
 
@@ -201,11 +218,11 @@ El cierre diario se genera automáticamente después de medianoche, según la ho
 
 El reporte es una herramienta de control. Confirma físicamente el efectivo en caja y los comprobantes de transferencia antes de tomar decisiones finales.
 
-## 12. Buenas prácticas de operación
+## 13. Buenas prácticas de operación
 
 1. Registra una paca al clasificarla, no días después.
 2. Separa correctamente las categorías dentro de la paca.
-3. Elige la paca manualmente en una venta si no usaste la más antigua.
+3. Elige siempre la paca exacta de la que salió cada prenda vendida.
 4. Registra daños tan pronto como los descubras.
 5. Crea cliente para cualquier venta pendiente, parcial o a domicilio.
 6. Confirma el pago antes de avanzar la entrega.
@@ -213,7 +230,7 @@ El reporte es una herramienta de control. Confirma físicamente el efectivo en c
 8. Compara el resumen diario con tu efectivo físico y transferencias recibidas.
 9. No compartas usuarios ni contraseñas.
 
-## 13. Problemas frecuentes
+## 14. Problemas frecuentes
 
 ### “No aparece una categoría al vender”
 
@@ -235,7 +252,7 @@ Otro usuario ya usa la combinación de nombre y apellido. Usa una variación rea
 
 Revisa que el navegador tenga permiso de notificaciones, que el dispositivo tenga conexión y que las reglas estén activas en Alertas.
 
-## 14. Soporte
+## 15. Soporte
 
 Antes de solicitar ayuda, toma una captura de la pantalla y anota:
 

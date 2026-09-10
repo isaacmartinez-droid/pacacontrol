@@ -9,13 +9,20 @@ const deliverySteps = [
   { id: 'delivered', label: 'Entregado', icon: PackageCheck },
 ]
 
+const pickupSteps = [
+  { id: 'to_prepare', label: 'Preparar', icon: CircleDollarSign },
+  { id: 'ready', label: 'Listo', icon: PackageCheck },
+  { id: 'delivered', label: 'Retirado', icon: PackageCheck },
+]
+
 function RecentSaleCard({ sale, onAdvanceStatus, onConfirmPayment, isUpdating = false }) {
   const [finalPaymentMethod, setFinalPaymentMethod] = useState('cash')
+  const steps = sale.fulfillmentMethod === 'delivery' ? deliverySteps : pickupSteps
   const currentStep = Math.max(
     0,
-    deliverySteps.findIndex((step) => step.id === sale.deliveryStatus),
+    steps.findIndex((step) => step.id === sale.deliveryStatus),
   )
-  const nextStep = deliverySteps[currentStep + 1]
+  const nextStep = steps[currentStep + 1]
 
   return (
     <article className="rounded-2xl border border-slate-100 bg-white p-4 shadow-sm">
@@ -33,6 +40,7 @@ function RecentSaleCard({ sale, onAdvanceStatus, onConfirmPayment, isUpdating = 
               {sale.baleCodes?.length > 0 && (
                 <p className="mt-0.5 truncate text-xs font-semibold text-brand-700">Paca: {sale.baleCodes.join(', ')}</p>
               )}
+              <p className="mt-0.5 text-[0.68rem] font-semibold text-slate-500">{sale.fulfillmentMethod === 'delivery' ? 'Envío al cliente' : 'Recoge en tienda'}</p>
             </div>
             <p className="shrink-0 text-sm font-extrabold text-slate-900">
               {formatCurrency(sale.total)}
@@ -45,8 +53,10 @@ function RecentSaleCard({ sale, onAdvanceStatus, onConfirmPayment, isUpdating = 
         Pago: {sale.paymentStatus === 'paid' ? 'Pagado' : sale.paymentStatus === 'partial' ? `Parcial · faltan ${formatCurrency(sale.balance)}` : `Pendiente · faltan ${formatCurrency(sale.balance)}`}
       </div>
 
-      <div className="mt-4 grid grid-cols-4" aria-label={`Estado del pedido: ${deliverySteps[currentStep].label}`}>
-        {deliverySteps.map((step, index) => {
+      {(sale.items?.length ?? 0) > 0 && <details className="mt-3 rounded-xl bg-slate-50 px-3 py-2"><summary className="cursor-pointer text-xs font-extrabold text-slate-700">Ver artículos individuales ({sale.items.length})</summary><div className="mt-2 space-y-2">{sale.items.map((item) => <div key={item.id} className="flex justify-between gap-3 border-t border-slate-200 pt-2 text-xs"><span className="min-w-0 text-slate-600"><b className="block truncate text-slate-800">{item.categoryName}</b>{item.baleCode} · {item.quantity} × {formatCurrency(item.unitPrice)}</span><b className="shrink-0 text-slate-900">{formatCurrency(item.quantity * item.unitPrice)}</b></div>)}</div></details>}
+
+      <div className={`mt-4 grid ${steps.length === 4 ? 'grid-cols-4' : 'grid-cols-3'}`} aria-label={`Estado del pedido: ${steps[currentStep].label}`}>
+        {steps.map((step, index) => {
           const Icon = step.icon
           const isComplete = index <= currentStep
           const isCurrent = index === currentStep

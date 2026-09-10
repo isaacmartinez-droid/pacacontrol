@@ -17,6 +17,15 @@ test('aplica niveles y respeta un precio personalizado', () => {
   assert.equal(calculateRecommendedPrice({ unitCost: 72.22, targetMargin: 40, priceLevel: 'custom', customPrice: 137 }), 137)
 })
 
+test('una regla fija de categoría tiene prioridad sobre el cálculo automático', () => {
+  assert.equal(calculateRecommendedPrice({
+    unitCost: 72.22,
+    targetMargin: 40,
+    priceLevel: 'economic',
+    categoryPrices: { economic: 180 },
+  }), 180)
+})
+
 test('calcula el margen real sobre el precio de venta', () => {
   assert.equal(calculatePriceMargin(120, 72), 40)
 })

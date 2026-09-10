@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { BadgeDollarSign, CircleCheck, PackageCheck, PackagePlus, Plus, Trash2 } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import PageHeader from '../components/common/PageHeader'
@@ -22,21 +22,29 @@ const blankEntry = () => ({
   priceLevel: 'economic',
   customRecommendedPrice: '',
 })
-const initialForm = () => ({
+const initialForm = (settings = {}) => ({
   purchaseDate: today,
   purchaseCost: '',
   transportCost: '0',
   otherExpenses: '0',
-  targetMargin: String(DEFAULT_TARGET_MARGIN),
+  targetMargin: String(settings.defaultTargetMargin ?? DEFAULT_TARGET_MARGIN),
   entries: [blankEntry()],
 })
 
 function NewBalePage() {
   const { data, createBale, isLoading } = usePacaData()
-  const [form, setForm] = useState(initialForm)
+  const [form, setForm] = useState(() => initialForm(data.settings))
+  const [settingsApplied, setSettingsApplied] = useState(false)
   const [formError, setFormError] = useState('')
   const [registeredBale, setRegisteredBale] = useState(null)
   const [isSaving, setIsSaving] = useState(false)
+
+  useEffect(() => {
+    if (!isLoading && !settingsApplied) {
+      setForm((current) => ({ ...current, targetMargin: String(data.settings.defaultTargetMargin) }))
+      setSettingsApplied(true)
+    }
+  }, [data.settings.defaultTargetMargin, isLoading, settingsApplied])
 
   const totals = useMemo(() => {
     const receivedPieces = form.entries.reduce((sum, entry) => sum + (Number(entry.quantity) || 0), 0)
@@ -56,18 +64,21 @@ function NewBalePage() {
     }
   }, [form])
 
-  const recommendationFor = (entry) => calculateRecommendedPrice({
-    unitCost: totals.costPerPiece,
-    targetMargin: totals.targetMargin,
-    priceLevel: entry.priceLevel,
-    customPrice: entry.customRecommendedPrice,
-  })
+  const recommendationFor = (entry) => {
+    const category = data.categories.find((item) => clean(item.name).toLocaleLowerCase('es') === clean(entry.name).toLocaleLowerCase('es'))
+    return calculateRecommendedPrice({
+      unitCost: totals.costPerPiece,
+      targetMargin: totals.targetMargin,
+      priceLevel: entry.priceLevel,
+      customPrice: entry.customRecommendedPrice,
+      categoryPrices: category?.prices,
+    })
+  }
   const projectedRevenue = form.entries.reduce((sum, entry) => {
     const sellable = Math.max(0, (Number(entry.quantity) || 0) - (Number(entry.damagedPieces) || 0))
     return sum + sellable * recommendationFor(entry)
   }, 0)
   const projectedProfit = projectedRevenue - totals.totalInvestment
-  const projectedMargin = projectedRevenue > 0 ? (projectedProfit / projectedRevenue) * 100 : 0
 
   const update = (field, value) => {
     setForm((current) => ({ ...current, [field]: value }))
@@ -140,7 +151,7 @@ function NewBalePage() {
     }
   }
 
-  if (registeredBale) return <Confirmation bale={registeredBale} onAgain={() => { setRegisteredBale(null); setForm(initialForm()) }} />
+  if (registeredBale) return <Confirmation bale={registeredBale} onAgain={() => { setRegisteredBale(null); setForm(initialForm(data.settings)) }} />
 
   return <div>
     <PageHeader eyebrow="Nueva inversión" title="Registrar paca" description="Divide una paca variada y calcula precios recomendados para cada categoría." backTo="/pacas" />
@@ -183,7 +194,7 @@ function NewBalePage() {
 
         <aside className="rounded-3xl bg-brand-950 p-5 text-white shadow-lg shadow-brand-950/15 lg:sticky lg:top-8 sm:p-6">
           <div className="flex items-center gap-3"><span className="grid size-11 place-items-center rounded-2xl bg-white/10"><BadgeDollarSign size={21} /></span><b>Resumen de inversión</b></div>
-          <dl className="mt-6 space-y-4 border-y border-white/10 py-5 text-sm"><Row label="Categorías" value={form.entries.length} /><Row label="Piezas recibidas" value={`${totals.receivedPieces} prendas`} /><Row label="Dañadas" value={`${totals.damagedPieces} prendas`} /><Row label="Disponibles" value={`${totals.sellablePieces} prendas`} /><Row label="Costo mínimo por pieza" value={totals.sellablePieces ? formatCurrency(totals.costPerPiece) : '—'} /><Row label={`Precio base (${totals.targetMargin || 0}%)`} value={totals.baseRecommendedPrice ? formatCurrency(totals.baseRecommendedPrice) : '—'} /><Row label="Venta proyectada" value={formatCurrency(projectedRevenue)} /><Row label={`Ganancia proyectada (${projectedMargin.toFixed(0)}%)`} value={formatCurrency(projectedProfit)} /></dl>
+          <dl className="mt-6 space-y-4 border-y border-white/10 py-5 text-sm"><Row label="Categorías" value={form.entries.length} /><Row label="Piezas recibidas" value={`${totals.receivedPieces} prendas`} /><Row label="Dañadas" value={`${totals.damagedPieces} prendas`} /><Row label="Disponibles" value={`${totals.sellablePieces} prendas`} /><Row label="Costo mínimo por pieza" value={totals.sellablePieces ? formatCurrency(totals.costPerPiece) : '—'} /><Row label={`Precio base (${totals.targetMargin || 0}%)`} value={totals.baseRecommendedPrice ? formatCurrency(totals.baseRecommendedPrice) : '—'} /><Row label="Venta proyectada" value={formatCurrency(projectedRevenue)} /><Row label="Ganancia estimada en córdobas" value={formatCurrency(projectedProfit)} /></dl>
           <p className="mt-5 text-3xl font-extrabold">{formatCurrency(totals.totalInvestment)}</p>
           {formError && <p role="alert" className="mt-4 rounded-xl bg-coral-500/15 p-3 text-sm font-semibold">{formError}</p>}
           <button type="submit" disabled={isSaving || isLoading} className="mt-6 flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-white px-5 text-sm font-extrabold text-brand-950 disabled:opacity-60"><PackageCheck size={19} />{isSaving ? 'Guardando…' : 'Registrar paca'}</button>

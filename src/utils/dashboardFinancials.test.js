@@ -16,7 +16,13 @@ test('separa resultado del período, cobros reales y cuentas por cobrar', () => 
         firstPaymentAt: '2026-09-07T15:00:00Z',
         secondPaymentAmount: 50,
         secondPaymentAt: '2026-09-08T15:00:00Z',
+        firstPaymentMethod: 'cash',
+        secondPaymentMethod: 'transfer',
+        total: 100,
         balance: 0,
+        customerId: 'customer-1',
+        fulfillmentMethod: 'delivery',
+        deliveryStatus: 'to_prepare',
       },
       {
         soldAt: '2026-08-20T15:00:00Z',
@@ -25,6 +31,7 @@ test('separa resultado del período, cobros reales y cuentas por cobrar', () => 
         firstPaymentAt: null,
         secondPaymentAmount: 0,
         secondPaymentAt: null,
+        total: 200,
         balance: 200,
       },
     ],
@@ -32,6 +39,7 @@ test('separa resultado del período, cobros reales y cuentas por cobrar', () => 
     bales: [
       { purchaseCost: 10000, acquisitionTransport: 300, otherExpenses: 160 },
     ],
+    baleInventory: [{ availablePieces: 10, estimatedUnitCost: 20 }],
   }
 
   assert.deepEqual(calculateDashboardFinancials(data, 'month', new Date('2026-09-10T18:00:00Z')), {
@@ -40,5 +48,10 @@ test('separa resultado del período, cobros reales y cuentas por cobrar', () => 
     receivables: 200,
     operatingExpenses: 20,
     baleInvestment: 10460,
+    inventoryValue: 200,
+    ordersTotal: 100,
+    cashCollected: 50,
+    transferCollected: 50,
+    pendingDeliveries: 1,
   })
 })

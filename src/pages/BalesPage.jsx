@@ -1,4 +1,4 @@
-import { CalendarDays, PackagePlus, Truck } from 'lucide-react'
+import { CalendarDays, PackagePlus, Pencil, Truck } from 'lucide-react'
 import { Link, useSearchParams } from 'react-router-dom'
 import PageHeader from '../components/common/PageHeader'
 import { usePacaData } from '../context/PacaDataContext'
@@ -51,9 +51,7 @@ function BalesPage() {
             <h2 id="current-bale-title" className="text-lg font-extrabold text-slate-900">
               {selectedId ? 'Paca seleccionada desde la alerta' : 'Paca actual'}
             </h2>
-            <span className={`rounded-full px-3 py-1 text-xs font-bold ${activeBale.status === 'En venta' ? 'bg-emerald-50 text-emerald-700' : 'bg-amber-50 text-amber-800'}`}>
-              {activeBale.status}
-            </span>
+            <div className="flex items-center gap-2"><Link to={`/pacas/${activeBale.id}/editar`} className="inline-flex min-h-9 items-center gap-1.5 rounded-xl bg-white px-3 text-xs font-extrabold text-brand-800 ring-1 ring-slate-200"><Pencil size={14} />Editar</Link><span className={`rounded-full px-3 py-1 text-xs font-bold ${activeBale.status === 'En venta' ? 'bg-emerald-50 text-emerald-700' : 'bg-amber-50 text-amber-800'}`}>{activeBale.status}</span></div>
           </div>
 
           <article className="overflow-hidden rounded-3xl bg-white shadow-soft ring-1 ring-slate-100">

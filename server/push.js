@@ -98,6 +98,7 @@ export async function loadOwnerAlertsData(admin, ownerId, deadline) {
     bales: bales.map((row) => ({ id: row.id, code: row.code, receivedPieces: row.received_pieces, soldPieces: row.sold_pieces, damagedPieces: row.damaged_pieces, availablePieces: row.available_pieces })),
     sales: sales.map((row) => ({ id: row.id, customerId: row.customer_id, customerName: row.customer?.name ?? 'Cliente', soldAt: row.sold_at,
       dateLabel: '', hasDeliveryStatus: ['to_prepare', 'ready', 'on_the_way', 'delivered'].includes(row.delivery_status), deliveryStatus: row.delivery_status,
+      fulfillmentMethod: row.fulfillment_method ?? (Number(row.delivery_cost) > 0 ? 'delivery' : 'pickup'),
       paymentStatus: row.payment_status ?? 'paid', balance: Math.max(0, Number(row.total) - Number(row.paid_amount)),
       lastPaymentAt: row.second_payment_at ?? row.first_payment_at ?? row.sold_at })),
   }

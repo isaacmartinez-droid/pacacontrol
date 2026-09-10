@@ -5,7 +5,7 @@ import { buildAlerts, defaultAlertSettings, normalizeAlertSettings, parseAlertPr
 const now = Date.parse('2026-09-07T18:00:00Z')
 const store = (overrides = {}) => ({ categories: [], bales: [], sales: [], ...overrides })
 const category = (overrides = {}) => ({ id: 'cat-1', name: 'Camisas', receivedPieces: 100, availablePieces: 10, ...overrides })
-const sale = (overrides = {}) => ({ id: 'sale-1', customerId: 'customer-1', customerName: 'Cliente de prueba', hasDeliveryStatus: true, paymentStatus: 'paid', deliveryStatus: 'to_prepare', soldAt: '2026-09-06T18:00:00Z', dateLabel: '6 sept 2026', ...overrides })
+const sale = (overrides = {}) => ({ id: 'sale-1', customerId: 'customer-1', customerName: 'Cliente de prueba', fulfillmentMethod: 'delivery', hasDeliveryStatus: true, paymentStatus: 'paid', deliveryStatus: 'to_prepare', soldAt: '2026-09-06T18:00:00Z', dateLabel: '6 sept 2026', ...overrides })
 const bale = (overrides = {}) => ({ id: 'bale-1', code: 'PAC-0001', receivedPieces: 100, soldPieces: 0, availablePieces: 90, damagedPieces: 10, ...overrides })
 
 test('una tienda vacía y categorías nunca usadas no generan avisos ficticios', () => {
@@ -33,6 +33,11 @@ test('el recordatorio de entrega se activa al cumplir 24 horas, incluso sin nuev
   assert.equal(buildAlerts(data, undefined, now - 1).length, 0)
   assert.equal(buildAlerts(data, undefined, now).length, 1)
   assert.equal(buildAlerts(data, undefined, now)[0].to, '/ventas?venta=sale-1')
+})
+
+test('un pedido que se recoge en tienda no genera alerta de envío', () => {
+  const data = store({ sales: [sale({ fulfillmentMethod: 'pickup' })] })
+  assert.equal(buildAlerts(data, undefined, Date.parse('2026-09-08T20:00:00Z')).some((alert) => alert.type === 'delivery'), false)
 })
 
 test('la deuda avisa a las 24 horas y repite su revisión cada 5 horas', () => {

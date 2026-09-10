@@ -1,11 +1,16 @@
 import { useEffect, useState } from 'react'
 import {
+  Banknote,
+  Boxes,
   CircleDollarSign,
+  HandCoins,
   PackageCheck,
   Plus,
+  ReceiptText,
   ShoppingBag,
   TrendingUp,
   TriangleAlert,
+  Truck,
   WalletCards,
 } from 'lucide-react'
 import ActiveBaleCard from '../components/dashboard/ActiveBaleCard'
@@ -38,6 +43,10 @@ function DashboardPage() {
     return () => window.clearInterval(timer)
   }, [])
 
+  useEffect(() => {
+    setSelectedPeriod(data.settings.dashboardPeriod)
+  }, [data.settings.dashboardPeriod])
+
   const summary = {
     availablePieces: data.categories.reduce((total, category) => total + category.availablePieces, 0),
     damagedPieces: data.bales.reduce((total, bale) => total + bale.damagedPieces, 0),
@@ -46,6 +55,29 @@ function DashboardPage() {
   const financials = calculateDashboardFinancials(data, selectedPeriod)
   const hasProfit = financials.netResult >= 0
   const activeBale = data.bales[0]
+  const kpiCards = {
+    netResult: {
+      icon: hasProfit ? TrendingUp : TriangleAlert,
+      label: `${hasProfit ? 'Ganancia neta' : 'Pérdida neta'} ${period.resultSuffix}`,
+      value: formatCurrency(Math.abs(financials.netResult)),
+      detail: 'Después de prendas, delivery y gastos', badge: 'Estimado', tone: hasProfit ? 'positive' : 'warning',
+    },
+    collected: {
+      icon: CircleDollarSign, label: `Dinero cobrado ${period.collectedSuffix}`, value: formatCurrency(financials.collected),
+      detail: financials.receivables > 0 ? `Por cobrar: ${formatCurrency(financials.receivables)}` : 'Sin saldos pendientes', badge: 'Cobros', tone: financials.receivables > 0 ? 'warning' : 'positive',
+    },
+    receivables: { icon: HandCoins, label: 'Dinero por cobrar', value: formatCurrency(financials.receivables), detail: financials.receivables > 0 ? 'Saldos pendientes de clientes' : 'Sin saldos pendientes', badge: 'Pendiente', tone: financials.receivables > 0 ? 'warning' : 'positive', to: '/clientes' },
+    baleInvestment: { icon: WalletCards, label: 'Inversión total en pacas', value: formatCurrency(financials.baleInvestment), detail: `${data.bales.length} ${data.bales.length === 1 ? 'paca registrada' : 'pacas registradas'}`, badge: 'Capital', tone: 'neutral', to: '/pacas' },
+    inventoryValue: { icon: Boxes, label: 'Valor del inventario disponible', value: formatCurrency(financials.inventoryValue), detail: 'Valor estimado al costo', badge: 'Inventario', tone: 'neutral', to: '/inventario' },
+    operatingExpenses: { icon: ReceiptText, label: `Gastos ${period.resultSuffix}`, value: formatCurrency(financials.operatingExpenses), detail: 'Gastos operativos registrados', badge: 'Gastos', tone: 'warning', to: '/gastos' },
+    ordersTotal: { icon: TrendingUp, label: `Ventas registradas ${period.resultSuffix}`, value: formatCurrency(financials.ordersTotal), detail: 'Total facturado, cobrado o pendiente', badge: 'Ventas', tone: 'positive', to: '/ventas' },
+    cashCollected: { icon: Banknote, label: `Efectivo cobrado ${period.collectedSuffix}`, value: formatCurrency(financials.cashCollected), detail: 'Pagos recibidos en efectivo', badge: 'Efectivo', tone: 'positive' },
+    transferCollected: { icon: CircleDollarSign, label: `Transferencias ${period.collectedSuffix}`, value: formatCurrency(financials.transferCollected), detail: 'Pagos recibidos por transferencia', badge: 'Banco', tone: 'positive' },
+    pendingDeliveries: { icon: Truck, label: 'Entregas pendientes', value: financials.pendingDeliveries, detail: 'Pedidos aún no entregados', badge: 'Delivery', tone: financials.pendingDeliveries > 0 ? 'warning' : 'positive', to: '/ventas' },
+    availablePieces: { icon: PackageCheck, label: 'Piezas disponibles', value: summary.availablePieces, detail: 'Listas para vender', badge: 'Stock', tone: 'neutral', to: '/inventario' },
+    damagedPieces: { icon: TriangleAlert, label: 'Piezas dañadas', value: summary.damagedPieces, detail: 'Requieren atención', badge: 'Revisar', tone: 'warning', to: '/productos-danados' },
+  }
+  const visibleKpis = data.settings.dashboardKpis.map((id) => kpiCards[id]).filter(Boolean).slice(0, 4)
 
   return (
     <div className="min-h-full bg-[#edf3f1]">
@@ -89,51 +121,8 @@ function DashboardPage() {
             </h2>
             <span className="text-xs font-semibold text-slate-400">{period.label}</span>
           </div>
-          <div className="grid grid-cols-1 gap-3 min-[380px]:grid-cols-2 md:grid-cols-3 md:gap-4 xl:grid-cols-5">
-            <SummaryCard
-              icon={hasProfit ? TrendingUp : TriangleAlert}
-              label={`${hasProfit ? 'Ganancia neta' : 'Pérdida neta'} ${period.resultSuffix}`}
-              value={formatCurrency(Math.abs(financials.netResult))}
-              detail="Después de prendas, delivery y gastos"
-              badge="Estimado"
-              tone={hasProfit ? 'positive' : 'warning'}
-            />
-            <SummaryCard
-              icon={CircleDollarSign}
-              label={`Dinero cobrado ${period.collectedSuffix}`}
-              value={formatCurrency(financials.collected)}
-              detail={financials.receivables > 0 ? `Por cobrar: ${formatCurrency(financials.receivables)}` : 'Sin saldos pendientes'}
-              badge="Cobros"
-              tone={financials.receivables > 0 ? 'warning' : 'positive'}
-            />
-            <SummaryCard
-              icon={WalletCards}
-              label="Inversión total en pacas"
-              value={formatCurrency(financials.baleInvestment)}
-              detail={`${data.bales.length} ${data.bales.length === 1 ? 'paca registrada' : 'pacas registradas'}`}
-              badge="Capital"
-              tone="neutral"
-              to="/pacas"
-              className="min-[380px]:col-span-2 md:col-span-1"
-            />
-            <SummaryCard
-              icon={PackageCheck}
-              label="Piezas disponibles"
-              value={summary.availablePieces}
-              detail="Listas para vender"
-              badge="Stock"
-              tone="neutral"
-              to="/inventario"
-            />
-            <SummaryCard
-              icon={TriangleAlert}
-              label="Piezas dañadas"
-              value={summary.damagedPieces}
-              detail="Requieren atención"
-              badge="Revisar"
-              tone="warning"
-              to="/productos-danados"
-            />
+          <div className="grid grid-cols-1 gap-3 min-[380px]:grid-cols-2 md:grid-cols-4 md:gap-4">
+            {visibleKpis.map((card) => <SummaryCard key={card.label} {...card} />)}
           </div>
         </section>
 

@@ -32,8 +32,11 @@ export function calculateRecommendedPrice({
   targetMargin = DEFAULT_TARGET_MARGIN,
   priceLevel = 'economic',
   customPrice = null,
+  categoryPrices = null,
 }) {
   if (priceLevel === 'custom') return Math.max(0, toNumber(customPrice))
+  const categoryPrice = toNumber(categoryPrices?.[priceLevel])
+  if (categoryPrice > 0) return categoryPrice
   const basePrice = calculateBaseRecommendedPrice(unitCost, targetMargin)
   return roundRecommendedPrice(basePrice * getPricingLevel(priceLevel).multiplier)
 }
