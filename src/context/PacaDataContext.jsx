@@ -190,8 +190,10 @@ function mapDailySummary(row) {
 }
 
 export function PacaDataProvider({ children }) {
-  const { user } = useAuth()
-  return <AccountPacaDataProvider key={user?.id ?? 'guest'} userId={user?.id}>{children}</AccountPacaDataProvider>
+  const { hasAcceptedCurrentLegal, isAccessActive, isProfileLoading, user } = useAuth()
+  const canLoadData = Boolean(user && hasAcceptedCurrentLegal && isAccessActive && !isProfileLoading)
+
+  return <AccountPacaDataProvider key={canLoadData ? user.id : 'guest'} userId={canLoadData ? user.id : null}>{children}</AccountPacaDataProvider>
 }
 
 function AccountPacaDataProvider({ userId, children }) {

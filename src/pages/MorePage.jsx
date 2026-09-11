@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { BarChart3, Bell, ChevronRight, CircleAlert, FileText, LoaderCircle, LogOut, PackageSearch, PackageX, ReceiptText, SlidersHorizontal, UserRound } from 'lucide-react'
+import { BarChart3, Bell, ChevronRight, CircleAlert, FileText, LoaderCircle, LogOut, PackageSearch, PackageX, ReceiptText, ShieldCheck, SlidersHorizontal, UserRound } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import PageHeader from '../components/common/PageHeader'
 import { useAuth } from '../context/AuthContext'
@@ -56,6 +56,14 @@ const modules = [
   },
 ]
 
+const adminModule = {
+  title: 'Panel admin',
+  description: 'Clientes, planes y accesos',
+  to: '/admin',
+  icon: ShieldCheck,
+  tone: 'coral',
+}
+
 const toneClasses = {
   brand: 'bg-brand-50 text-brand-700',
   coral: 'bg-coral-50 text-coral-600',
@@ -64,10 +72,11 @@ const toneClasses = {
 }
 
 function MorePage() {
-  const { user, signOut } = useAuth()
+  const { isAdmin, user, signOut } = useAuth()
   const [isSigningOut, setIsSigningOut] = useState(false)
   const [signOutError, setSignOutError] = useState('')
   const username = user?.user_metadata?.username ?? user?.email?.split('@')[0]
+  const visibleModules = isAdmin ? [adminModule, ...modules] : modules
 
   async function handleSignOut() {
     setIsSigningOut(true)
@@ -90,7 +99,7 @@ function MorePage() {
       />
       <div className="page-content space-y-6 py-5 md:py-8">
         <nav aria-label="Módulos adicionales" className="max-w-5xl space-y-3 sm:grid sm:grid-cols-2 sm:gap-4 sm:space-y-0">
-          {modules.map((module) => {
+          {visibleModules.map((module) => {
             const Icon = module.icon
 
             return (

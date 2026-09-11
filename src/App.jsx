@@ -1,6 +1,7 @@
 import { Route, Routes } from 'react-router-dom'
 import ProtectedRoute from './components/auth/ProtectedRoute'
 import AppShell from './components/layout/AppShell'
+import AdminPage from './pages/AdminPage'
 import AuthPage from './pages/AuthPage'
 import BalesPage from './pages/BalesPage'
 import CustomersPage from './pages/CustomersPage'
@@ -46,6 +47,7 @@ function App() {
         <Route path="productos-danados" element={<DamagedProductsPage />} />
         <Route path="reportes" element={<ReportsPage />} />
         <Route path="mas" element={<MorePage />} />
+        <Route path="admin" element={<AdminPage />} />
         <Route path="alertas" element={<AlertsPage />} />
         <Route path="preferencias" element={<BusinessPreferencesPage />} />
         <Route path="*" element={<NotFoundPage />} />

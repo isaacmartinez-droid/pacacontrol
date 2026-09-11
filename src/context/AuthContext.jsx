@@ -160,6 +160,7 @@ export function AuthProvider({ children }) {
           && profile?.privacy_version === PRIVACY_VERSION,
       ),
       isAccessActive: !profile || profile.access_status === 'active',
+      isAdmin: Boolean(profile?.access_status === 'active' && profile?.service_plan === 'internal'),
       async signIn({ username, password }) {
         const email = usernameToEmail(username)
         const { error } = await getSupabaseClient().auth.signInWithPassword({ email, password })

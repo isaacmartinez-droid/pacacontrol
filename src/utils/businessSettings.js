@@ -1,3 +1,5 @@
+import { defaultPricingRules, normalizePricingRules } from './pricing.js'
+
 export const dashboardKpiOptions = [
   { id: 'netResult', label: 'Ganancia o pérdida neta' },
   { id: 'collected', label: 'Dinero cobrado' },
@@ -27,6 +29,8 @@ export const defaultBusinessSettings = Object.freeze({
   defaultDeliveryCost: 0,
   defaultDeliveryCharge: 0,
   warnBelowRecommended: true,
+  defaultPricingRules,
+  pricingRuleTemplates: [],
 })
 
 const numberInRange = (value, fallback, min, max) => {
@@ -38,6 +42,14 @@ export function normalizeBusinessSettings(settings = {}) {
   const requestedKpis = Array.isArray(settings.dashboardKpis) ? settings.dashboardKpis : defaultBusinessSettings.dashboardKpis
   const dashboardKpis = [...new Set(requestedKpis)].filter((id) => validKpiIds.has(id)).slice(0, 4)
 
+  const pricingRuleTemplates = Array.isArray(settings.pricingRuleTemplates)
+    ? settings.pricingRuleTemplates.slice(0, 20).map((template, index) => ({
+      id: typeof template?.id === 'string' && template.id ? template.id : `rule-${index + 1}`,
+      name: typeof template?.name === 'string' && template.name.trim() ? template.name.trim().slice(0, 60) : `Regla ${index + 1}`,
+      rules: normalizePricingRules(template?.rules),
+    })).filter((template, index, templates) => templates.findIndex((item) => item.id === template.id) === index)
+    : []
+
   return {
     dashboardKpis: dashboardKpis.length ? dashboardKpis : [...defaultBusinessSettings.dashboardKpis],
     dashboardPeriod: validPeriods.has(settings.dashboardPeriod) ? settings.dashboardPeriod : defaultBusinessSettings.dashboardPeriod,
@@ -47,6 +59,8 @@ export function normalizeBusinessSettings(settings = {}) {
     defaultDeliveryCost: numberInRange(settings.defaultDeliveryCost, defaultBusinessSettings.defaultDeliveryCost, 0, Number.MAX_SAFE_INTEGER),
     defaultDeliveryCharge: numberInRange(settings.defaultDeliveryCharge, defaultBusinessSettings.defaultDeliveryCharge, 0, Number.MAX_SAFE_INTEGER),
     warnBelowRecommended: settings.warnBelowRecommended !== false,
+    defaultPricingRules: normalizePricingRules(settings.defaultPricingRules),
+    pricingRuleTemplates,
   }
 }
 
@@ -61,6 +75,8 @@ export function mapBusinessSettings(row) {
     defaultDeliveryCost: row.default_delivery_cost,
     defaultDeliveryCharge: row.default_delivery_charge,
     warnBelowRecommended: row.warn_below_recommended,
+    defaultPricingRules: row.default_pricing_rules,
+    pricingRuleTemplates: row.pricing_rule_templates,
   })
 }
 
@@ -75,5 +91,7 @@ export function businessSettingsToRow(settings) {
     default_delivery_cost: normalized.defaultDeliveryCost,
     default_delivery_charge: normalized.defaultDeliveryCharge,
     warn_below_recommended: normalized.warnBelowRecommended,
+    default_pricing_rules: normalized.defaultPricingRules,
+    pricing_rule_templates: normalized.pricingRuleTemplates,
   }
 }
