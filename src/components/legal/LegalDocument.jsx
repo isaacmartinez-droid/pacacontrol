@@ -21,13 +21,6 @@ function LegalDocument({ compact = false }) {
 
       <DocumentSection title="Terminos de uso" sections={termsSections} />
       <DocumentSection title="Politica de privacidad" sections={privacySections} />
-
-      <section className="rounded-3xl bg-amber-50 p-5 ring-1 ring-amber-100">
-        <h2 className="text-lg font-extrabold text-amber-950">Revision legal recomendada</h2>
-        <p className="mt-2 text-sm leading-6 text-amber-900">
-          Este texto esta preparado para operar el producto con mas orden, pero no reemplaza la revision de un abogado cuando el servicio crezca, cambie de pais o empiece a manejar contratos formales con varios clientes.
-        </p>
-      </section>
     </div>
   )
 }

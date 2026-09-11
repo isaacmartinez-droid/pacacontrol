@@ -1,20 +1,19 @@
 import { useMemo, useState } from 'react'
-import { CircleAlert, Eye, EyeOff, LoaderCircle, LockKeyhole, ShieldCheck, Store, UserPlus } from 'lucide-react'
+import { CircleAlert, Eye, EyeOff, LoaderCircle, LockKeyhole, Store, UserPlus } from 'lucide-react'
 import { Link, Navigate, useLocation } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 
 function AuthPage() {
-  const { isAdmin, isConfigured, isLoading, isProfileLoading, isPublicSignupEnabled, requiresSignupAccessCode, signIn, signUp, user } = useAuth()
+  const { isConfigured, isLoading, isProfileLoading, isPublicSignupEnabled, requiresSignupAccessCode, signIn, signUp, user } = useAuth()
   const location = useLocation()
   const [isRegistering, setIsRegistering] = useState(false)
-  const [loginTarget, setLoginTarget] = useState('store')
   const [form, setForm] = useState({ username: '', firstName: '', lastName: '', password: '', accessCode: '', acceptedLegal: false })
   const [showPassword, setShowPassword] = useState(false)
   const [error, setError] = useState('')
   const [message, setMessage] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
 
-  const destination = location.state?.from || (isAdmin || loginTarget === 'admin' ? '/admin' : '/')
+  const destination = location.state?.from || '/'
   const generatedUsername = useMemo(
     () => buildUsername(form.firstName, form.lastName),
     [form.firstName, form.lastName],
@@ -81,31 +80,6 @@ function AuthPage() {
               <h2 className="text-xl font-extrabold text-slate-900">{isRegistering ? 'Crea tu cuenta' : 'Bienvenido de nuevo'}</h2>
               <p className="mt-1 text-sm text-slate-500">{isRegistering ? 'Escribe tu nombre y apellido; generaremos tu usuario automáticamente.' : 'Ingresa con tu usuario y contraseña.'}</p>
 
-              {!isRegistering && (
-                <div className="mt-5 grid grid-cols-2 gap-2 rounded-2xl bg-slate-50 p-1">
-                  <button
-                    type="button"
-                    onClick={() => setLoginTarget('store')}
-                    className={`flex min-h-11 items-center justify-center gap-2 rounded-xl text-sm font-extrabold transition ${
-                      loginTarget === 'store' ? 'bg-white text-brand-900 shadow-sm' : 'text-slate-500'
-                    }`}
-                  >
-                    <Store size={17} />
-                    Tienda
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setLoginTarget('admin')}
-                    className={`flex min-h-11 items-center justify-center gap-2 rounded-xl text-sm font-extrabold transition ${
-                      loginTarget === 'admin' ? 'bg-white text-brand-900 shadow-sm' : 'text-slate-500'
-                    }`}
-                  >
-                    <ShieldCheck size={17} />
-                    Admin
-                  </button>
-                </div>
-              )}
-
               <form className="mt-6 space-y-4" onSubmit={handleSubmit}>
                 {isRegistering ? (
                   <>
@@ -147,8 +121,7 @@ function AuthPage() {
               ) : (
                 <div className="mt-5 rounded-2xl bg-brand-50 p-4 text-sm leading-6 text-brand-900">
                   <p className="font-extrabold">Acceso por invitacion</p>
-                  <p className="mt-1">El registro publico esta cerrado. Si viste el sistema en redes o quieres probarlo, solicita una cuenta al administrador.</p>
-                  <Link to="/legal" className="mt-3 inline-block font-extrabold text-brand-700 underline">Ver terminos y privacidad</Link>
+                  <Link to="/legal" className="mt-2 inline-block font-extrabold text-brand-700 underline">Ver terminos y privacidad</Link>
                 </div>
               )}
             </>
