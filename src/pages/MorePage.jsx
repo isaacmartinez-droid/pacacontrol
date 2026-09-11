@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { BarChart3, Bell, ChevronRight, CircleAlert, LoaderCircle, LogOut, PackageSearch, PackageX, ReceiptText, SlidersHorizontal, UserRound } from 'lucide-react'
+import { BarChart3, Bell, ChevronRight, CircleAlert, FileText, LoaderCircle, LogOut, PackageSearch, PackageX, ReceiptText, SlidersHorizontal, UserRound } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import PageHeader from '../components/common/PageHeader'
 import { useAuth } from '../context/AuthContext'
@@ -46,6 +46,13 @@ const modules = [
     to: '/reportes',
     icon: BarChart3,
     tone: 'emerald',
+  },
+  {
+    title: 'Terminos y privacidad',
+    description: 'Condiciones de uso, datos y acceso',
+    to: '/legal',
+    icon: FileText,
+    tone: 'brand',
   },
 ]
 

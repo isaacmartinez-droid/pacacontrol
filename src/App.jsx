@@ -9,6 +9,7 @@ import DamagedProductsPage from './pages/DamagedProductsPage'
 import DashboardPage from './pages/DashboardPage'
 import ExpensesPage from './pages/ExpensesPage'
 import InventoryPage from './pages/InventoryPage'
+import LegalPage from './pages/LegalPage'
 import MorePage from './pages/MorePage'
 import NewBalePage from './pages/NewBalePage'
 import NewCustomerPage from './pages/NewCustomerPage'
@@ -26,6 +27,7 @@ function App() {
   return (
     <Routes>
       <Route path="acceder" element={<AuthPage />} />
+      <Route path="legal" element={<LegalPage />} />
       <Route element={<ProtectedRoute />}>
       <Route element={<AppShell />}>
         <Route index element={<DashboardPage />} />

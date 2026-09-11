@@ -1,13 +1,13 @@
 import { useMemo, useState } from 'react'
 import { CircleAlert, Eye, EyeOff, LoaderCircle, LockKeyhole, Store, UserPlus } from 'lucide-react'
-import { Navigate, useLocation } from 'react-router-dom'
+import { Link, Navigate, useLocation } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 
 function AuthPage() {
-  const { isConfigured, isLoading, signIn, signUp, user } = useAuth()
+  const { isConfigured, isLoading, isPublicSignupEnabled, requiresSignupAccessCode, signIn, signUp, user } = useAuth()
   const location = useLocation()
   const [isRegistering, setIsRegistering] = useState(false)
-  const [form, setForm] = useState({ username: '', firstName: '', lastName: '', password: '' })
+  const [form, setForm] = useState({ username: '', firstName: '', lastName: '', password: '', accessCode: '', acceptedLegal: false })
   const [showPassword, setShowPassword] = useState(false)
   const [error, setError] = useState('')
   const [message, setMessage] = useState('')
@@ -81,6 +81,13 @@ function AuthPage() {
                     </div>
                     <label className="block text-sm font-bold text-slate-700">Usuario generado<input className="sale-input mt-2 bg-brand-50" type="text" autoComplete="username" value={generatedUsername} readOnly aria-describedby="generated-username-help" /></label>
                     <p id="generated-username-help" className="-mt-2 text-xs text-slate-500">Se crea como nombre.apellido, sin espacios ni tildes.</p>
+                    {requiresSignupAccessCode && (
+                      <label className="block text-sm font-bold text-slate-700">Codigo de acceso<input className="sale-input mt-2" autoComplete="off" value={form.accessCode} required onChange={(event) => update('accessCode', event.target.value)} /></label>
+                    )}
+                    <label className="flex items-start gap-3 rounded-2xl bg-slate-50 p-4 text-sm font-bold leading-6 text-slate-700">
+                      <input type="checkbox" checked={form.acceptedLegal} required onChange={(event) => update('acceptedLegal', event.target.checked)} className="mt-1 size-5 shrink-0 accent-brand-800" />
+                      <span>Acepto los <Link to="/legal" className="text-brand-700 underline">terminos de uso y la politica de privacidad</Link>.</span>
+                    </label>
                   </>
                 ) : (
                   <label className="block text-sm font-bold text-slate-700">Usuario<input className="sale-input mt-2" type="text" autoComplete="username" autoCapitalize="none" spellCheck="false" pattern="[a-zA-Z0-9]+(?:\.[a-zA-Z0-9]+)+" title="Usa el formato nombre.apellido, sin espacios ni tildes." placeholder="nombre.apellido" value={form.username} required onChange={(event) => update('username', event.target.value)} /></label>
@@ -99,9 +106,17 @@ function AuthPage() {
                 </button>
               </form>
 
-              <button type="button" className="mt-5 w-full text-sm font-bold text-brand-700 hover:underline" onClick={() => { setIsRegistering((value) => !value); setError(''); setMessage(''); setShowPassword(false) }}>
-                {isRegistering ? 'Ya tengo cuenta' : 'Crear mi primera cuenta'}
-              </button>
+              {isPublicSignupEnabled ? (
+                <button type="button" className="mt-5 w-full text-sm font-bold text-brand-700 hover:underline" onClick={() => { setIsRegistering((value) => !value); setError(''); setMessage(''); setShowPassword(false) }}>
+                  {isRegistering ? 'Ya tengo cuenta' : 'Crear mi primera cuenta'}
+                </button>
+              ) : (
+                <div className="mt-5 rounded-2xl bg-brand-50 p-4 text-sm leading-6 text-brand-900">
+                  <p className="font-extrabold">Acceso por invitacion</p>
+                  <p className="mt-1">El registro publico esta cerrado. Si viste el sistema en redes o quieres probarlo, solicita una cuenta al administrador.</p>
+                  <Link to="/legal" className="mt-3 inline-block font-extrabold text-brand-700 underline">Ver terminos y privacidad</Link>
+                </div>
+              )}
             </>
           )}
         </div>
@@ -126,6 +141,8 @@ function getAuthErrorMessage(error, isRegistering) {
     user_already_exists: 'Ese usuario ya existe. Usa la opción “Ya tengo cuenta” para ingresar.',
     signup_disabled: 'La creación de cuentas está desactivada en Supabase.',
     email_provider_disabled: 'El acceso con usuario y contraseña está desactivado en Supabase.',
+    invalid_invite_code: 'El codigo de acceso no es valido.',
+    terms_required: 'Debes aceptar los terminos y la politica de privacidad.',
     weak_password: 'La contraseña no cumple los requisitos de seguridad.',
     over_request_rate_limit: 'Se hicieron demasiados intentos. Espera un momento y vuelve a probar.',
   }
