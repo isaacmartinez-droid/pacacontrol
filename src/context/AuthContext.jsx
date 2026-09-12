@@ -7,12 +7,35 @@ const AuthContext = createContext(null)
 const IDLE_TIMEOUT_MS = 30 * 60 * 1000
 const PUBLIC_SIGNUP_ENABLED = import.meta.env.VITE_ALLOW_PUBLIC_SIGNUP === 'true'
 const SIGNUP_ACCESS_CODE = import.meta.env.VITE_SIGNUP_ACCESS_CODE?.trim() ?? ''
+const PROFILE_COLUMNS = 'id, display_name, access_status, service_plan, account_role, legal_terms_version, terms_accepted_at, privacy_version, privacy_accepted_at'
+const LEGACY_PROFILE_COLUMNS = 'id, display_name, access_status, service_plan, legal_terms_version, terms_accepted_at, privacy_version, privacy_accepted_at'
+
 function usernameToEmail(username) {
   // Supabase Auth necesita una identidad con formato de email para usar
   // contraseñas. Reutilizamos el host real del proyecto como identificador
   // interno para que Supabase lo acepte sin pedirle un correo al usuario.
   const projectHostname = new URL(import.meta.env.VITE_SUPABASE_URL).hostname
   return `${username.trim().toLowerCase()}@${projectHostname}`
+}
+
+async function fetchProfile(userId) {
+  const client = getSupabaseClient()
+  const withRole = await client
+    .from('profiles')
+    .select(PROFILE_COLUMNS)
+    .eq('id', userId)
+    .maybeSingle()
+
+  if (!withRole.error) return withRole
+
+  const message = withRole.error.message ?? ''
+  if (withRole.error.code !== 'PGRST204' && !message.includes('account_role')) return withRole
+
+  return client
+    .from('profiles')
+    .select(LEGACY_PROFILE_COLUMNS)
+    .eq('id', userId)
+    .maybeSingle()
 }
 
 export function AuthProvider({ children }) {
@@ -34,11 +57,7 @@ export function AuthProvider({ children }) {
     setIsProfileLoading(true)
     setProfileError('')
 
-    const { data, error } = await getSupabaseClient()
-      .from('profiles')
-      .select('id, display_name, access_status, service_plan, legal_terms_version, terms_accepted_at, privacy_version, privacy_accepted_at')
-      .eq('id', userId)
-      .maybeSingle()
+    const { data, error } = await fetchProfile(userId)
 
     if (error) {
       setProfile(null)
@@ -115,11 +134,7 @@ export function AuthProvider({ children }) {
     setIsProfileLoading(true)
     setProfileError('')
 
-    getSupabaseClient()
-      .from('profiles')
-      .select('id, display_name, access_status, service_plan, legal_terms_version, terms_accepted_at, privacy_version, privacy_accepted_at')
-      .eq('id', session.user.id)
-      .maybeSingle()
+    fetchProfile(session.user.id)
       .then(({ data, error }) => {
         if (cancelled) return
         if (error) {
@@ -160,7 +175,7 @@ export function AuthProvider({ children }) {
           && profile?.privacy_version === PRIVACY_VERSION,
       ),
       isAccessActive: !profile || profile.access_status === 'active',
-      isAdmin: Boolean(profile?.access_status === 'active' && profile?.service_plan === 'internal'),
+      isAdmin: Boolean(profile?.access_status === 'active' && (profile?.account_role === 'admin' || profile?.service_plan === 'internal')),
       async signIn({ username, password }) {
         const email = usernameToEmail(username)
         const { error } = await getSupabaseClient().auth.signInWithPassword({ email, password })
