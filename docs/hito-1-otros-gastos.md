@@ -90,7 +90,12 @@ La auditoría completa de producción devolvió sus 17 comprobaciones en `true`:
 - cero funciones restantes con `America/Guatemala`;
 - controles anteriores de historial, arqueos, pagos e inventario presentes.
 
+El frontend compatible se publicó desde `main` en el commit `2664f12`. El humo
+público posterior confirmó respuesta `200` en acceso, rutas internas, manifest,
+service worker y configuración push. El paquete publicado contiene la interfaz
+de desglose de otros gastos.
+
 Pendiente para cerrar el hito:
 
-1. Publicar el frontend compatible.
-2. Hacer un recorrido breve de lectura y creación en producción.
+1. Hacer un recorrido autenticado breve de lectura, creación y edición en
+   producción con una cuenta de prueba.

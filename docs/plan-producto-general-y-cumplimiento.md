@@ -60,7 +60,7 @@ la migración o configuración correspondiente ya esté aplicada en producción.
 | Avisos visibles dentro de la aplicación | Pruebas locales aprobadas | Prueba cruzada en dispositivos reales |
 | Push con la aplicación cerrada | Configuración pública detectada | Tarea programada y prueba real en dispositivos |
 | Centro formal de Ajustes | Pendiente | Diseñarlo con vocabulario neutral |
-| Detalle de otros gastos de compra | Base de producción auditada: 17/17 controles aprobados | Publicar frontend compatible y hacer recorrido final |
+| Detalle de otros gastos de compra | Base auditada y frontend publicados en producción | Recorrido autenticado final con una cuenta de prueba |
 | Códigos de prueba y campañas | Pendiente | Diseño seguro, administración y reglas legales |
 | Avisos de vencimiento de prueba | Pendiente | Depende de campañas y vigencia de cuenta |
 | Perfil y asistente de negocio | Pendiente | Base de la transformación general |
