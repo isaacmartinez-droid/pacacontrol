@@ -56,7 +56,7 @@ export function makePushPlan(data, subscription, now = Date.now()) {
   const fresh = alerts.filter((alert) => notified[alert.id] !== alert.revision)
   for (const alert of fresh) notified[alert.id] = alert.revision
   return { notified, payloads: fresh.map((alert) => ({
-    title: alert.type === 'debt' ? 'Cobro pendiente' : 'Tienda J&F',
+    title: ({ debt: 'Cobro pendiente', stock: 'Inventario bajo', delivery: 'Entrega pendiente', damage: 'Daños elevados', bale: 'Paca agotada' })[alert.type] || 'Tienda J&F',
     body: alert.type === 'debt'
       ? 'Un cliente tiene un pago pendiente desde hace más de 24 horas. Abre la aplicación para revisar el historial.'
       : 'Una alerta necesita tu atención. Abre la aplicación para revisar los detalles.',
@@ -90,17 +90,18 @@ async function allRows(query, deadline) {
 export async function loadOwnerAlertsData(admin, ownerId, deadline) {
   const [categories, bales, sales] = await Promise.all([
     allRows(() => admin.from('inventory_summary').select('category_id,name,received_pieces,available_pieces').eq('owner_id', ownerId).order('category_id'), deadline),
-    allRows(() => admin.from('bale_summary').select('id,code,received_pieces,sold_pieces,damaged_pieces,available_pieces').eq('owner_id', ownerId).order('id'), deadline),
-    allRows(() => admin.from('sales').select('*,customer:customers(name)').eq('owner_id', ownerId).not('customer_id', 'is', null).order('id'), deadline),
+    allRows(() => admin.from('bale_summary').select('id,code,received_pieces,sold_pieces,damaged_pieces,available_pieces,archived_at').eq('owner_id', ownerId).order('id'), deadline),
+    allRows(() => admin.from('sales').select('*,customer:customers(name),sale_items(sale_item_allocations(inventory:bale_inventory(bale:bales(archived_at))))').eq('owner_id', ownerId).not('customer_id', 'is', null).order('id'), deadline),
   ])
   return {
     categories: categories.map((row) => ({ id: row.category_id, name: row.name, receivedPieces: row.received_pieces, availablePieces: row.available_pieces })),
-    bales: bales.map((row) => ({ id: row.id, code: row.code, receivedPieces: row.received_pieces, soldPieces: row.sold_pieces, damagedPieces: row.damaged_pieces, availablePieces: row.available_pieces })),
+    bales: bales.map((row) => ({ id: row.id, code: row.code, isArchived: Boolean(row.archived_at), receivedPieces: row.received_pieces, soldPieces: row.sold_pieces, damagedPieces: row.damaged_pieces, availablePieces: row.available_pieces })),
     sales: sales.map((row) => ({ id: row.id, customerId: row.customer_id, customerName: row.customer?.name ?? 'Cliente', soldAt: row.sold_at,
+      isArchived: (row.sale_items ?? []).length > 0 && row.sale_items.every((item) => (item.sale_item_allocations ?? []).length > 0 && item.sale_item_allocations.every((allocation) => Boolean(allocation.inventory?.bale?.archived_at))),
       dateLabel: '', hasDeliveryStatus: ['to_prepare', 'ready', 'on_the_way', 'delivered'].includes(row.delivery_status), deliveryStatus: row.delivery_status,
       fulfillmentMethod: row.fulfillment_method ?? (Number(row.delivery_cost) > 0 ? 'delivery' : 'pickup'),
       paymentStatus: row.payment_status ?? 'paid', balance: Math.max(0, Number(row.total) - Number(row.paid_amount)),
-      lastPaymentAt: row.second_payment_at ?? row.first_payment_at ?? row.sold_at })),
+      lastPaymentAt: row.last_additional_payment_at ?? row.second_payment_at ?? row.first_payment_at ?? row.sold_at })),
   }
 }
 

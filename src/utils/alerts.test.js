@@ -8,6 +8,12 @@ const category = (overrides = {}) => ({ id: 'cat-1', name: 'Camisas', receivedPi
 const sale = (overrides = {}) => ({ id: 'sale-1', customerId: 'customer-1', customerName: 'Cliente de prueba', fulfillmentMethod: 'delivery', hasDeliveryStatus: true, paymentStatus: 'paid', deliveryStatus: 'to_prepare', soldAt: '2026-09-06T18:00:00Z', dateLabel: '6 sept 2026', ...overrides })
 const bale = (overrides = {}) => ({ id: 'bale-1', code: 'PAC-0001', receivedPieces: 100, soldPieces: 0, availablePieces: 90, damagedPieces: 10, ...overrides })
 
+test('archivar retira alertas operativas pero conserva recordatorios de deuda', () => {
+  const alerts = buildAlerts(store({ bales: [bale({ isArchived: true, availablePieces: 0, soldPieces: 90 })], sales: [sale({ isArchived: true }), sale({ id: 'debt', isArchived: true, balance: 200, paymentStatus: 'partial' })] }), undefined, now)
+  assert.equal(alerts.some((alert) => ['bale', 'damage', 'delivery'].includes(alert.type)), false)
+  assert.equal(alerts.find((alert) => alert.type === 'debt')?.id, 'debt:customer-1')
+})
+
 test('una tienda vacía y categorías nunca usadas no generan avisos ficticios', () => {
   assert.deepEqual(buildAlerts(store(), undefined, now), [])
   assert.deepEqual(buildAlerts(store({ categories: [category({ receivedPieces: 0, availablePieces: 0 })] })), [])

@@ -27,6 +27,10 @@ export const pricingLevels = [
   { id: 'custom', label: 'Precio personalizado', multiplier: null },
 ]
 
+// Estos son los niveles que la base permite guardar en el inventario.
+// Los descuentos y el nivel especial siguen siendo herramientas de cálculo.
+export const inventoryPricingLevels = pricingLevels.filter((level) => ['economic', 'standard', 'premium', 'custom'].includes(level.id))
+
 export function getPricingLevel(levelId) {
   return pricingLevels.find((level) => level.id === levelId) ?? pricingLevels[0]
 }

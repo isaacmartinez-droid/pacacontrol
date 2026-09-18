@@ -44,7 +44,7 @@ function InventoryPage() {
           <div className="overflow-hidden rounded-3xl bg-white shadow-soft ring-1 ring-slate-100">
             {selectedId && visibleCategories.length === 0 && <p className="p-5 text-sm text-slate-600">La categoría seleccionada no está disponible en los datos cargados.</p>}
             {visibleCategories.map((category, index) => {
-              const categoryInventory = data.baleInventory.filter((inventory) => inventory.categoryId === category.id && inventory.availablePieces > 0)
+              const categoryInventory = data.baleInventory.filter((inventory) => inventory.isActive !== false && inventory.categoryId === category.id && inventory.availablePieces > 0)
               return <div key={category.id} className={index > 0 ? 'border-t border-slate-100' : ''}>
                 <div className="flex min-h-14 items-center justify-between gap-4 px-5 py-3">
                   <div className="flex min-w-0 items-center gap-3"><span className="grid size-9 shrink-0 place-items-center rounded-xl bg-brand-50 text-sm font-extrabold text-brand-700">{category.name.charAt(0)}</span><p className="truncate text-sm font-semibold text-slate-700">{category.name}</p></div>

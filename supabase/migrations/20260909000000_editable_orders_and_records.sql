@@ -292,7 +292,7 @@ begin
   if auth.uid() is null then raise exception 'Debes iniciar sesión.'; end if;
   if p_purchase_date is null or p_purchase_cost is null or p_purchase_cost <= 0 then raise exception 'Revisa la fecha y el costo de compra.'; end if;
   if coalesce(p_transport_cost, 0) < 0 or coalesce(p_other_expenses, 0) < 0 then raise exception 'Los costos no pueden ser negativos.'; end if;
-  if p_target_margin is null or p_target_margin < 1 or p_target_margin > 90 then raise exception 'El margen debe estar entre 1% y 90%.'; end if;
+  if p_target_margin is null or p_target_margin < 1 or p_target_margin > 90 then raise exception 'El margen debe estar entre 1%% y 90%%.'; end if;
   if p_inventory_lines is null or jsonb_typeof(p_inventory_lines) <> 'array' or jsonb_array_length(p_inventory_lines) = 0 then raise exception 'La paca necesita al menos una categoría.'; end if;
   select * into v_bale from public.bales where id = p_bale_id and owner_id = auth.uid() for update;
   if not found then raise exception 'No se encontró la paca.'; end if;

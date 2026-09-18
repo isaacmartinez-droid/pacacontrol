@@ -5,8 +5,9 @@ import { LEGAL_TERMS_VERSION, PRIVACY_VERSION } from '../legal/legalContent'
 
 const AuthContext = createContext(null)
 const IDLE_TIMEOUT_MS = 30 * 60 * 1000
-const PUBLIC_SIGNUP_ENABLED = import.meta.env.VITE_ALLOW_PUBLIC_SIGNUP === 'true'
-const SIGNUP_ACCESS_CODE = import.meta.env.VITE_SIGNUP_ACCESS_CODE?.trim() ?? ''
+// Registro público cerrado hasta implementar invitaciones validadas en servidor.
+// Ninguna variable VITE_ debe actuar como secreto o autorización de registro.
+const PUBLIC_SIGNUP_ENABLED = false
 const PROFILE_COLUMNS = 'id, display_name, access_status, service_plan, account_role, legal_terms_version, terms_accepted_at, privacy_version, privacy_accepted_at'
 const LEGACY_PROFILE_COLUMNS = 'id, display_name, access_status, service_plan, legal_terms_version, terms_accepted_at, privacy_version, privacy_accepted_at'
 
@@ -167,57 +168,25 @@ export function AuthProvider({ children }) {
       profileError,
       isConfigured: isSupabaseConfigured,
       isPublicSignupEnabled: PUBLIC_SIGNUP_ENABLED,
-      requiresSignupAccessCode: Boolean(SIGNUP_ACCESS_CODE),
+      requiresSignupAccessCode: false,
       hasAcceptedCurrentLegal: Boolean(
-        profile?.terms_accepted_at
+        profile?.id === session?.user?.id
+          && profile?.terms_accepted_at
           && profile?.privacy_accepted_at
           && profile?.legal_terms_version === LEGAL_TERMS_VERSION
           && profile?.privacy_version === PRIVACY_VERSION,
       ),
-      isAccessActive: !profile || profile.access_status === 'active',
-      isAdmin: Boolean(profile?.access_status === 'active' && (profile?.account_role === 'admin' || profile?.service_plan === 'internal')),
+      isAccessActive: Boolean(profile?.id === session?.user?.id && profile?.access_status === 'active'),
+      isAdmin: Boolean(profile?.id === session?.user?.id && profile?.access_status === 'active' && (profile?.account_role === 'admin' || profile?.service_plan === 'internal')),
       async signIn({ username, password }) {
         const email = usernameToEmail(username)
         const { error } = await getSupabaseClient().auth.signInWithPassword({ email, password })
         if (error) throw error
       },
-      async signUp({ username, password, firstName = '', lastName = '', accessCode = '', acceptedLegal = false }) {
-        if (!PUBLIC_SIGNUP_ENABLED) {
-          const error = new Error('El registro publico esta cerrado. Solicita tu cuenta al administrador.')
-          error.code = 'signup_disabled'
-          throw error
-        }
-        if (SIGNUP_ACCESS_CODE && accessCode.trim() !== SIGNUP_ACCESS_CODE) {
-          const error = new Error('El codigo de acceso no es valido.')
-          error.code = 'invalid_invite_code'
-          throw error
-        }
-        if (!acceptedLegal) {
-          const error = new Error('Debes aceptar los terminos y la politica de privacidad.')
-          error.code = 'terms_required'
-          throw error
-        }
-        const normalizedUsername = username.trim().toLowerCase()
-        const email = usernameToEmail(normalizedUsername)
-        const acceptedAt = new Date().toISOString()
-        const { data, error } = await getSupabaseClient().auth.signUp({
-          email,
-          password,
-          options: {
-            data: {
-              display_name: `${firstName.trim()} ${lastName.trim()}`.trim() || normalizedUsername,
-              username: normalizedUsername,
-              first_name: firstName.trim(),
-              last_name: lastName.trim(),
-              legal_terms_version: LEGAL_TERMS_VERSION,
-              terms_accepted_at: acceptedAt,
-              privacy_version: PRIVACY_VERSION,
-              privacy_accepted_at: acceptedAt,
-            },
-          },
-        })
-        if (error) throw error
-        return data
+      async signUp() {
+        const error = new Error('El registro público está cerrado. Solicita tu cuenta al administrador.')
+        error.code = 'signup_disabled'
+        throw error
       },
       async acceptLegalTerms() {
         const { data, error } = await getSupabaseClient()

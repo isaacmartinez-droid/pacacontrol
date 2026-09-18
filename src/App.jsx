@@ -12,6 +12,8 @@ import CustomerDetailPage from './pages/CustomerDetailPage'
 import DamagedProductsPage from './pages/DamagedProductsPage'
 import DashboardPage from './pages/DashboardPage'
 import ExpensesPage from './pages/ExpensesPage'
+import CashReconciliationPage from './pages/CashReconciliationPage'
+import HistoryPage from './pages/HistoryPage'
 import InventoryPage from './pages/InventoryPage'
 import LegalPage from './pages/LegalPage'
 import MorePage from './pages/MorePage'
@@ -62,6 +64,8 @@ function App() {
           <Route path="clientes/:customerId" element={<CustomerDetailPage />} />
           <Route path="clientes/:customerId/editar" element={<EditCustomerPage />} />
           <Route path="gastos" element={<ExpensesPage />} />
+          <Route path="caja" element={<CashReconciliationPage />} />
+          <Route path="historial" element={<HistoryPage />} />
           <Route path="productos-danados" element={<DamagedProductsPage />} />
           <Route path="reportes" element={<ReportsPage />} />
           <Route path="mas" element={<MorePage />} />

@@ -70,7 +70,7 @@ function NewSalePage() {
       ...item,
       category: categories.find((category) => category.id === item.categoryId),
       inventory,
-      priceLines,
+      normalizedPriceLines: priceLines,
       quantity: totals.quantity,
       merchandiseTotal: totals.merchandiseTotal,
       merchandiseCost: totals.quantity * (inventory?.estimatedUnitCost ?? 0),
@@ -150,10 +150,10 @@ function NewSalePage() {
   async function handleSubmit(event) {
     event.preventDefault()
     if (!calculatedItems.length) return setFormError('Agrega al menos un artículo.')
-    if (calculatedItems.some((item) => !item.category || !item.inventory)) return setFormError('Selecciona la categoría y la paca de cada artículo.')
+    if (calculatedItems.some((item) => !item.category || !item.inventory || item.inventory.isActive === false)) return setFormError('Selecciona una categoría y una paca activa para cada artículo.')
     if (new Set(calculatedItems.map((item) => item.baleInventoryId)).size !== calculatedItems.length) return setFormError('No repitas la misma categoría y paca; agrega sus precios dentro del mismo artículo.')
     for (const item of calculatedItems) {
-      if (item.priceLines.some((line) => !Number.isInteger(line.quantity) || line.quantity < 1 || line.unitPrice <= 0)) return setFormError('Cada precio necesita una cantidad entera y un monto mayores que cero.')
+      if (item.normalizedPriceLines.some((line) => !Number.isInteger(line.quantity) || line.quantity < 1 || line.unitPrice <= 0)) return setFormError('Cada precio necesita una cantidad entera y un monto mayores que cero.')
       if (item.quantity > item.inventory.availablePieces) return setFormError(`${item.inventory.baleCode} solo tiene ${item.inventory.availablePieces} piezas disponibles de ${item.category.name}.`)
     }
     if (form.customerId === 'new' && !form.newCustomerName.trim()) return setFormError('Escribe el nombre del cliente nuevo.')
@@ -171,7 +171,7 @@ function NewSalePage() {
         customerId = customer.id
       }
       await registerSale({
-        items: calculatedItems.map((item) => ({ categoryId: item.categoryId, baleInventoryId: item.baleInventoryId, priceLines: item.priceLines })),
+        items: calculatedItems.map((item) => ({ categoryId: item.categoryId, baleInventoryId: item.baleInventoryId, priceLines: item.normalizedPriceLines })),
         customerId,
         fulfillmentMethod: form.fulfillmentMethod,
         deliveryCost,
@@ -205,7 +205,7 @@ function NewSalePage() {
           <section className="rounded-3xl bg-white p-5 shadow-soft ring-1 ring-slate-100 sm:p-6">
             <div className="flex flex-wrap items-start justify-between gap-3"><div className="flex items-start gap-3"><span className="grid size-11 shrink-0 place-items-center rounded-2xl bg-brand-50 text-brand-700"><ShoppingBag size={21} /></span><div><h2 className="text-lg font-extrabold text-slate-900">Artículos del pedido</h2><p className="mt-1 text-sm text-slate-500">Cada artículo conserva su categoría, paca, cantidad y precio.</p></div></div><button type="button" onClick={addItem} className="inline-flex min-h-10 items-center gap-1 rounded-xl bg-brand-900 px-4 text-xs font-extrabold text-white"><Plus size={16} />Agregar artículo</button></div>
             <div className="mt-5 space-y-4">{calculatedItems.map((item, itemIndex) => {
-              const baleOptions = data.baleInventory.filter((inventory) => inventory.categoryId === item.categoryId && inventory.availablePieces > 0)
+              const baleOptions = data.baleInventory.filter((inventory) => inventory.isActive !== false && inventory.categoryId === item.categoryId && inventory.availablePieces > 0)
               return <article key={item.id} className="rounded-2xl border border-slate-200 p-4">
                 <div className="flex items-center justify-between gap-3"><h3 className="font-extrabold text-slate-900">Artículo {itemIndex + 1}</h3>{form.items.length > 1 && <button type="button" onClick={() => removeItem(item.id)} className="rounded-lg p-2 text-coral-600" aria-label={`Quitar artículo ${itemIndex + 1}`}><Trash2 size={18} /></button>}</div>
                 <div className="mt-3 grid gap-3 sm:grid-cols-2"><Field label="Categoría"><select value={item.categoryId} onChange={(event) => updateItem(item.id, 'categoryId', event.target.value)} className="sale-input">{categories.map((category) => <option key={category.id} value={category.id}>{category.name} · {category.availablePieces} disponibles</option>)}</select></Field><Field label="Paca de origen"><select required value={item.baleInventoryId} onChange={(event) => updateItem(item.id, 'baleInventoryId', event.target.value)} className="sale-input"><option value="">Selecciona una paca</option>{baleOptions.map((inventory) => <option key={inventory.id} value={inventory.id}>{inventory.baleCode} · {inventory.availablePieces} disponibles · sugerido {formatCurrency(inventory.recommendedUnitPrice)}</option>)}</select></Field></div>

@@ -4,14 +4,15 @@ import { Link } from 'react-router-dom'
 import PageHeader from '../components/common/PageHeader'
 import { formatCurrency } from '../utils/currency'
 import { usePacaData } from '../context/PacaDataContext'
+import { recordedCategories } from '../utils/recordedPreferences'
+import { getBusinessDateKey } from '../utils/dashboardFinancials'
 import {
   calculateBaseRecommendedPrice,
   calculateRecommendedPrice,
   DEFAULT_TARGET_PROFIT,
-  pricingLevels,
+  inventoryPricingLevels as pricingLevels,
 } from '../utils/pricing'
 
-const today = new Date().toISOString().slice(0, 10)
 const clean = (value) => value.trim().replace(/\s+/g, ' ')
 const blankEntry = () => ({
   id: crypto.randomUUID(),
@@ -22,11 +23,12 @@ const blankEntry = () => ({
   priceLevel: 'economic',
   customRecommendedPrice: '',
 })
+const blankOtherExpense = () => ({ id: crypto.randomUUID(), concept: '', amount: '' })
 const initialForm = (settings = {}) => ({
-  purchaseDate: today,
+  purchaseDate: getBusinessDateKey(new Date()),
   purchaseCost: '',
   transportCost: '0',
-  otherExpenses: '0',
+  otherExpenseItems: [],
   targetProfitAmount: String(settings.defaultTargetProfitAmount ?? DEFAULT_TARGET_PROFIT),
   entries: [blankEntry()],
 })
@@ -49,7 +51,8 @@ function NewBalePage() {
   const totals = useMemo(() => {
     const receivedPieces = form.entries.reduce((sum, entry) => sum + (Number(entry.quantity) || 0), 0)
     const damagedPieces = form.entries.reduce((sum, entry) => sum + (Number(entry.damagedPieces) || 0), 0)
-    const totalInvestment = (Number(form.purchaseCost) || 0) + (Number(form.transportCost) || 0) + (Number(form.otherExpenses) || 0)
+    const otherExpenses = form.otherExpenseItems.reduce((sum, item) => sum + (Number(item.amount) || 0), 0)
+    const totalInvestment = (Number(form.purchaseCost) || 0) + (Number(form.transportCost) || 0) + otherExpenses
     const sellablePieces = Math.max(0, receivedPieces - damagedPieces)
     const costPerPiece = sellablePieces ? totalInvestment / sellablePieces : 0
     const targetProfitAmount = Number(form.targetProfitAmount) || 0
@@ -60,6 +63,7 @@ function NewBalePage() {
       sellablePieces,
       costPerPiece,
       targetProfitAmount,
+      otherExpenses,
       baseRecommendedPrice: calculateBaseRecommendedPrice(costPerPiece, targetProfitAmount, sellablePieces),
     }
   }, [form])
@@ -100,6 +104,18 @@ function NewBalePage() {
   const removeEntry = (id) => setForm((current) => current.entries.length === 1
     ? current
     : { ...current, entries: current.entries.filter((item) => item.id !== id) })
+  const addOtherExpense = () => setForm((current) => ({ ...current, otherExpenseItems: [...current.otherExpenseItems, blankOtherExpense()] }))
+  const updateOtherExpense = (id, field, value) => {
+    setForm((current) => ({
+      ...current,
+      otherExpenseItems: current.otherExpenseItems.map((item) => item.id === id ? { ...item, [field]: value } : item),
+    }))
+    setFormError('')
+  }
+  const removeOtherExpense = (id) => setForm((current) => ({
+    ...current,
+    otherExpenseItems: current.otherExpenseItems.filter((item) => item.id !== id),
+  }))
 
   async function submit(event) {
     event.preventDefault()
@@ -107,6 +123,16 @@ function NewBalePage() {
     const targetProfitAmount = Number(form.targetProfitAmount) || 0
     if (!form.purchaseDate || purchaseCost <= 0) return setFormError('Selecciona la fecha e ingresa el costo de compra.')
     if (targetProfitAmount < 0) return setFormError('La ganancia deseada no puede ser negativa.')
+
+    const otherExpenseItems = []
+    for (const item of form.otherExpenseItems) {
+      const concept = clean(item.concept)
+      const amount = Number(item.amount)
+      if (!concept || concept.length > 160 || !Number.isFinite(amount) || amount <= 0) {
+        return setFormError('Cada otro gasto necesita un concepto y un monto mayor que cero.')
+      }
+      otherExpenseItems.push({ concept, amount })
+    }
 
     const names = new Set()
     const categoryEntries = []
@@ -139,7 +165,7 @@ function NewBalePage() {
         purchaseDate: form.purchaseDate,
         purchaseCost,
         transportCost: Number(form.transportCost) || 0,
-        otherExpenses: Number(form.otherExpenses) || 0,
+        otherExpenseItems,
         receivedPieces: totals.receivedPieces,
         targetProfitAmount,
         categoryEntries,
@@ -165,21 +191,32 @@ function NewBalePage() {
               <Field label="Fecha de compra"><input type="date" required value={form.purchaseDate} onChange={(event) => update('purchaseDate', event.target.value)} className="sale-input" /></Field>
               <Money label="Costo de compra" required value={form.purchaseCost} onChange={(event) => update('purchaseCost', event.target.value)} />
               <Money label="Transporte" value={form.transportCost} onChange={(event) => update('transportCost', event.target.value)} />
-              <Money label="Otros gastos" value={form.otherExpenses} onChange={(event) => update('otherExpenses', event.target.value)} />
               <Money label="Ganancia deseada para toda la paca" required value={form.targetProfitAmount} onChange={(event) => update('targetProfitAmount', event.target.value)} />
               <p className="self-end pb-3 text-xs leading-5 text-slate-500">El sistema reparte este monto entre todas las piezas vendibles para recomendar el precio unitario.</p>
+            </div>
+            <div className="mt-5 rounded-2xl border border-slate-200 p-4">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <div><h3 className="font-extrabold text-slate-900">Otros gastos de la compra</h3><p className="mt-1 text-xs text-slate-500">Registra qué se pagó y cuánto. El total se calcula automáticamente.</p></div>
+                <button type="button" onClick={addOtherExpense} className="inline-flex min-h-10 items-center gap-1 rounded-xl bg-brand-50 px-3 text-xs font-extrabold text-brand-800"><Plus size={16} />Agregar otro gasto</button>
+              </div>
+              {form.otherExpenseItems.length === 0 ? <p className="mt-4 rounded-xl bg-slate-50 p-3 text-sm text-slate-500">No hay otros gastos en esta compra.</p> : <div className="mt-4 space-y-3">{form.otherExpenseItems.map((item, index) => <div key={item.id} className="grid items-end gap-3 rounded-xl bg-slate-50 p-3 sm:grid-cols-[minmax(0,1fr)_12rem_auto]">
+                <Field label={`Concepto de otro gasto ${index + 1}`}><input maxLength="160" value={item.concept} onChange={(event) => updateOtherExpense(item.id, 'concept', event.target.value)} placeholder="Ej. Empaque o carga" className="sale-input" /></Field>
+                <Money label={`Monto de otro gasto ${index + 1}`} value={item.amount} onChange={(event) => updateOtherExpense(item.id, 'amount', event.target.value)} required />
+                <button type="button" onClick={() => removeOtherExpense(item.id)} aria-label={`Quitar otro gasto ${index + 1}`} className="mb-1 grid size-11 place-items-center rounded-xl text-coral-600 hover:bg-red-50"><Trash2 size={18} /></button>
+              </div>)}</div>}
+              <p className="mt-4 text-right text-sm font-extrabold text-brand-900">Total de otros gastos: {formatCurrency(totals.otherExpenses)}</p>
             </div>
           </section>
 
           <section className="rounded-3xl bg-white p-5 shadow-soft ring-1 ring-slate-100 sm:p-6">
-            <div className="flex items-start justify-between gap-3"><div><h2 className="text-lg font-extrabold text-slate-900">Clasificación de la paca</h2><p className="mt-1 text-sm text-slate-500">Cada categoría puede tener un nivel de precio diferente.</p></div><button type="button" onClick={addEntry} className="inline-flex min-h-10 items-center gap-1 rounded-xl bg-brand-50 px-3 text-xs font-extrabold text-brand-800"><Plus size={16} />Agregar</button></div>
-            <datalist id="categories">{data.categories.map((category) => <option key={category.id} value={category.name} />)}</datalist>
+            <div className="flex items-start justify-between gap-3"><div><h2 className="text-lg font-extrabold text-slate-900">Clasificación de la paca</h2><p className="mt-1 text-sm text-slate-500">Escribe tus categorías o reutiliza las que ya registraste. Cada una puede tener un nivel de precio diferente.</p></div><button type="button" onClick={addEntry} className="inline-flex min-h-10 shrink-0 items-center gap-1 rounded-xl bg-brand-50 px-3 text-xs font-extrabold text-brand-800"><Plus size={16} />Agregar más</button></div>
+            <datalist id="categories">{recordedCategories(data).map((category) => <option key={category.id} value={category.name} />)}</datalist>
             <div className="mt-5 space-y-4">{form.entries.map((entry, index) => {
               const recommendedPrice = recommendationFor(entry)
               return <div key={entry.id} className="rounded-2xl border border-slate-200 p-4">
                 <div className="mb-3 flex justify-between"><b className="text-sm text-slate-700">Categoría {index + 1}</b>{form.entries.length > 1 && <button type="button" onClick={() => removeEntry(entry.id)} className="text-coral-600" aria-label="Quitar categoría"><Trash2 size={18} /></button>}</div>
                 <div className="grid gap-3 sm:grid-cols-3">
-                  <Field label="Nombre"><input list="categories" placeholder="Ej. Deportiva" value={entry.name} onChange={(event) => updateEntry(entry.id, 'name', event.target.value)} className="sale-input" /></Field>
+                  <Field label="Nombre"><input list="categories" placeholder="Escribe una categoría" value={entry.name} onChange={(event) => updateEntry(entry.id, 'name', event.target.value)} className="sale-input" /></Field>
                   <Field label="Piezas"><input type="number" min="1" value={entry.quantity} onChange={(event) => updateEntry(entry.id, 'quantity', event.target.value)} className="sale-input" /></Field>
                   <Field label="Dañadas"><input type="number" min="0" max={Number(entry.quantity) || undefined} value={entry.damagedPieces} onChange={(event) => updateEntry(entry.id, 'damagedPieces', event.target.value)} className="sale-input" /></Field>
                 </div>

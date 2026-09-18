@@ -10,8 +10,11 @@ begin;
 delete from public.sale_item_allocations;
 delete from public.damaged_products;
 delete from public.sale_items;
+delete from public.sale_additional_payments;
 delete from public.sales;
 delete from public.expenses;
+delete from public.cash_reconciliations;
+delete from public.bale_other_expense_items;
 delete from public.bale_inventory;
 delete from public.bales;
 delete from public.categories;
@@ -19,6 +22,8 @@ delete from public.customers;
 delete from public.daily_summaries;
 delete from public.push_subscriptions;
 delete from public.business_settings;
+delete from public.business_history;
+delete from public.monthly_expense_commitments;
 
 -- DELETE no reinicia una identidad. Esto garantiza que la siguiente paca
 -- registrada use bale_number = 1 y, por tanto, el código PAC-0001.

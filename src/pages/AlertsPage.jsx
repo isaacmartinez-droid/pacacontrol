@@ -59,7 +59,7 @@ export default function AlertsPage() {
             </ul>
           ) : !error && <EmptyState icon={Bell} title={onlyUnread ? 'No hay alertas sin leer' : 'No hay alertas activas'} description={onlyUnread ? 'Puedes consultar las alertas que siguen pendientes en “Todas”.' : 'Tu tienda no tiene avisos según los límites configurados.'} />}
           <p className="mt-4 text-xs leading-5 text-slate-500">Se revisan cada minuto mientras la aplicación está visible y al volver a ella. Los avisos desaparecen cuando los datos dejan de cumplir la regla.</p>
-          {lastUpdatedAt && <p className="mt-1 text-xs text-slate-500">Última actualización: {new Date(lastUpdatedAt).toLocaleString('es', { dateStyle: 'short', timeStyle: 'short' })}</p>}
+          {lastUpdatedAt && <p className="mt-1 text-xs text-slate-500">Última actualización: {new Date(lastUpdatedAt).toLocaleString('es-NI', { dateStyle: 'short', timeStyle: 'short', timeZone: 'America/Managua' })}</p>}
         </section>
 
         <form onSubmit={handleSave} className="rounded-3xl bg-white p-5 shadow-soft ring-1 ring-slate-100 sm:p-6">

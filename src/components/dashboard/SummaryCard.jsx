@@ -19,7 +19,7 @@ function SummaryCard({ icon: Icon, label, value, detail, badge, tone = 'brand', 
           </span>
         )}
       </div>
-      <p className="relative mt-5 truncate text-xs font-bold text-brand-100">{label}</p>
+      <p className="relative mt-5 text-xs font-bold leading-5 text-brand-100">{label}</p>
       <p className="relative mt-1 truncate text-2xl font-extrabold tracking-tight text-white">{value}</p>
       <p className="relative mt-auto self-start rounded-lg bg-white/10 px-2 py-1 text-[0.68rem] font-bold text-brand-100">
         {detail}

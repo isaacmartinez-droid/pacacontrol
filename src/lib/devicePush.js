@@ -19,6 +19,19 @@ export function readPushBinding() {
   try { return JSON.parse(window.localStorage.getItem(bindingKey)) } catch { return null }
 }
 
+export async function testLocalDeviceNotification() {
+  if (!pushAvailability().supported || Notification.permission !== 'granted') {
+    throw new Error('Primero permite las notificaciones de este dispositivo.')
+  }
+  await navigator.serviceWorker.register('/sw.js')
+  const registration = await navigator.serviceWorker.ready
+  await registration.showNotification('Tienda J&F', {
+    body: 'Prueba local: este dispositivo tiene permiso para mostrar avisos.',
+    icon: '/icons/icon-192.png', badge: '/icons/badge-96.png',
+    tag: 'pacacontrol-prueba-local', renotify: true, data: { url: '/alertas' },
+  })
+}
+
 export function getDevicePushErrorMessage(error) {
   const message = String(error?.message ?? '')
   if (/registration failed\s*-?\s*push service error/i.test(message)) {

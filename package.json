@@ -5,14 +5,20 @@
   "type": "module",
   "scripts": {
     "push:keys": "node scripts/push-keys.js",
-    "test": "node --test src/lib/devicePush.test.js src/utils/alerts.test.js src/utils/businessSettings.test.js src/utils/dashboardFinancials.test.js src/utils/pricing.test.js server/push.test.js tests/service-worker.test.js",
+    "test": "node --test src/lib/devicePush.test.js src/utils/alerts.test.js src/utils/alertBanners.test.js src/utils/businessLocale.test.js src/utils/businessSettings.test.js src/utils/recordedPreferences.test.js src/utils/dashboardFinancials.test.js src/utils/baleFinancials.test.js src/utils/cashReconciliation.test.js src/utils/pricing.test.js server/push.test.js tests/service-worker.test.js tests/business-records.postgres.test.js tests/security.postgres.test.js tests/staging-setup.test.js",
+    "audit:production": "node scripts/production-preflight.mjs",
+    "audit:staging": "node scripts/production-preflight.mjs --staging",
     "dev": "vite",
+    "dev:staging": "vite --mode staging --host 127.0.0.1 --port 5174 --strictPort",
+    "test:ui": "node tests/business-ui.smoke.mjs",
     "build": "vite build",
     "preview": "vite preview"
   },
   "devDependencies": {
+    "@electric-sql/pglite": "^0.5.8",
     "@tailwindcss/vite": "^4.3.3",
     "@vitejs/plugin-react": "^6.1.1",
+    "playwright": "^1.63.0",
     "tailwindcss": "^4.3.3",
     "vite": "^8.2.2"
   },

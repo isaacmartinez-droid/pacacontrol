@@ -35,6 +35,21 @@ test('el clic abre la ruta protegida e ignora destinos externos del mensaje', as
   assert.deepEqual(harness.opened, ['https://tienda.example/alertas'])
 })
 
+test('los avisos distintos no se reemplazan entre sí y refrescan ventanas propias', async () => {
+  const messages = []
+  const harness = await workerHarness([{ url: 'https://tienda.example/', postMessage(message) { messages.push(message.type) } }])
+  for (const [title, tag] of [['Inventario bajo', 'pacacontrol-stock-cat'], ['Cobro pendiente', 'pacacontrol-debt-client']]) {
+    let pending
+    harness.listeners.push({ data: { json: () => ({ title, tag, body: 'Aviso', url: 'https://attacker.example' }) }, waitUntil(promise) { pending = promise } })
+    await pending
+  }
+  assert.deepEqual(harness.notifications.map((item) => item.title), ['Inventario bajo', 'Cobro pendiente'])
+  assert.notEqual(harness.notifications[0].options.tag, harness.notifications[1].options.tag)
+  assert.equal(harness.notifications[1].options.renotify, true)
+  assert.deepEqual(messages, ['PACA_PUSH_RECEIVED', 'PACA_PUSH_RECEIVED'])
+  assert.equal(harness.notifications[1].options.data.url, '/alertas')
+})
+
 test('reutiliza la ventana existente de la aplicación', async () => {
   const navigated = []
   let focused = false

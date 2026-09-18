@@ -26,6 +26,13 @@ Esta función requiere un despliegue de frontend y API en Vercel, una migración
 7. Esperar la primera ejecución y revisar la tarea en Supabase Cron. En la app, abrir **Alertas**, activar el dispositivo y pulsar **Enviar prueba**. Se envía desde el servidor; máximo una prueba por minuto por dispositivo.
 8. Para verificar el flujo completo: con una alerta activa, cerrar la aplicación y esperar la siguiente revisión. El teléfono/PC debe tener conexión y permitir avisos del navegador y del sistema. El modo No molestar y el ahorro de batería pueden silenciarlos o retrasarlos.
 
+## Avisos visibles dentro del programa
+
+Los avisos emergen automáticamente sin abrir la campana, en todas las pantallas
+del negocio. No requieren permiso de notificaciones del dispositivo. Cerrar un
+aviso no lo marca leído; su acción permite abrir el detalle. Véase
+[avisos visibles y hora de Nicaragua](avisos-en-pantalla-y-nicaragua.md).
+
 ## Teléfonos y computadoras
 
 - En iPhone/iPad se requiere iOS/iPadOS 16.4 o posterior y añadir la web a la pantalla de inicio. Abrirla desde ese icono antes de conceder el permiso.

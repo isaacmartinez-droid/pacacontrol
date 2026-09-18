@@ -1,4 +1,6 @@
-const BUSINESS_TIME_ZONE = 'America/Guatemala'
+import { getActiveBale } from './baleFinancials.js'
+
+export const BUSINESS_TIME_ZONE = 'America/Managua'
 const dateKeyFormatter = new Intl.DateTimeFormat('en-CA', {
   timeZone: BUSINESS_TIME_ZONE,
   year: 'numeric',
@@ -35,7 +37,7 @@ export function getPeriodStartKey(period, now = new Date()) {
   return currentDate.toISOString().slice(0, 10)
 }
 
-export function calculateDashboardFinancials(data, period = 'month', now = new Date()) {
+export function calculateDashboardFinancials(data, period = 'month', now = new Date(), baleId = '') {
   const currentKey = getBusinessDateKey(now)
   const startKey = getPeriodStartKey(period, now)
   const isInPeriod = (value) => {
@@ -52,23 +54,28 @@ export function calculateDashboardFinancials(data, period = 'month', now = new D
   const payments = data.sales.flatMap((sale) => [
     { amount: toNumber(sale.firstPaymentAmount), method: sale.firstPaymentMethod, at: sale.firstPaymentAt },
     { amount: toNumber(sale.secondPaymentAmount), method: sale.secondPaymentMethod, at: sale.secondPaymentAt },
+    ...(sale.additionalPayments ?? []).map((payment) => ({ amount: toNumber(payment.amount), method: payment.method, at: payment.paidAt })),
   ]).filter((payment) => payment.amount > 0 && isInPeriod(payment.at))
   const collected = payments.reduce((sum, payment) => sum + payment.amount, 0)
   const cashCollected = payments.filter((payment) => payment.method === 'cash').reduce((sum, payment) => sum + payment.amount, 0)
   const transferCollected = payments.filter((payment) => payment.method === 'transfer').reduce((sum, payment) => sum + payment.amount, 0)
   const receivables = data.sales.reduce((sum, sale) => sum + Math.max(0, toNumber(sale.balance)), 0)
-  const baleInvestment = (data.bales ?? []).reduce((sum, bale) => sum + getBaleInvestment(bale), 0)
-  const inventoryValue = (data.baleInventory ?? []).reduce(
+  const activeBale = getActiveBale(data.bales, baleId)
+  const baleInvestment = activeBale ? getBaleInvestment(activeBale) : 0
+  const monthlyExpenseReserve = (data.monthlyExpenses ?? []).filter((expense) => expense.isActive)
+    .reduce((sum, expense) => sum + toNumber(expense.monthlyAmount), 0)
+  const inventoryValue = (data.baleInventory ?? []).filter((inventory) => inventory.isActive !== false).reduce(
     (sum, inventory) => sum + toNumber(inventory.availablePieces) * toNumber(inventory.estimatedUnitCost),
     0,
   )
-  const pendingDeliveries = data.sales.filter((sale) => sale.fulfillmentMethod === 'delivery' && sale.deliveryStatus !== 'delivered').length
+  const pendingDeliveries = data.sales.filter((sale) => !sale.isArchived && sale.fulfillmentMethod === 'delivery' && sale.deliveryStatus !== 'delivered').length
 
   return {
     netResult: grossResult - operatingExpenses,
     collected,
     receivables,
     operatingExpenses,
+    monthlyExpenseReserve,
     baleInvestment,
     inventoryValue,
     ordersTotal,

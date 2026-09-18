@@ -46,6 +46,7 @@ export function buildAlerts(data, settings = defaultAlertSettings, now = Date.no
 
   if (rules.deliveryEnabled) {
     for (const sale of data.sales) {
+      if (sale.isArchived) continue
       const soldAt = Date.parse(sale.soldAt)
       // La venta de mostrador no implica un envío. Tampoco inferimos un pago
       // cuando el estado todavía no existe en el esquema de la base de datos.
@@ -99,6 +100,7 @@ export function buildAlerts(data, settings = defaultAlertSettings, now = Date.no
 
   if (rules.damageEnabled) {
     for (const bale of data.bales) {
+      if (bale.isArchived) continue
       if (bale.receivedPieces > 0 && Number.isFinite(bale.availablePieces)
         && bale.availablePieces <= 0 && bale.soldPieces > 0) {
         alerts.push({

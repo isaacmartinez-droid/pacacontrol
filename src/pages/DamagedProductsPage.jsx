@@ -5,9 +5,10 @@ import { usePacaData } from '../context/PacaDataContext'
 
 function DamagedProductsPage() {
   const { data, registerDamage } = usePacaData()
-  const damagedProducts = data.damagedProducts
+  const [showArchived, setShowArchived] = useState(false)
+  const damagedProducts = data.damagedProducts.filter((item) => Boolean(item.isArchived) === showArchived)
   const damagedTotal = damagedProducts.reduce((total, item) => total + item.quantity, 0)
-  const availableInventory = data.baleInventory.filter((inventory) => inventory.availablePieces > 0)
+  const availableInventory = data.baleInventory.filter((inventory) => inventory.isActive !== false && inventory.availablePieces > 0)
   const [inventoryId, setInventoryId] = useState(availableInventory[0]?.id ?? '')
   const [quantity, setQuantity] = useState(1)
   const [reason, setReason] = useState('Daño descubierto después de registrar la paca')
@@ -36,6 +37,7 @@ function DamagedProductsPage() {
         backTo="/mas"
       />
       <div className="page-content grid items-start gap-5 py-5 md:py-8 lg:grid-cols-[minmax(15rem,0.7fr)_minmax(0,1.3fr)] lg:gap-8">
+        <label className="flex items-center gap-2 text-sm font-bold text-slate-600 lg:col-span-2"><input type="checkbox" checked={showArchived} onChange={(event) => setShowArchived(event.target.checked)} />Consultar daños de pacas archivadas</label>
         <section className="rounded-3xl border border-amber-100 bg-amber-50 p-5">
           <div className="flex items-center gap-3">
             <div className="grid size-11 place-items-center rounded-2xl bg-white text-amber-700 shadow-sm">

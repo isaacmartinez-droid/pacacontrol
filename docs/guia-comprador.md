@@ -220,7 +220,7 @@ En **Más → Reportes y ganancias** puedes revisar:
 - saldo pendiente por cobrar;
 - inversión y resultado de la paca actual.
 
-El cierre diario se genera automáticamente después de medianoche, según la hora de Guatemala. El costo no descuenta toda la compra de una paca en un solo día: se reparte entre las prendas vendibles para estimar mejor el resultado de cada venta.
+El cierre diario se genera automáticamente después de medianoche, según la hora de Nicaragua. El costo no descuenta toda la compra de una paca en un solo día: se reparte entre las prendas vendibles para estimar mejor el resultado de cada venta.
 
 El reporte es una herramienta de control. Confirma físicamente el efectivo en caja y los comprobantes de transferencia antes de tomar decisiones finales.
 

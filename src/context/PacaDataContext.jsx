@@ -2,6 +2,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useRef, use
 import { useAuth } from './AuthContext'
 import { getSupabaseClient } from '../lib/supabaseClient'
 import { formatShortDate } from '../utils/dates'
+import { allocateBaleCollections } from '../utils/baleFinancials'
 import { calculateBaseRecommendedPrice, DEFAULT_TARGET_PROFIT } from '../utils/pricing'
 import {
   businessSettingsToRow,
@@ -15,52 +16,17 @@ const PacaDataContext = createContext(null)
 const asNumber = (value) => Number(value) || 0
 const deliveryStatuses = ['to_prepare', 'ready', 'on_the_way', 'delivered']
 const paymentStatuses = ['pending', 'partial', 'paid']
-function normalizeCategoryName(value) {
-  return value.trim().replace(/\s+/g, ' ')
+
+async function loadAllRows(query) {
+  const data = []
+  for (let offset = 0; ; offset += 500) {
+    const result = await query().range(offset, offset + 499)
+    if (result.error) return result
+    data.push(...result.data)
+    if (result.data.length < 500) return { data, error: null }
+  }
 }
-
-function categoryComparisonKey(value) {
-  return normalizeCategoryName(value).toLocaleLowerCase('es')
-}
-
-function createCategorySlug(name) {
-  const baseSlug = name
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .toLocaleLowerCase('es')
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-+|-+$/g, '')
-    .slice(0, 60) || 'categoria'
-  const uniqueSuffix = globalThis.crypto?.randomUUID?.().slice(0, 8)
-    ?? Math.random().toString(36).slice(2, 10)
-
-  return `${baseSlug}-${uniqueSuffix}`
-}
-
-async function findOrCreateCategory(supabase, categoryName) {
-  const normalizedName = normalizeCategoryName(categoryName)
-  const { data: categories, error: categoriesError } = await supabase
-    .from('categories')
-    .select('id, name')
-
-  if (categoriesError) throw categoriesError
-
-  const existingCategory = categories.find(
-    (category) => categoryComparisonKey(category.name) === categoryComparisonKey(normalizedName),
-  )
-  if (existingCategory) return existingCategory
-
-  const { data: newCategory, error: categoryError } = await supabase
-    .from('categories')
-    .insert({ name: normalizedName, slug: createCategorySlug(normalizedName) })
-    .select('id, name')
-    .single()
-
-  if (categoryError) throw categoryError
-  return newCategory
-}
-
-function mapBale(row, currentRevenue = 0) {
+function mapBale(row, currentRevenue = 0, collectedAmount = 0) {
   const receivedPieces = row.received_pieces
   const damagedPieces = row.damaged_pieces
   const sellablePieces = Math.max(0, receivedPieces - damagedPieces)
@@ -71,6 +37,10 @@ function mapBale(row, currentRevenue = 0) {
     id: row.id,
     code: row.code,
     purchaseDate: row.purchase_date,
+    createdAt: row.created_at,
+    archivedAt: row.archived_at ?? null,
+    archivedReason: row.archived_reason ?? '',
+    isArchived: Boolean(row.archived_at),
     purchaseCost: asNumber(row.purchase_cost),
     acquisitionTransport: asNumber(row.transport_cost),
     otherExpenses: asNumber(row.other_expenses),
@@ -80,27 +50,30 @@ function mapBale(row, currentRevenue = 0) {
     damagedPieces,
     availablePieces: row.available_pieces,
     currentRevenue,
+    collectedAmount,
     targetProfitAmount,
     estimatedUnitCost,
     baseRecommendedPrice: calculateBaseRecommendedPrice(estimatedUnitCost, targetProfitAmount, sellablePieces),
-    status: row.available_pieces > 0 ? 'En venta' : row.sold_pieces > 0 ? 'Agotada' : 'Sin piezas vendibles',
+    status: row.archived_at ? 'Archivada' : row.available_pieces > 0 ? 'En venta' : row.sold_pieces > 0 ? 'Agotada' : 'Sin piezas vendibles',
   }
 }
 
 function mapSale(row) {
   const items = row.sale_items ?? []
   const primaryItem = items[0]
-  const saleItems = items.map((item) => ({
-    id: item.id,
+  const saleItems = items.flatMap((item) => (item.sale_item_allocations?.length ? item.sale_item_allocations : [null]).map((allocation) => ({
+    id: allocation ? `${item.id}:${allocation.inventory?.id}` : item.id,
     categoryId: item.category_id,
     categoryName: item.category?.name ?? 'Sin categoría',
-    baleInventoryId: item.sale_item_allocations?.[0]?.inventory?.id,
-    baleCode: item.sale_item_allocations?.[0]?.inventory?.bale?.code ?? 'Paca',
-    quantity: item.quantity,
+    baleInventoryId: allocation?.inventory?.id,
+    baleId: allocation?.inventory?.bale?.id,
+    baleIsArchived: Boolean(allocation?.inventory?.bale?.archived_at),
+    baleCode: allocation?.inventory?.bale?.code ?? 'Paca',
+    quantity: allocation?.quantity ?? item.quantity,
     unitPrice: asNumber(item.unit_price),
     referenceUnitCost: asNumber(item.reference_unit_cost),
     recommendedUnitPrice: asNumber(item.recommended_unit_price),
-  })).sort((a, b) => a.categoryName.localeCompare(b.categoryName, 'es') || a.unitPrice - b.unitPrice)
+  }))).sort((a, b) => a.categoryName.localeCompare(b.categoryName, 'es') || a.unitPrice - b.unitPrice)
   const priceLines = saleItems.map((item) => ({
     quantity: item.quantity,
     unitPrice: item.unitPrice,
@@ -121,6 +94,8 @@ function mapSale(row) {
   return {
     id: row.id,
     customerId: row.customer_id,
+    isArchived: saleItems.length > 0 && saleItems.every((item) => item.baleIsArchived),
+    hasArchivedInventory: saleItems.some((item) => item.baleIsArchived),
     customerName: row.customer?.name ?? 'Venta de mostrador',
     pieces: items.reduce((total, item) => total + item.quantity, 0),
     total,
@@ -132,6 +107,7 @@ function mapSale(row) {
     estimatedProfit: total - estimatedMerchandiseCost - deliveryCost,
     dateLabel: formatShortDate(row.sold_at),
     soldAt: row.sold_at,
+    createdAt: row.created_at,
     notes: row.notes ?? '',
     hasDeliveryStatus: deliveryStatuses.includes(row.delivery_status),
     deliveryStatus,
@@ -145,7 +121,8 @@ function mapSale(row) {
     secondPaymentAmount: asNumber(row.second_payment_amount),
     secondPaymentMethod: row.second_payment_method,
     secondPaymentAt: row.second_payment_at,
-    lastPaymentAt: row.second_payment_at ?? row.first_payment_at ?? row.sold_at,
+    lastPaymentAt: row.last_additional_payment_at ?? row.second_payment_at ?? row.first_payment_at ?? row.sold_at,
+    additionalPayments: (row.additional_payments ?? []).map((payment) => ({ id: payment.id, amount: asNumber(payment.amount), method: payment.method, paidAt: payment.paid_at })).sort((a, b) => a.paidAt.localeCompare(b.paidAt)),
     baleCodes,
     unitPrice: asNumber(primaryItem?.unit_price),
     referenceUnitCost: asNumber(primaryItem?.reference_unit_cost),
@@ -214,19 +191,21 @@ function AccountPacaDataProvider({ userId, children }) {
 
     try {
       const supabase = getSupabaseClient()
-      const [categories, bales, sales, customers, expenses, damagedProducts, allocations, dailySummaries, baleInventory, businessSettings] = await Promise.all([
-        supabase.from('inventory_summary').select('category_id, name, received_pieces, available_pieces, economic_price, standard_price, premium_price').order('name'),
-        supabase.from('bale_summary').select('*').order('purchase_date', { ascending: false }),
-        supabase.from('sales').select('*, customer:customers(name), sale_items(id, category_id, quantity, unit_price, reference_unit_cost, recommended_unit_price, category:categories(id, name), sale_item_allocations(quantity, inventory:bale_inventory(id, bale:bales(code))))').order('sold_at', { ascending: false }),
-        supabase.from('customer_summary').select('id, name, phone, is_priority, purchases, total_spent').order('name'),
-        supabase.from('expenses').select('id, concept, amount, expense_date').order('expense_date', { ascending: false }),
-        supabase.from('damaged_products').select('id, quantity, reason, reported_at, inventory:bale_inventory(category:categories(name), bale:bales(code))').order('reported_at', { ascending: false }),
-        supabase.from('sale_item_allocations').select('quantity, sale_item:sale_items(unit_price), inventory:bale_inventory(bale_id)'),
+      const [categories, bales, sales, customers, expenses, damagedProducts, allocations, dailySummaries, baleInventory, businessSettings, monthlyExpenses, baleOtherExpenses] = await Promise.all([
+        loadAllRows(() => supabase.from('inventory_summary').select('*').order('name').order('category_id')),
+        loadAllRows(() => supabase.from('bale_summary').select('*').order('purchase_date', { ascending: false }).order('id')),
+        loadAllRows(() => supabase.from('sales').select('*, additional_payments:sale_additional_payments(id, amount, method, paid_at), customer:customers(name), sale_items(id, category_id, quantity, unit_price, reference_unit_cost, recommended_unit_price, category:categories(id, name), sale_item_allocations(quantity, inventory:bale_inventory(id, bale:bales(id, code, archived_at))))').order('sold_at', { ascending: false }).order('id')),
+        loadAllRows(() => supabase.from('customer_summary').select('id, name, phone, is_priority, purchases, total_spent').order('name').order('id')),
+        loadAllRows(() => supabase.from('expenses').select('*').order('expense_date', { ascending: false }).order('id')),
+        loadAllRows(() => supabase.from('damaged_products').select('id, quantity, reason, reported_at, inventory:bale_inventory(category:categories(name), bale:bales(code, archived_at))').order('reported_at', { ascending: false }).order('id')),
+        loadAllRows(() => supabase.from('sale_item_allocations').select('quantity, sale_item:sale_items(unit_price), inventory:bale_inventory(bale_id)').order('id')),
         supabase.from('daily_summaries').select('*').order('summary_date', { ascending: false }).limit(14),
-        supabase.from('bale_inventory_pricing').select('*').order('bale_code'),
+        loadAllRows(() => supabase.from('bale_inventory_pricing').select('*').order('bale_code').order('id')),
         supabase.from('business_settings').select('*').maybeSingle(),
+        loadAllRows(() => supabase.from('monthly_expense_commitments').select('*').order('created_at', { ascending: false }).order('id')),
+        loadAllRows(() => supabase.from('bale_other_expense_items').select('*').order('bale_id').order('sort_order').order('id')),
       ])
-      const failed = [categories, bales, sales, customers, expenses, damagedProducts, allocations, dailySummaries, baleInventory, businessSettings].find((result) => result.error)
+      const failed = [categories, bales, sales, customers, expenses, damagedProducts, allocations, dailySummaries, baleInventory, businessSettings, monthlyExpenses, baleOtherExpenses].find((result) => result.error)
       if (failed) throw failed.error
       if (requestId !== latestRequest.current) return
 
@@ -235,7 +214,9 @@ function AccountPacaDataProvider({ userId, children }) {
         const baleId = row.inventory?.bale_id
         if (baleId) revenueByBale.set(baleId, (revenueByBale.get(baleId) ?? 0) + row.quantity * asNumber(row.sale_item?.unit_price))
       })
-      const mappedBales = bales.data.map((row) => mapBale(row, revenueByBale.get(row.id) ?? 0))
+      const mappedSales = sales.data.map(mapSale)
+      const collections = allocateBaleCollections(mappedSales)
+      const mappedBales = bales.data.map((row) => mapBale(row, revenueByBale.get(row.id) ?? 0, collections.get(row.id) ?? 0))
       lastRefreshAt.current = Date.now()
       setState({
         isLoading: false,
@@ -246,6 +227,7 @@ function AccountPacaDataProvider({ userId, children }) {
           categories: categories.data.map((row) => ({
             id: row.category_id,
             name: row.name,
+            isUserCreated: row.is_user_created === true,
             receivedPieces: row.received_pieces,
             availablePieces: row.available_pieces,
             prices: {
@@ -255,13 +237,23 @@ function AccountPacaDataProvider({ userId, children }) {
             },
           })),
           bales: mappedBales,
-          sales: sales.data.map(mapSale),
+          sales: mappedSales,
           customers: customers.data.map(mapCustomer),
-          expenses: expenses.data.map((row) => ({ id: row.id, concept: row.concept, expenseDate: row.expense_date, dateLabel: formatShortDate(row.expense_date), amount: asNumber(row.amount) })),
+          expenses: expenses.data.map((row) => ({ id: row.id, concept: row.concept, category: row.category, paymentMethod: row.payment_method ?? 'unknown', notes: row.notes ?? '', baleId: row.bale_id, expenseDate: row.expense_date, dateLabel: formatShortDate(row.expense_date), amount: asNumber(row.amount) })),
+          monthlyExpenses: monthlyExpenses.data.map((row) => ({ id: row.id, concept: row.concept, category: row.category, monthlyAmount: asNumber(row.monthly_amount), isActive: row.is_active })),
+          baleOtherExpenses: baleOtherExpenses.data.map((row) => ({
+            id: row.id,
+            baleId: row.bale_id,
+            concept: row.concept,
+            amount: asNumber(row.amount),
+            sortOrder: row.sort_order,
+            createdAt: row.created_at,
+          })),
           dailySummaries: dailySummaries.data.map(mapDailySummary),
           baleInventory: baleInventory.data.map((row) => ({
             id: row.id,
             baleId: row.bale_id,
+            isActive: row.is_active !== false && !row.bale_archived_at,
             baleCode: row.bale_code ?? 'Paca',
             categoryId: row.category_id,
             categoryName: row.category_name ?? 'Categoría',
@@ -276,7 +268,7 @@ function AccountPacaDataProvider({ userId, children }) {
             baseRecommendedPrice: asNumber(row.base_recommended_price),
             recommendedUnitPrice: asNumber(row.recommended_unit_price),
           })),
-          damagedProducts: damagedProducts.data.map((row) => ({ id: row.id, baleCode: row.inventory?.bale?.code ?? 'Paca', category: row.inventory?.category?.name ?? 'Sin categoría', quantity: row.quantity, reason: row.reason })),
+          damagedProducts: damagedProducts.data.map((row) => ({ id: row.id, isArchived: Boolean(row.inventory?.bale?.archived_at), baleCode: row.inventory?.bale?.code ?? 'Paca', category: row.inventory?.category?.name ?? 'Sin categoría', quantity: row.quantity, reason: row.reason })),
         },
       })
     } catch (error) {
@@ -298,11 +290,16 @@ function AccountPacaDataProvider({ userId, children }) {
       }
     }
     const timer = window.setInterval(refreshVisible, 60000)
+    const onPush = (event) => {
+      if (event.data?.type === 'PACA_PUSH_RECEIVED') refresh({ silent: true })
+    }
+    navigator.serviceWorker?.addEventListener('message', onPush)
     document.addEventListener('visibilitychange', refreshVisible)
     window.addEventListener('focus', refreshVisible)
     window.addEventListener('online', refreshVisible)
     return () => {
       window.clearInterval(timer)
+      navigator.serviceWorker?.removeEventListener('message', onPush)
       document.removeEventListener('visibilitychange', refreshVisible)
       window.removeEventListener('focus', refreshVisible)
       window.removeEventListener('online', refreshVisible)
@@ -313,35 +310,27 @@ function AccountPacaDataProvider({ userId, children }) {
     purchaseDate,
     purchaseCost,
     transportCost,
-    otherExpenses,
+    otherExpenseItems,
     receivedPieces,
     targetProfitAmount,
     categoryEntries,
   }) => {
     const supabase = getSupabaseClient()
-    const { data: bale, error: baleError } = await supabase.from('bales').insert({ purchase_date: purchaseDate, purchase_cost: purchaseCost, transport_cost: transportCost, other_expenses: otherExpenses, received_pieces: receivedPieces, target_profit_amount: targetProfitAmount }).select('*').single()
+    const { data: bale, error: baleError } = await supabase.rpc('create_bale_with_expense_details', {
+      p_purchase_date: purchaseDate,
+      p_purchase_cost: purchaseCost,
+      p_transport_cost: transportCost,
+      p_target_profit_amount: targetProfitAmount,
+      p_category_entries: categoryEntries,
+      p_other_expense_items: otherExpenseItems,
+    })
     if (baleError) throw baleError
 
     const categoryNames = []
     let damagedPieces = 0
     for (const entry of categoryEntries) {
-      const category = await findOrCreateCategory(supabase, entry.name)
-      const { data: inventory, error: inventoryError } = await supabase.from('bale_inventory').insert({
-        bale_id: bale.id,
-        category_id: category.id,
-        received_quantity: entry.quantity,
-        price_level: entry.priceLevel,
-        custom_recommended_price: entry.priceLevel === 'custom' ? entry.customRecommendedPrice : null,
-      }).select('id').single()
-      if (inventoryError) throw inventoryError
-      categoryNames.push(category.name)
+      categoryNames.push(entry.name)
       damagedPieces += entry.damagedPieces
-      if (entry.damagedPieces > 0) {
-        const { error: damagedError } = await supabase.rpc('register_damaged_product', {
-          p_bale_inventory_id: inventory.id, p_quantity: entry.damagedPieces, p_reason: entry.damageReason,
-        })
-        if (damagedError) throw damagedError
-      }
     }
 
     await refresh()
@@ -377,12 +366,11 @@ function AccountPacaDataProvider({ userId, children }) {
   }, [refresh])
 
   const updateBale = useCallback(async (baleId, values) => {
-    const { error } = await getSupabaseClient().rpc('update_bale_details_with_profit', {
+    const { error } = await getSupabaseClient().rpc('update_bale_with_expense_details', {
       p_bale_id: baleId,
       p_purchase_date: values.purchaseDate,
       p_purchase_cost: values.purchaseCost,
       p_transport_cost: values.transportCost,
-      p_other_expenses: values.otherExpenses,
       p_target_profit_amount: values.targetProfitAmount,
       p_inventory_lines: values.inventoryLines.map((line) => ({
         bale_inventory_id: line.id,
@@ -390,14 +378,49 @@ function AccountPacaDataProvider({ userId, children }) {
         price_level: line.priceLevel,
         custom_recommended_price: line.priceLevel === 'custom' ? line.customRecommendedPrice : null,
       })),
+      p_other_expense_items: values.otherExpenseItems,
       p_notes: values.notes || null,
     })
     if (error) throw error
     await refresh()
   }, [refresh])
 
-  const deleteBale = useCallback(async (baleId) => {
-    const { error } = await getSupabaseClient().rpc('delete_empty_bale', { p_bale_id: baleId })
+  const archiveBale = useCallback(async (baleId, archived = true, reason = '') => {
+    const { error } = await getSupabaseClient().rpc('set_bale_archived', { p_bale_id: baleId, p_archived: archived, p_reason: reason || null })
+    if (error) throw error
+    await refresh()
+  }, [refresh])
+
+  const createExpense = useCallback(async ({ concept, amount, expenseDate, category, notes, baleId, paymentMethod }) => {
+    const { error } = await getSupabaseClient().from('expenses').insert({
+      concept: concept.trim(), amount, expense_date: expenseDate, category,
+      notes: notes?.trim() || null, bale_id: baleId || null, payment_method: paymentMethod ?? 'unknown',
+    })
+    if (error) throw error
+    await refresh()
+  }, [refresh])
+
+  const updateExpense = useCallback(async (id, values) => {
+    const { error } = await getSupabaseClient().rpc('update_business_expense', {
+      p_expense_id: id, p_concept: values.concept.trim(), p_amount: values.amount,
+      p_expense_date: values.expenseDate, p_category: values.category,
+      p_bale_id: values.baleId || null, p_notes: values.notes?.trim() || null,
+      p_payment_method: values.paymentMethod ?? 'unknown',
+    })
+    if (error) throw error
+    await refresh()
+  }, [refresh])
+
+  const saveMonthlyExpense = useCallback(async ({ id, concept, category, monthlyAmount }) => {
+    const values = { concept: concept.trim(), category, monthly_amount: monthlyAmount }
+    const table = getSupabaseClient().from('monthly_expense_commitments')
+    const { error } = await (id ? table.update(values).eq('id', id) : table.insert(values))
+    if (error) throw error
+    await refresh()
+  }, [refresh])
+
+  const setMonthlyExpenseActive = useCallback(async (id, isActive) => {
+    const { error } = await getSupabaseClient().from('monthly_expense_commitments').update({ is_active: isActive }).eq('id', id)
     if (error) throw error
     await refresh()
   }, [refresh])
@@ -513,6 +536,18 @@ function AccountPacaDataProvider({ userId, children }) {
     await refresh({ silent: true })
   }, [refresh, userId])
 
+  const createCategory = useCallback(async (rawName) => {
+    const name = rawName.trim().replace(/\s+/g, ' ')
+    if (!name || name.length > 80) throw new Error('Escribe una categoría de entre 1 y 80 caracteres.')
+    const existing = state.data.categories.find((category) => category.name.toLocaleLowerCase('es') === name.toLocaleLowerCase('es'))
+    const client = getSupabaseClient()
+    const { error } = existing
+      ? await client.from('categories').update({ is_user_created: true }).eq('id', existing.id)
+      : await client.from('categories').insert({ owner_id: userId, name, slug: `category-${crypto.randomUUID()}`, is_user_created: true })
+    if (error) throw new Error(/is_user_created/.test(error.message) ? 'Ejecuta la migración de categorías explícitas antes de agregar una categoría.' : error.message)
+    await refresh({ silent: true })
+  }, [state.data.categories, userId, refresh])
+
   const saveCategoryPrices = useCallback(async (rules) => {
     const { error } = await getSupabaseClient().rpc('save_category_price_rules', {
       p_rules: rules.map((rule) => ({
@@ -527,14 +562,14 @@ function AccountPacaDataProvider({ userId, children }) {
   }, [refresh])
 
   const value = useMemo(
-    () => ({ ...state, refresh, createBale, updateBale, deleteBale, createCustomer, updateCustomer, registerSale, updateSaleOrder, registerDamage, updateSaleDeliveryStatus, updateSalePayment, completeSalePayment, saveBusinessSettings, saveCategoryPrices }),
-    [state, refresh, createBale, updateBale, deleteBale, createCustomer, updateCustomer, registerSale, updateSaleOrder, registerDamage, updateSaleDeliveryStatus, updateSalePayment, completeSalePayment, saveBusinessSettings, saveCategoryPrices],
+    () => ({ ...state, refresh, createBale, updateBale, archiveBale, createExpense, updateExpense, saveMonthlyExpense, setMonthlyExpenseActive, createCustomer, updateCustomer, registerSale, updateSaleOrder, registerDamage, updateSaleDeliveryStatus, updateSalePayment, completeSalePayment, saveBusinessSettings, saveCategoryPrices, createCategory }),
+    [state, refresh, createBale, updateBale, archiveBale, createExpense, updateExpense, saveMonthlyExpense, setMonthlyExpenseActive, createCustomer, updateCustomer, registerSale, updateSaleOrder, registerDamage, updateSaleDeliveryStatus, updateSalePayment, completeSalePayment, saveBusinessSettings, saveCategoryPrices, createCategory],
   )
   return <PacaDataContext.Provider value={value}>{children}</PacaDataContext.Provider>
 }
 
 function emptyData() {
-  return { categories: [], bales: [], sales: [], customers: [], expenses: [], damagedProducts: [], dailySummaries: [], baleInventory: [], settings: { ...defaultBusinessSettings, dashboardKpis: [...defaultBusinessSettings.dashboardKpis] } }
+  return { categories: [], bales: [], sales: [], customers: [], expenses: [], monthlyExpenses: [], baleOtherExpenses: [], damagedProducts: [], dailySummaries: [], baleInventory: [], settings: { ...defaultBusinessSettings, dashboardKpis: [...defaultBusinessSettings.dashboardKpis] } }
 }
 
 export function usePacaData() {

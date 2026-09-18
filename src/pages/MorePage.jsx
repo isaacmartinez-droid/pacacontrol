@@ -5,6 +5,14 @@ import PageHeader from '../components/common/PageHeader'
 import { useAuth } from '../context/AuthContext'
 
 const modules = [
+  { title: 'Arqueo de caja', description: 'Efectivo esperado, contado y diferencias', to: '/caja', icon: ReceiptText, tone: 'emerald' },
+  {
+    title: 'Historial de cambios',
+    description: 'Pacas archivadas y correcciones de pedidos',
+    to: '/historial',
+    icon: FileText,
+    tone: 'brand',
+  },
   {
     title: 'Preferencias del negocio',
     description: 'Precios, indicadores y valores habituales',
@@ -28,7 +36,7 @@ const modules = [
   },
   {
     title: 'Gastos',
-    description: 'Transporte y costos de la tienda',
+    description: 'Gastos pagados y metas de reserva mensual',
     to: '/gastos',
     icon: ReceiptText,
     tone: 'coral',

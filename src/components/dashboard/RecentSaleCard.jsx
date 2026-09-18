@@ -52,9 +52,10 @@ function RecentSaleCard({ sale, onAdvanceStatus, onConfirmPayment, isUpdating = 
         Pago: {sale.paymentStatus === 'paid' ? 'Pagado' : sale.paymentStatus === 'partial' ? `Parcial · faltan ${formatCurrency(sale.balance)}` : `Pendiente · faltan ${formatCurrency(sale.balance)}`}
       </div>
 
-      {sale.deliveryStatus !== 'delivered' && <Link to={`/ventas/${sale.id}/editar`} className="mt-3 flex min-h-11 w-full items-center justify-center gap-2 rounded-xl border border-brand-200 bg-brand-50 px-4 text-xs font-extrabold text-brand-800 transition hover:bg-brand-100"><Pencil size={15} />Editar artículos, cliente o entrega</Link>}
+      {!sale.hasArchivedInventory && <Link to={`/ventas/${sale.id}/editar`} className="mt-3 flex min-h-11 w-full items-center justify-center gap-2 rounded-xl border border-brand-200 bg-brand-50 px-4 text-xs font-extrabold text-brand-800 transition hover:bg-brand-100"><Pencil size={15} />Editar artículos, cliente o entrega</Link>}
 
-      {(sale.items?.length ?? 0) > 0 && <details className="mt-3 rounded-xl bg-slate-50 px-3 py-2"><summary className="cursor-pointer text-xs font-extrabold text-slate-700">Ver artículos individuales ({sale.items.length})</summary><div className="mt-2 space-y-2">{sale.items.map((item) => sale.deliveryStatus === 'delivered' ? <div key={item.id} className="flex justify-between gap-3 border-t border-slate-200 pt-2 text-xs"><ItemDescription item={item} /><b className="shrink-0 text-slate-900">{formatCurrency(item.quantity * item.unitPrice)}</b></div> : <Link key={item.id} to={`/ventas/${sale.id}/editar`} className="flex justify-between gap-3 border-t border-slate-200 pt-2 text-xs transition hover:text-brand-800"><ItemDescription item={item} /><span className="flex shrink-0 items-center gap-1 font-extrabold"><Pencil size={12} />Editar</span></Link>)}</div></details>}
+      {sale.hasArchivedInventory && <p className="mt-3 rounded-xl bg-slate-100 p-3 text-xs font-bold text-slate-600">Contiene una paca archivada. Reactívala para corregir sus artículos. Las deudas y pagos se conservan.</p>}
+      {(sale.items?.length ?? 0) > 0 && <details className="mt-3 rounded-xl bg-slate-50 px-3 py-2"><summary className="cursor-pointer text-xs font-extrabold text-slate-700">Ver artículos individuales ({sale.items.length})</summary><div className="mt-2 space-y-2">{sale.items.map((item) => sale.hasArchivedInventory ? <div key={item.id} className="flex justify-between gap-3 border-t border-slate-200 pt-2 text-xs"><ItemDescription item={item} /><b className="shrink-0 text-slate-900">{formatCurrency(item.quantity * item.unitPrice)}</b></div> : <Link key={item.id} to={`/ventas/${sale.id}/editar`} className="flex justify-between gap-3 border-t border-slate-200 pt-2 text-xs transition hover:text-brand-800"><ItemDescription item={item} /><span className="flex shrink-0 items-center gap-1 font-extrabold"><Pencil size={12} />Editar</span></Link>)}</div></details>}
 
       <div className={`mt-4 grid ${steps.length === 4 ? 'grid-cols-4' : 'grid-cols-3'}`} aria-label={`Estado del pedido: ${steps[currentStep].label}`}>
         {steps.map((step, index) => {
@@ -91,7 +92,7 @@ function RecentSaleCard({ sale, onAdvanceStatus, onConfirmPayment, isUpdating = 
 
       {onConfirmPayment && sale.paymentStatus !== 'paid' && <div className="mt-3 grid grid-cols-[1fr_auto] gap-2"><label className="sr-only" htmlFor={`payment-${sale.id}`}>Método del pago final</label><select id={`payment-${sale.id}`} value={finalPaymentMethod} onChange={(event) => setFinalPaymentMethod(event.target.value)} className="sale-input min-h-10 py-1 text-xs"><option value="cash">Efectivo</option><option value="transfer">Transferencia</option><option value="card">Tarjeta</option><option value="other">Otro</option></select><button type="button" disabled={isUpdating} onClick={() => onConfirmPayment(sale.id, finalPaymentMethod)} className="min-h-10 rounded-xl bg-emerald-50 px-4 text-xs font-extrabold text-emerald-800 transition hover:bg-emerald-100 disabled:opacity-60">{isUpdating ? 'Actualizando…' : 'Cobrar saldo'}</button></div>}
 
-      {onAdvanceStatus && nextStep && sale.paymentStatus === 'paid' && (
+      {!sale.isArchived && onAdvanceStatus && nextStep && sale.paymentStatus === 'paid' && (
         <button
           type="button"
           disabled={isUpdating}

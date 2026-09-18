@@ -60,7 +60,7 @@ export default function EditSalePage() {
       ...item,
       inventory,
       category: data.categories.find((category) => category.id === item.categoryId),
-      priceLines,
+      normalizedPriceLines: priceLines,
       quantity: totals.quantity,
       merchandiseTotal: totals.merchandiseTotal,
       availablePieces: (inventory?.availablePieces ?? 0) + (originalQuantityByInventory.get(item.baleInventoryId) ?? 0),
@@ -70,6 +70,7 @@ export default function EditSalePage() {
 
   if (!sale && !isLoading) return <div><PageHeader title="Pedido no encontrado" backTo="/ventas" /><div className="page-content py-6"><EmptyState icon={CircleAlert} title="Este pedido no está disponible" description="Puede no pertenecer a esta cuenta o haber sido eliminado." /></div></div>
   if (!form) return <div><PageHeader title="Cargando pedido…" backTo="/ventas" /></div>
+  if (sale.hasArchivedInventory) return <div><PageHeader title="Pedido de una paca archivada" backTo="/ventas" /><div className="page-content py-6"><p className="rounded-2xl bg-white p-5 text-sm text-slate-600">Reactiva las pacas de este pedido desde Pacas → Archivadas antes de corregir sus artículos. Los pagos y la deuda se conservan.</p></div></div>
 
   const hasDelivery = form.fulfillmentMethod === 'delivery'
   const deliveryCost = hasDelivery ? Number(form.deliveryCost) || 0 : 0
@@ -109,24 +110,22 @@ export default function EditSalePage() {
 
   async function submit(event) {
     event.preventDefault()
-    if (sale.deliveryStatus === 'delivered') return setMessage('Un pedido entregado ya forma parte del historial y no se puede editar.')
-    if (calculatedItems.some((item) => !item.category || !item.inventory)) return setMessage('Selecciona la categoría y la paca de cada artículo.')
+    if (calculatedItems.some((item) => !item.category || !item.inventory || item.inventory.isActive === false)) return setMessage('Selecciona la categoría y la paca de cada artículo.')
     if (new Set(calculatedItems.map((item) => item.baleInventoryId)).size !== calculatedItems.length) return setMessage('No repitas la misma categoría y paca; reúne sus precios en un solo artículo.')
     for (const item of calculatedItems) {
-      if (item.priceLines.some((line) => !Number.isInteger(line.quantity) || line.quantity < 1 || line.unitPrice <= 0)) return setMessage('Cada precio necesita una cantidad entera y un monto mayores que cero.')
+      if (item.normalizedPriceLines.some((line) => !Number.isInteger(line.quantity) || line.quantity < 1 || line.unitPrice <= 0)) return setMessage('Cada precio necesita una cantidad entera y un monto mayores que cero.')
       if (item.quantity > item.availablePieces) return setMessage(`${item.inventory.baleCode} solo permite ${item.availablePieces} piezas en este pedido.`)
     }
     if (hasDelivery && form.customerId === 'walk-in') return setMessage('Elige un cliente para realizar el envío.')
     if (hasDelivery && deliveryCost <= 0) return setMessage('Ingresa el costo real del delivery.')
     if (form.customerId === 'walk-in' && balance > 0) return setMessage('Elige un cliente para conservar un saldo pendiente.')
     if (balance < 0) return setMessage(`El nuevo total no puede ser menor que los ${formatCurrency(sale.paidAmount)} ya pagados.`)
-    if (sale.secondPaymentAmount > 0 && balance > 0) return setMessage('El pedido ya tiene dos pagos y no puede quedar necesitando un tercer pago.')
 
     setIsSaving(true)
     setMessage('')
     try {
       await updateSaleOrder(saleId, {
-        items: calculatedItems.map((item) => ({ categoryId: item.categoryId, baleInventoryId: item.baleInventoryId, priceLines: item.priceLines })),
+        items: calculatedItems.map((item) => ({ categoryId: item.categoryId, baleInventoryId: item.baleInventoryId, priceLines: item.normalizedPriceLines })),
         customerId: form.customerId,
         fulfillmentMethod: form.fulfillmentMethod,
         deliveryCost,
@@ -143,10 +142,11 @@ export default function EditSalePage() {
     <div className="page-content py-6 md:py-8">
       <form onSubmit={submit} className="grid items-start gap-5 lg:grid-cols-[minmax(0,1.35fr)_minmax(19rem,0.65fr)] lg:gap-8">
         <div className="space-y-5">
+          {sale.deliveryStatus === 'delivered' && <p className="rounded-2xl bg-amber-50 p-4 text-sm font-semibold text-amber-800">Estás corrigiendo un pedido entregado. El cambio quedará en el historial y no alterará los pagos recibidos.</p>}
           <Section title="Artículos del pedido" description="Puedes agregar, quitar o corregir piezas y precios.">
             <button type="button" onClick={addItem} className="mb-4 inline-flex min-h-10 items-center gap-1 rounded-xl bg-brand-900 px-4 text-xs font-extrabold text-white"><Plus size={16} />Agregar artículo</button>
             <div className="space-y-4">{calculatedItems.map((item, index) => {
-              const options = data.baleInventory.filter((inventory) => inventory.categoryId === item.categoryId && ((inventory.availablePieces + (originalQuantityByInventory.get(inventory.id) ?? 0)) > 0 || inventory.id === item.baleInventoryId))
+              const options = data.baleInventory.filter((inventory) => inventory.isActive !== false && inventory.categoryId === item.categoryId && ((inventory.availablePieces + (originalQuantityByInventory.get(inventory.id) ?? 0)) > 0 || inventory.id === item.baleInventoryId))
               return <article key={item.id} className="rounded-2xl border border-slate-200 p-4">
                 <div className="flex items-center justify-between"><b>Artículo {index + 1}</b>{form.items.length > 1 && <button type="button" onClick={() => removeItem(item.id)} className="p-2 text-red-600" aria-label={`Quitar artículo ${index + 1}`}><Trash2 size={18} /></button>}</div>
                 <div className="mt-3 grid gap-3 sm:grid-cols-2"><Field label="Categoría"><select className="sale-input" value={item.categoryId} onChange={(event) => updateItem(item.id, 'categoryId', event.target.value)}>{data.categories.map((category) => <option key={category.id} value={category.id}>{category.name}</option>)}</select></Field><Field label="Paca de origen"><select className="sale-input" required value={item.baleInventoryId} onChange={(event) => updateItem(item.id, 'baleInventoryId', event.target.value)}><option value="">Selecciona una paca</option>{options.map((inventory) => <option key={inventory.id} value={inventory.id}>{inventory.baleCode} · {inventory.availablePieces + (originalQuantityByInventory.get(inventory.id) ?? 0)} disponibles para editar</option>)}</select></Field></div>

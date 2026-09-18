@@ -3,6 +3,7 @@ import { Outlet } from 'react-router-dom'
 import { usePacaData } from '../../context/PacaDataContext'
 import BottomNavigation from './BottomNavigation'
 import SidebarNavigation from './SidebarNavigation'
+import AlertBanners from '../common/AlertBanners'
 
 function AppShell() {
   const { error, isLoading, refresh } = usePacaData()
@@ -36,6 +37,7 @@ function AppShell() {
         <Outlet />
       </main>
       <BottomNavigation />
+      <AlertBanners />
     </div>
   )
 }
