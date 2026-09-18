@@ -10,7 +10,7 @@ Solo contiene la URL y clave publicable: no necesita contraseñas ni claves secr
 1. Confirmar el nombre del proyecto en Supabase antes de abrir SQL Editor.
 2. Ejecutar el contenido completo de
    [install_staging.sql](../supabase/setup/install_staging.sql).
-   Es una copia generada de las 30 migraciones en orden, con una sola transacción.
+   Es una copia generada de las 31 migraciones en orden, con una sola transacción.
    Rechaza bases donde ya exista alguna de las tablas de la app. No usar en clientes.
    Si falla, la transacción revierte; comunicar el error antes de reintentar.
 3. En Auth desactivar `Allow new users to sign up`, manteniendo Email habilitado.

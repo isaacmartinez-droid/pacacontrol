@@ -5,6 +5,13 @@ import PageHeader from '../components/common/PageHeader'
 import { useAuth } from '../context/AuthContext'
 
 const modules = [
+  {
+    title: 'Ajustes',
+    description: 'Identidad, operación y configuración del negocio',
+    to: '/ajustes',
+    icon: SlidersHorizontal,
+    tone: 'brand',
+  },
   { title: 'Arqueo de caja', description: 'Efectivo esperado, contado y diferencias', to: '/caja', icon: ReceiptText, tone: 'emerald' },
   {
     title: 'Historial de cambios',
@@ -12,13 +19,6 @@ const modules = [
     to: '/historial',
     icon: FileText,
     tone: 'brand',
-  },
-  {
-    title: 'Preferencias del negocio',
-    description: 'Precios, indicadores y valores habituales',
-    to: '/preferencias',
-    icon: SlidersHorizontal,
-    tone: 'emerald',
   },
   {
     title: 'Alertas',

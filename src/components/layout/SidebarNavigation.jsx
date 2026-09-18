@@ -2,24 +2,27 @@ import { CircleCheck, LogOut, Store, UserRound } from 'lucide-react'
 import { Link, useLocation } from 'react-router-dom'
 import { isNavigationItemActive, navigationItems } from './navigation'
 import { useAuth } from '../../context/AuthContext'
+import { usePacaData } from '../../context/PacaDataContext'
 
 function SidebarNavigation() {
   const { pathname } = useLocation()
   const { user, signOut } = useAuth()
+  const { data } = usePacaData()
   const username = user?.user_metadata?.username ?? user?.email?.split('@')[0]
+  const businessName = data.businessProfile?.businessName || 'Mi negocio'
 
   return (
     <aside className="sticky top-0 hidden h-dvh w-[4.75rem] shrink-0 flex-col border-r border-brand-800 bg-brand-950 px-3 py-5 text-white shadow-xl shadow-brand-950/10 lg:flex xl:w-72 xl:px-4 xl:py-6">
       <Link
         to="/"
-        aria-label="Tienda J&F, inicio"
+        aria-label={`${businessName}, inicio`}
         className="flex min-h-14 items-center justify-center gap-3 rounded-2xl px-0 focus-visible:outline-offset-2 xl:justify-start xl:px-2"
       >
         <span className="grid size-11 shrink-0 place-items-center rounded-2xl bg-white text-brand-950 shadow-lg shadow-black/10">
           <Store aria-hidden="true" size={22} />
         </span>
         <span className="hidden xl:block">
-          <span className="block text-lg font-extrabold tracking-tight text-white">Tienda J&amp;F</span>
+          <span className="block truncate text-lg font-extrabold tracking-tight text-white">{businessName}</span>
           <span className="block text-xs font-medium text-brand-200">Mi tienda</span>
         </span>
       </Link>

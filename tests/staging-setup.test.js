@@ -40,10 +40,12 @@ test('instalador crea base completa y rechaza ejecutarse de nuevo sin tocar dato
     const sql = await installer()
     await db.exec(sql)
     await db.exec(await audit())
-    const { rows } = await db.query("select to_regprocedure('public.create_bale_with_inventory(date,numeric,numeric,numeric,numeric,jsonb)')::text as rpc, to_regprocedure('public.create_bale_with_expense_details(date,numeric,numeric,numeric,jsonb,jsonb)')::text as detailed_rpc, to_regclass('public.bale_other_expense_items')::text as detail_table")
+    const { rows } = await db.query("select to_regprocedure('public.create_bale_with_inventory(date,numeric,numeric,numeric,numeric,jsonb)')::text as rpc, to_regprocedure('public.create_bale_with_expense_details(date,numeric,numeric,numeric,jsonb,jsonb)')::text as detailed_rpc, to_regclass('public.bale_other_expense_items')::text as detail_table, to_regclass('public.business_profiles')::text as profile_table, to_regprocedure('public.complete_business_onboarding(text,text,text,boolean,text,text[],text[],text)')::text as onboarding_rpc")
     assert.ok(rows[0].rpc)
     assert.ok(rows[0].detailed_rpc)
     assert.equal(rows[0].detail_table, 'bale_other_expense_items')
+    assert.equal(rows[0].profile_table, 'business_profiles')
+    assert.ok(rows[0].onboarding_rpc)
     const defaults = (await db.query("select column_default from information_schema.columns where table_schema='public' and table_name='sales' and column_name='sold_at'")).rows
     assert.equal(defaults[0].column_default, 'now()')
     await assert.rejects(db.exec(sql), /base ya tiene objetos/)

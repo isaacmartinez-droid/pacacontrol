@@ -29,6 +29,23 @@ const baleOtherExpenseItems = []
 const extraCategories = [{ category_id: 'unused-blouses', name: 'Blusas' }, { category_id: 'unused-other', name: 'Otros' }]
 const categoryPrices = {}
 let businessSettings = null
+const businessProfile = {
+  owner_id: owner,
+  business_name: 'Tienda de prueba',
+  activity_description: 'Venta por lotes',
+  template_key: 'legacy_bales',
+  template_version: 1,
+  inventory_mode: 'batches',
+  tracks_variants: false,
+  sales_mode: 'both',
+  fulfillment_methods: ['pickup', 'delivery'],
+  vocabulary: { purchaseSingular: 'Paca', purchasePlural: 'Pacas', inventoryUnitSingular: 'Pieza', inventoryUnitPlural: 'Piezas' },
+  onboarding_status: 'completed',
+  onboarding_step: 7,
+  onboarding_draft: {},
+  completed_at: soldAt,
+}
+const businessTemplates = [{ template_key: 'legacy_bales', version: 1, name: 'Venta por pacas o lotes', description: 'Compatible', is_active: true, config: { suggested_categories: [], vocabulary: businessProfile.vocabulary } }]
 const errors = []
 let baleRegistrationCalls = 0
 let baleRegistrationBody
@@ -69,6 +86,16 @@ try {
     const body = method === 'GET' ? null : request.postDataJSON()
     let result = []
     if (table === 'profiles') result = [{ id: owner, display_name: 'Isaac', account_role: 'owner', access_status: 'active', service_plan: 'trial', legal_terms_version: LEGAL_TERMS_VERSION, privacy_version: PRIVACY_VERSION, terms_accepted_at: soldAt, privacy_accepted_at: soldAt }]
+    else if (table === 'business_profiles') result = [businessProfile]
+    else if (table === 'business_templates') result = businessTemplates
+    else if (table === 'update_business_profile') {
+      Object.assign(businessProfile, {
+        business_name: body.p_business_name,
+        activity_description: body.p_activity_description,
+        vocabulary: body.p_vocabulary,
+      })
+      result = businessProfile
+    }
     else if (table === 'bale_summary') result = bales
     else if (table === 'inventory_summary') result = [{ category_id: 'category-1', name: 'Pantalones', ...categoryPrices, received_pieces: bales.filter((bale) => !bale.archived_at).reduce((sum, bale) => sum + bale.received_pieces, 0), available_pieces: bales.filter((bale) => !bale.archived_at).reduce((sum, bale) => sum + bale.available_pieces, 0) }, ...extraCategories]
     else if (table === 'business_settings') {
@@ -370,6 +397,19 @@ try {
   assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth), true)
   assert.deepEqual(errors, [])
   console.log('OK: categorías reales sin supuestos, última venta copiable, agregar categoría conserva borradores y persiste; objetivo viene de última compra.')
+
+  await page.goto(origin + '/ajustes')
+  await page.getByRole('heading', { name: 'Ajustes', exact: true }).waitFor()
+  assert.equal(await page.getByText('Venta por pacas o lotes', { exact: true }).count(), 1)
+  await page.getByLabel('Nombre visible del negocio').fill('Comercio de prueba')
+  await page.getByLabel('Una compra o lote').fill('Lote')
+  await page.getByLabel('Varias compras o lotes').fill('Lotes')
+  await page.getByRole('button', { name: 'Guardar ajustes', exact: true }).click()
+  await page.getByText('Información del negocio actualizada.', { exact: true }).waitFor()
+  assert.equal(businessProfile.business_name, 'Comercio de prueba')
+  assert.equal(businessProfile.vocabulary.purchasePlural, 'Lotes')
+  assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth), true)
+  console.log('OK: Ajustes carga el perfil migrado y guarda identidad y vocabulario del negocio.')
 
   const guest = await browser.newPage({ viewport: { width: 390, height: 844 } })
   await guest.goto(origin + '/acceder')

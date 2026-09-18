@@ -59,11 +59,11 @@ la migración o configuración correspondiente ya esté aplicada en producción.
 | Archivo de compras/lotes | Pruebas locales aprobadas | Comprobar historial, alertas y reactivación remotos |
 | Avisos visibles dentro de la aplicación | Pruebas locales aprobadas | Prueba cruzada en dispositivos reales |
 | Push con la aplicación cerrada | Configuración pública detectada | Tarea programada y prueba real en dispositivos |
-| Centro formal de Ajustes | Pendiente | Diseñarlo con vocabulario neutral |
-| Detalle de otros gastos de compra | Base auditada y frontend publicados en producción | Recorrido autenticado final con una cuenta de prueba |
+| Centro formal de Ajustes | Fundamento y ruta `/ajustes` implementados localmente | Verificar migración y pantalla en staging |
+| Detalle de otros gastos de compra | Hito 1 cerrado y verificado en producción | Ninguna |
 | Códigos de prueba y campañas | Pendiente | Diseño seguro, administración y reglas legales |
 | Avisos de vencimiento de prueba | Pendiente | Depende de campañas y vigencia de cuenta |
-| Perfil y asistente de negocio | Pendiente | Base de la transformación general |
+| Perfil y asistente de negocio | Perfil, plantillas y estado reanudable implementados localmente | Aplicar en staging; asistente visual corresponde al Hito 3 |
 | Documentos legales definitivos | Investigación iniciada | Dependen de identidad y modelo comercial definitivos |
 
 ### Hito 0. Cerrar la estabilización actual
@@ -115,6 +115,9 @@ Después de cerrar los pendientes actuales se implementará:
 
 Condición de salida: una cuenta nueva puede describir su negocio y una cuenta
 existente continúa funcionando sin pérdida ni duplicación.
+
+La implementación y el procedimiento de verificación se registran en
+[`docs/hito-2-fundamento-negocio.md`](hito-2-fundamento-negocio.md).
 
 ### Hito 3. Asistente y experiencia neutral
 

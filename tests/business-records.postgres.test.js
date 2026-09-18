@@ -44,7 +44,11 @@ test(`archivos, correcciones y gastos mantienen pagos, inventario y aislamiento 
     // Las cuentas nuevas requieren aprobación; fixtures habilitados por SQL de servicio.
     await db.exec("update public.profiles set access_status = 'active'")
     await db.query("select set_config('request.jwt.claim.sub', $1, false)", [owner])
-    category = await scalar("select id from public.categories where owner_id = $1 and slug = 'pants'", [owner])
+    await db.query(`select public.complete_business_onboarding(
+      'Negocio de prueba', 'manual', 'batches', false, 'both',
+      array['pickup','delivery'], array['Pantalones'], 'Pruebas automatizadas'
+    )`)
+    category = await scalar("select id from public.categories where owner_id = $1 and name = 'Pantalones'", [owner])
     customer = await scalar("insert into public.customers (name) values ('Clienta de prueba') returning id")
     bale = await scalar('insert into public.bales (purchase_cost, received_pieces, target_profit_amount) values (8550, 150, 4000) returning id')
     inventory = await scalar('insert into public.bale_inventory (bale_id, category_id, received_quantity) values ($1, $2, 150) returning id', [bale.id, category.id])

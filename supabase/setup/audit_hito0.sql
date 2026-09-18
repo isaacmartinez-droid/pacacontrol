@@ -80,6 +80,31 @@ with feature_status(feature, installed, detail) as (
       'update_bale_with_expense_details',
       to_regprocedure('public.update_bale_with_expense_details(uuid,date,numeric,numeric,numeric,jsonb,jsonb,text)') is not null,
       'Corrección auditada de compra y desglose'
+    ),
+    (
+      'business_templates',
+      to_regclass('public.business_templates') is not null,
+      'Plantillas versionadas del negocio'
+    ),
+    (
+      'business_profiles',
+      to_regclass('public.business_profiles') is not null,
+      'Perfil y estado de configuración del negocio'
+    ),
+    (
+      'save_business_onboarding_draft',
+      to_regprocedure('public.save_business_onboarding_draft(integer,jsonb)') is not null,
+      'Borrador reanudable sin crear categorías'
+    ),
+    (
+      'complete_business_onboarding',
+      to_regprocedure('public.complete_business_onboarding(text,text,text,boolean,text,text[],text[],text)') is not null,
+      'Confirmación atómica e idempotente del negocio'
+    ),
+    (
+      'update_business_profile',
+      to_regprocedure('public.update_business_profile(text,text,jsonb)') is not null,
+      'Edición validada de identidad y vocabulario'
     )
 ), date_defaults as (
   select

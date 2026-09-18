@@ -32,6 +32,8 @@ test('fase 1: aislamiento, registro y RPC no dependen de controles del navegador
     await t.test('registro directo queda suspendido y no confía en rol/plan de metadata', async () => {
       const row = await scalar('select access_status, account_role, service_plan from public.profiles where id = $1', [owner])
       assert.deepEqual(row, { access_status: 'suspended', account_role: 'owner', service_plan: 'pilot_free' })
+      assert.equal(Number((await scalar('select count(*) as count from public.categories where owner_id = $1', [owner])).count), 0)
+      assert.equal((await scalar('select onboarding_status from public.business_profiles where owner_id = $1', [owner])).onboarding_status, 'pending')
       await login(owner)
       await assert.rejects(db.exec("insert into public.customers(name) values ('No autorizado')"), /row-level security|acceso activo/)
       await assert.rejects(db.exec('select public.admin_list_accounts()'), /administrador/)
@@ -39,12 +41,39 @@ test('fase 1: aislamiento, registro y RPC no dependen de controles del navegador
       await db.exec("update public.profiles set access_status = 'active'")
     })
 
+    await t.test('onboarding guarda borrador sin inventar categorias y confirma una sola vez', async () => {
+      await login(owner)
+      const draft = await scalar("select onboarding_status, onboarding_step from public.save_business_onboarding_draft(2, '{\"businessName\":\"Mi tienda\"}'::jsonb)")
+      assert.deepEqual(draft, { onboarding_status: 'in_progress', onboarding_step: 2 })
+      assert.equal(Number((await scalar('select count(*) as count from public.categories')).count), 0)
+      await db.query(`select public.complete_business_onboarding(
+        'Negocio de prueba', 'manual', 'batches', false, 'both',
+        array['pickup','delivery'], array['Pantalones','pantalones'], 'Pruebas de seguridad'
+      )`)
+      assert.equal(Number((await scalar("select count(*) as count from public.categories where lower(name) = 'pantalones'")).count), 1)
+      await db.query(`select public.complete_business_onboarding(
+        'Intento posterior', 'general_store', 'units', true, 'immediate',
+        array['pickup'], array['Zapatos'], 'No debe reemplazar la configuración'
+      )`)
+      assert.equal(Number((await scalar("select count(*) as count from public.categories where lower(name) = 'pantalones'")).count), 1)
+      assert.equal(Number((await scalar("select count(*) as count from public.categories where lower(name) = 'zapatos'")).count), 0)
+      await assert.rejects(db.exec("select public.save_business_onboarding_draft(3, '{}'::jsonb)"), /ya fue completada/)
+      const profile = await scalar('select onboarding_status, template_key, onboarding_step from public.business_profiles')
+      assert.deepEqual(profile, { onboarding_status: 'completed', template_key: 'manual', onboarding_step: 7 })
+    })
+
     await login(other)
-    const foreignCategory = await scalar("select id from public.categories where slug = 'pants'")
+    await db.query(`select public.complete_business_onboarding(
+      'Otro negocio', 'manual', 'batches', false, 'both',
+      array['pickup','delivery'], array['Pantalones'], 'Pruebas de seguridad'
+    )`)
+
+    await login(other)
+    const foreignCategory = await scalar("select id from public.categories where name = 'Pantalones'")
     const foreignCustomer = await scalar("insert into public.customers(name) values ('Otro negocio') returning id")
     await login(owner)
     const bale = await scalar('insert into public.bales(purchase_cost, received_pieces, target_profit_amount) values (8550, 100, 4000) returning id')
-    const category = await scalar("select id from public.categories where slug = 'pants'")
+    const category = await scalar("select id from public.categories where name = 'Pantalones'")
     const inventory = await scalar('insert into public.bale_inventory(bale_id, category_id, received_quantity) values ($1, $2, 100) returning id', [bale.id, category.id])
     const customer = await scalar("insert into public.customers(name) values ('Mi cliente') returning id")
     const items = JSON.stringify([{ category_id: category.id, bale_inventory_id: inventory.id, price_lines: [{ quantity: 2, unit_price: 100 }] }])

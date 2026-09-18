@@ -46,6 +46,8 @@ if (!url || !key) {
     ['cash_reconciliations', 'id'],
     ['categories', 'is_user_created'],
     ['bale_other_expense_items', 'id,bale_id,concept,amount,sort_order'],
+    ['business_templates', 'template_key,version,is_active'],
+    ['business_profiles', 'owner_id,onboarding_status,template_key,template_version'],
   ]) await check(name, '/rest/v1/' + name + '?select=' + columns + '&limit=0')
   report.limitations = 'HEAD solo comprueba exposición/autorización del esquema; 401/403 puede ser protección esperada. Un 400/404 requiere confirmar metadatos con audit_hito0.sql. Sin credenciales administrativas no se verifican respaldos, RLS, funciones ni despliegue Vercel.'
   console.log(JSON.stringify(report, null, 2))

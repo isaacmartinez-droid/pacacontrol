@@ -95,7 +95,9 @@ público posterior confirmó respuesta `200` en acceso, rutas internas, manifest
 service worker y configuración push. El paquete publicado contiene la interfaz
 de desglose de otros gastos.
 
-Pendiente para cerrar el hito:
+### Cierre del hito
 
-1. Hacer un recorrido autenticado breve de lectura, creación y edición en
-   producción con una cuenta de prueba.
+El recorrido autenticado de lectura, creación y edición en producción fue
+aprobado por el usuario el 18 de septiembre de 2026. El Hito 1 queda cerrado:
+base, seguridad, interfaz, compatibilidad histórica y despliegue fueron
+verificados.

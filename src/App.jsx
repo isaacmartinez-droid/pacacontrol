@@ -25,6 +25,7 @@ import ReportsPage from './pages/ReportsPage'
 import SalesPage from './pages/SalesPage'
 import AlertsPage from './pages/AlertsPage'
 import BusinessPreferencesPage from './pages/BusinessPreferencesPage'
+import SettingsPage from './pages/SettingsPage'
 import EditBalePage from './pages/EditBalePage'
 import EditCustomerPage from './pages/EditCustomerPage'
 import EditSalePage from './pages/EditSalePage'
@@ -71,6 +72,7 @@ function App() {
           <Route path="mas" element={<MorePage />} />
           <Route path="alertas" element={<AlertsPage />} />
           <Route path="preferencias" element={<BusinessPreferencesPage />} />
+          <Route path="ajustes" element={<SettingsPage />} />
           <Route path="*" element={<NotFoundPage />} />
         </Route>
       </Route>

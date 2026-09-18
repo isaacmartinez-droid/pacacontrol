@@ -10,6 +10,7 @@ import {
   mapBusinessSettings,
   normalizeBusinessSettings,
 } from '../utils/businessSettings'
+import { mapBusinessProfile, mapBusinessTemplate, normalizeBusinessVocabulary } from '../utils/businessProfile'
 
 const PacaDataContext = createContext(null)
 
@@ -191,7 +192,7 @@ function AccountPacaDataProvider({ userId, children }) {
 
     try {
       const supabase = getSupabaseClient()
-      const [categories, bales, sales, customers, expenses, damagedProducts, allocations, dailySummaries, baleInventory, businessSettings, monthlyExpenses, baleOtherExpenses] = await Promise.all([
+      const [categories, bales, sales, customers, expenses, damagedProducts, allocations, dailySummaries, baleInventory, businessSettings, monthlyExpenses, baleOtherExpenses, businessProfile, businessTemplates] = await Promise.all([
         loadAllRows(() => supabase.from('inventory_summary').select('*').order('name').order('category_id')),
         loadAllRows(() => supabase.from('bale_summary').select('*').order('purchase_date', { ascending: false }).order('id')),
         loadAllRows(() => supabase.from('sales').select('*, additional_payments:sale_additional_payments(id, amount, method, paid_at), customer:customers(name), sale_items(id, category_id, quantity, unit_price, reference_unit_cost, recommended_unit_price, category:categories(id, name), sale_item_allocations(quantity, inventory:bale_inventory(id, bale:bales(id, code, archived_at))))').order('sold_at', { ascending: false }).order('id')),
@@ -204,8 +205,10 @@ function AccountPacaDataProvider({ userId, children }) {
         supabase.from('business_settings').select('*').maybeSingle(),
         loadAllRows(() => supabase.from('monthly_expense_commitments').select('*').order('created_at', { ascending: false }).order('id')),
         loadAllRows(() => supabase.from('bale_other_expense_items').select('*').order('bale_id').order('sort_order').order('id')),
+        supabase.from('business_profiles').select('*').maybeSingle(),
+        loadAllRows(() => supabase.from('business_templates').select('*').eq('is_active', true).order('name').order('version', { ascending: false })),
       ])
-      const failed = [categories, bales, sales, customers, expenses, damagedProducts, allocations, dailySummaries, baleInventory, businessSettings, monthlyExpenses, baleOtherExpenses].find((result) => result.error)
+      const failed = [categories, bales, sales, customers, expenses, damagedProducts, allocations, dailySummaries, baleInventory, businessSettings, monthlyExpenses, baleOtherExpenses, businessProfile, businessTemplates].find((result) => result.error)
       if (failed) throw failed.error
       if (requestId !== latestRequest.current) return
 
@@ -223,6 +226,8 @@ function AccountPacaDataProvider({ userId, children }) {
         error: '',
         lastUpdatedAt: lastRefreshAt.current,
         data: {
+          businessProfile: mapBusinessProfile(businessProfile.data),
+          businessTemplates: businessTemplates.data.map(mapBusinessTemplate),
           settings: mapBusinessSettings(businessSettings.data),
           categories: categories.data.map((row) => ({
             id: row.category_id,
@@ -536,6 +541,22 @@ function AccountPacaDataProvider({ userId, children }) {
     await refresh({ silent: true })
   }, [refresh, userId])
 
+  const saveBusinessProfile = useCallback(async ({ businessName, activityDescription, vocabulary }) => {
+    const { data: updated, error } = await getSupabaseClient().rpc('update_business_profile', {
+      p_business_name: businessName,
+      p_activity_description: activityDescription || null,
+      p_vocabulary: normalizeBusinessVocabulary(vocabulary),
+    })
+    if (error) throw error
+    const mapped = mapBusinessProfile(updated)
+    setState((current) => ({
+      ...current,
+      data: { ...current.data, businessProfile: mapped },
+    }))
+    await refresh({ silent: true })
+    return mapped
+  }, [refresh])
+
   const createCategory = useCallback(async (rawName) => {
     const name = rawName.trim().replace(/\s+/g, ' ')
     if (!name || name.length > 80) throw new Error('Escribe una categoría de entre 1 y 80 caracteres.')
@@ -562,14 +583,14 @@ function AccountPacaDataProvider({ userId, children }) {
   }, [refresh])
 
   const value = useMemo(
-    () => ({ ...state, refresh, createBale, updateBale, archiveBale, createExpense, updateExpense, saveMonthlyExpense, setMonthlyExpenseActive, createCustomer, updateCustomer, registerSale, updateSaleOrder, registerDamage, updateSaleDeliveryStatus, updateSalePayment, completeSalePayment, saveBusinessSettings, saveCategoryPrices, createCategory }),
-    [state, refresh, createBale, updateBale, archiveBale, createExpense, updateExpense, saveMonthlyExpense, setMonthlyExpenseActive, createCustomer, updateCustomer, registerSale, updateSaleOrder, registerDamage, updateSaleDeliveryStatus, updateSalePayment, completeSalePayment, saveBusinessSettings, saveCategoryPrices, createCategory],
+    () => ({ ...state, refresh, createBale, updateBale, archiveBale, createExpense, updateExpense, saveMonthlyExpense, setMonthlyExpenseActive, createCustomer, updateCustomer, registerSale, updateSaleOrder, registerDamage, updateSaleDeliveryStatus, updateSalePayment, completeSalePayment, saveBusinessSettings, saveBusinessProfile, saveCategoryPrices, createCategory }),
+    [state, refresh, createBale, updateBale, archiveBale, createExpense, updateExpense, saveMonthlyExpense, setMonthlyExpenseActive, createCustomer, updateCustomer, registerSale, updateSaleOrder, registerDamage, updateSaleDeliveryStatus, updateSalePayment, completeSalePayment, saveBusinessSettings, saveBusinessProfile, saveCategoryPrices, createCategory],
   )
   return <PacaDataContext.Provider value={value}>{children}</PacaDataContext.Provider>
 }
 
 function emptyData() {
-  return { categories: [], bales: [], sales: [], customers: [], expenses: [], monthlyExpenses: [], baleOtherExpenses: [], damagedProducts: [], dailySummaries: [], baleInventory: [], settings: { ...defaultBusinessSettings, dashboardKpis: [...defaultBusinessSettings.dashboardKpis] } }
+  return { businessProfile: null, businessTemplates: [], categories: [], bales: [], sales: [], customers: [], expenses: [], monthlyExpenses: [], baleOtherExpenses: [], damagedProducts: [], dailySummaries: [], baleInventory: [], settings: { ...defaultBusinessSettings, dashboardKpis: [...defaultBusinessSettings.dashboardKpis] } }
 }
 
 export function usePacaData() {

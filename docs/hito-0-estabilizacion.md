@@ -13,7 +13,7 @@ cuentas, datos o configuración.
 | `npm test` | 108 pruebas aprobadas, 0 fallos |
 | `npm run test:ui` | Recorrido móvil simulado aprobado |
 | `npm run build` | Compilación de producción aprobada |
-| Paridad de migraciones | 30 archivos y 30 incluidos en `install_staging.sql` |
+| Paridad de migraciones | 31 archivos y 31 incluidos en `install_staging.sql` |
 | Instalación vacía | Aprobada mediante PGlite |
 | Reejecución del instalador | Rechazada sin alterar datos, según prueba |
 | Fallo al final del instalador | Transacción revertida por completo, según prueba |
