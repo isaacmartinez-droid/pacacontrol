@@ -61,11 +61,15 @@ de todo el vocabulario y el asistente a pantalla completa corresponden al Hito 3
 - prueba móvil de lectura y guardado en `/ajustes`;
 - compilación de producción aprobada.
 
-## Despliegue pendiente
+## Verificación remota
 
-1. Aplicar la migración en staging.
-2. Ejecutar `audit_hito0.sql`; ahora debe devolver 22 comprobaciones en `true`.
-3. Probar `/ajustes` con una cuenta existente y confirmar que aparecen su nombre,
-   plantilla heredada y categorías sin cambios.
-4. Cuando staging sea aprobado, aplicar y auditar producción.
-5. Publicar el frontend compatible.
+- La migración fue aplicada en staging y producción.
+- `audit_hito0.sql` devolvió 22 comprobaciones en `true`.
+- PostgREST expone `business_templates` y `business_profiles` como recursos
+  protegidos en ambos entornos.
+- `/ajustes` fue probado con una cuenta existente en staging: conservó su
+  plantilla heredada y sus categorías, y permitió guardar la identidad del
+  negocio.
+
+Solo queda publicar y comprobar el frontend compatible en producción para
+cerrar el hito.
