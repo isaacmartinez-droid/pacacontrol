@@ -61,7 +61,7 @@ de todo el vocabulario y el asistente a pantalla completa corresponden al Hito 3
 - prueba móvil de lectura y guardado en `/ajustes`;
 - compilación de producción aprobada.
 
-## Verificación remota
+## Verificación remota y cierre
 
 - La migración fue aplicada en staging y producción.
 - `audit_hito0.sql` devolvió 22 comprobaciones en `true`.
@@ -70,6 +70,8 @@ de todo el vocabulario y el asistente a pantalla completa corresponden al Hito 3
 - `/ajustes` fue probado con una cuenta existente en staging: conservó su
   plantilla heredada y sus categorías, y permitió guardar la identidad del
   negocio.
+- El frontend compatible fue publicado en producción y la ruta pública
+  `/ajustes` respondió correctamente con el nuevo paquete.
 
-Solo queda publicar y comprobar el frontend compatible en producción para
-cerrar el hito.
+El Hito 2 quedó cerrado el 18 de septiembre de 2026. El asistente visual para
+cuentas nuevas y la aplicación completa del vocabulario pertenecen al Hito 3.

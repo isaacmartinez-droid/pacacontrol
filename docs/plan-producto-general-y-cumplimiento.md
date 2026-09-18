@@ -59,11 +59,11 @@ la migración o configuración correspondiente ya esté aplicada en producción.
 | Archivo de compras/lotes | Pruebas locales aprobadas | Comprobar historial, alertas y reactivación remotos |
 | Avisos visibles dentro de la aplicación | Pruebas locales aprobadas | Prueba cruzada en dispositivos reales |
 | Push con la aplicación cerrada | Configuración pública detectada | Tarea programada y prueba real en dispositivos |
-| Centro formal de Ajustes | Esquema remoto y pantalla en staging aprobados | Publicar y comprobar el frontend en producción |
+| Centro formal de Ajustes | Hito 2 cerrado y verificado en producción | Ninguna |
 | Detalle de otros gastos de compra | Hito 1 cerrado y verificado en producción | Ninguna |
 | Códigos de prueba y campañas | Pendiente | Diseño seguro, administración y reglas legales |
 | Avisos de vencimiento de prueba | Pendiente | Depende de campañas y vigencia de cuenta |
-| Perfil y asistente de negocio | Perfil, plantillas y estado reanudable verificados en staging y producción | Publicar el frontend; asistente visual corresponde al Hito 3 |
+| Perfil y asistente de negocio | Fundamento del perfil cerrado y verificado en producción | Construir el asistente visual en el Hito 3 |
 | Documentos legales definitivos | Investigación iniciada | Dependen de identidad y modelo comercial definitivos |
 
 ### Hito 0. Cerrar la estabilización actual
