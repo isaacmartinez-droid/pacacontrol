@@ -63,7 +63,8 @@ la migración o configuración correspondiente ya esté aplicada en producción.
 | Detalle de otros gastos de compra | Hito 1 cerrado y verificado en producción | Ninguna |
 | Códigos de prueba y campañas | Pendiente | Diseño seguro, administración y reglas legales |
 | Avisos de vencimiento de prueba | Pendiente | Depende de campañas y vigencia de cuenta |
-| Perfil y asistente de negocio | Hito 3 aprobado con cuentas nueva y existente en staging | Aplicar migración y desplegar en producción |
+| Perfil y asistente de negocio | Hito 3 desplegado en producción | Recorrido autenticado final en producción |
+| Portal administrativo independiente | Dos compilaciones y fronteras por rol verificadas localmente | Crear segundo proyecto de Vercel y validar ambos dominios |
 | Documentos legales definitivos | Investigación iniciada | Dependen de identidad y modelo comercial definitivos |
 
 ### Hito 0. Cerrar la estabilización actual
@@ -134,6 +135,25 @@ ropa o pacas, mientras una cuenta existente conserva su forma de trabajo.
 
 La implementación y el procedimiento de verificación se registran en
 [`docs/hito-3-asistente-experiencia-neutral.md`](hito-3-asistente-experiencia-neutral.md).
+
+### Hito 3.5. Separar el portal administrativo
+
+Antes de implementar campañas y códigos de prueba:
+
+1. retirar la consola administrativa del paquete comercial;
+2. crear una aplicación administrativa con login y compilación propios;
+3. mantener una sola base con autorización por rol en PostgreSQL;
+4. desplegar ambas aplicaciones como proyectos independientes;
+5. derivar las cuentas internas al dominio administrativo;
+6. comprobar que los clientes no pueden cargar la consola y que el portal no
+   consulta datos operativos de un negocio.
+
+Condición de salida: clientes y administradores usan aplicaciones, dominios y
+paquetes diferentes, sin duplicar identidades ni debilitar la autorización del
+servidor.
+
+La arquitectura y el procedimiento de despliegue se registran en
+[`docs/portal-administrativo-separado.md`](portal-administrativo-separado.md).
 
 ### Hito 4. Identidad y acceso comercial
 

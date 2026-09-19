@@ -56,10 +56,11 @@ let baleRegistrationBody
 let saleRegistrationBody
 let onboardingDraftCalls = 0
 let onboardingCompletionBody
+let accountRole = 'owner'
 
 const server = spawn(process.execPath, [fileURLToPath(new URL('../node_modules/vite/bin/vite.js', import.meta.url)), '--host', '127.0.0.1', '--port', '5179', '--strictPort'], {
   cwd: fileURLToPath(new URL('../', import.meta.url)), windowsHide: true, stdio: 'pipe',
-  env: { ...process.env, VITE_SUPABASE_URL: 'https://paca-ui-test.supabase.co', VITE_SUPABASE_PUBLISHABLE_KEY: 'test-public-key', VITE_ALLOW_PUBLIC_SIGNUP: 'true', VITE_SIGNUP_ACCESS_CODE: 'obsolete-test-value' },
+  env: { ...process.env, VITE_SUPABASE_URL: 'https://paca-ui-test.supabase.co', VITE_SUPABASE_PUBLISHABLE_KEY: 'test-public-key', VITE_ADMIN_APP_URL: 'https://admin-ui-test.example', VITE_ALLOW_PUBLIC_SIGNUP: 'true', VITE_SIGNUP_ACCESS_CODE: 'obsolete-test-value' },
 })
 let serverOutput = ''
 server.stdout.on('data', (data) => { serverOutput += data })
@@ -91,7 +92,7 @@ try {
     const method = request.method()
     const body = method === 'GET' ? null : request.postDataJSON()
     let result = []
-    if (table === 'profiles') result = [{ id: owner, display_name: 'Isaac', account_role: 'owner', access_status: 'active', service_plan: 'trial', legal_terms_version: LEGAL_TERMS_VERSION, privacy_version: PRIVACY_VERSION, terms_accepted_at: soldAt, privacy_accepted_at: soldAt }]
+    if (table === 'profiles') result = [{ id: owner, display_name: 'Isaac', account_role: accountRole, access_status: 'active', service_plan: accountRole === 'admin' ? 'internal' : 'trial', legal_terms_version: LEGAL_TERMS_VERSION, privacy_version: PRIVACY_VERSION, terms_accepted_at: soldAt, privacy_accepted_at: soldAt }]
     else if (table === 'business_profiles') result = [businessProfile]
     else if (table === 'business_templates') result = businessTemplates
     else if (table === 'update_business_profile') {
@@ -216,6 +217,7 @@ try {
     await route.fulfill({ status: 200, contentType: 'application/json', headers: Array.isArray(result) ? { 'content-range': '0-' + Math.max(0, result.length - 1) + '/' + result.length } : {}, body: JSON.stringify(result) })
   })
   await page.route('**/api/**', (route) => route.fulfill({ status: 200, contentType: 'application/json', body: '{}' }))
+  await page.route('https://admin-ui-test.example/**', (route) => route.fulfill({ status: 200, contentType: 'text/html', body: '<h1>Portal administrativo separado</h1>' }))
 
   await page.goto(origin)
   await page.getByRole('heading', { name: 'Tu resumen' }).waitFor()
@@ -493,6 +495,17 @@ try {
   assert.equal(await guest.getByRole('button', { name: /Crear.*cuenta/ }).count(), 0)
   await guest.close()
   console.log('OK: registro publico permanece cerrado aunque existan variables VITE antiguas.')
+
+  await page.goto(origin + '/admin')
+  await page.getByRole('heading', { name: 'Esta pantalla no existe', exact: true }).waitFor()
+  assert.equal(await page.getByRole('heading', { name: 'Panel admin', exact: true }).count(), 0)
+
+  accountRole = 'admin'
+  await page.reload()
+  await page.waitForURL('https://admin-ui-test.example/')
+  await page.getByRole('heading', { name: 'Portal administrativo separado', exact: true }).waitFor()
+  assert.deepEqual(errors, [])
+  console.log('OK: la app comercial no contiene /admin y deriva cuentas internas al portal independiente.')
 } finally {
   await browser?.close()
   server.kill()

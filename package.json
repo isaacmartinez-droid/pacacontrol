@@ -5,13 +5,16 @@
   "type": "module",
   "scripts": {
     "push:keys": "node scripts/push-keys.js",
-    "test": "node --test src/lib/devicePush.test.js src/utils/alerts.test.js src/utils/alertBanners.test.js src/utils/businessLocale.test.js src/utils/businessProfile.test.js src/utils/businessOnboarding.test.js src/utils/businessSettings.test.js src/utils/recordedPreferences.test.js src/utils/dashboardFinancials.test.js src/utils/baleFinancials.test.js src/utils/cashReconciliation.test.js src/utils/pricing.test.js server/push.test.js tests/service-worker.test.js tests/business-records.postgres.test.js tests/security.postgres.test.js tests/staging-setup.test.js",
+    "test": "node --test src/lib/devicePush.test.js src/utils/alerts.test.js src/utils/alertBanners.test.js src/utils/businessLocale.test.js src/utils/businessProfile.test.js src/utils/businessOnboarding.test.js src/utils/businessSettings.test.js src/utils/portalUrl.test.js src/utils/recordedPreferences.test.js src/utils/dashboardFinancials.test.js src/utils/baleFinancials.test.js src/utils/cashReconciliation.test.js src/utils/pricing.test.js server/push.test.js tests/service-worker.test.js tests/business-records.postgres.test.js tests/security.postgres.test.js tests/staging-setup.test.js",
     "audit:production": "node scripts/production-preflight.mjs",
     "audit:staging": "node scripts/production-preflight.mjs --staging",
     "dev": "vite",
     "dev:staging": "vite --mode staging --host 127.0.0.1 --port 5174 --strictPort",
-    "test:ui": "node tests/business-ui.smoke.mjs",
+    "test:ui": "node tests/business-ui.smoke.mjs && node tests/admin-ui.smoke.mjs",
     "build": "vite build",
+    "build:admin": "vite build --config vite.admin.config.js",
+    "dev:admin": "vite --config vite.admin.config.js --host 127.0.0.1 --port 5175 --strictPort",
+    "dev:admin:staging": "vite --config vite.admin.config.js --mode staging --host 127.0.0.1 --port 5175 --strictPort",
     "preview": "vite preview"
   },
   "devDependencies": {

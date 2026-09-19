@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Ban, BellRing, CheckCircle2, CircleAlert, LoaderCircle, LogOut, RefreshCw, Save, Search, ShieldCheck, UsersRound } from 'lucide-react'
-import { useAuth } from '../context/AuthContext'
-import { getSupabaseClient } from '../lib/supabaseClient'
-import { formatCurrency } from '../utils/currency'
+import { useAuth } from '../../src/context/AuthContext'
+import { getSupabaseClient } from '../../src/lib/supabaseClient'
+import { formatCurrency } from '../../src/utils/currency'
 
 const accessOptions = [
   { id: 'active', label: 'Activa' },
