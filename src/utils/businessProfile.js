@@ -44,3 +44,22 @@ export function mapBusinessTemplate(row) {
     vocabulary: normalizeBusinessVocabulary(row.config?.vocabulary),
   }
 }
+
+function lowerInitial(value) {
+  return value ? value.charAt(0).toLocaleLowerCase('es') + value.slice(1) : value
+}
+
+export function getBusinessTerms(profile = null) {
+  const vocabulary = normalizeBusinessVocabulary(profile?.vocabulary ?? profile ?? defaultBusinessVocabulary)
+  return {
+    ...vocabulary,
+    purchaseSingularLower: lowerInitial(vocabulary.purchaseSingular),
+    purchasePluralLower: lowerInitial(vocabulary.purchasePlural),
+    inventoryUnitSingularLower: lowerInitial(vocabulary.inventoryUnitSingular),
+    inventoryUnitPluralLower: lowerInitial(vocabulary.inventoryUnitPlural),
+  }
+}
+
+export function inventoryQuantityLabel(quantity, terms) {
+  return quantity === 1 ? terms.inventoryUnitSingularLower : terms.inventoryUnitPluralLower
+}

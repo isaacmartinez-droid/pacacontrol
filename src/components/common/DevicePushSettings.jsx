@@ -105,7 +105,7 @@ export default function DevicePushSettings() {
       {!availability.supported ? <p className="mt-3 text-sm leading-6 text-slate-600">{availability.reason || 'Comprobando compatibilidad…'}</p> : (
         <>
           {config === null && <p role="status" className="mt-3 text-sm text-slate-600">Comprobando el servicio de avisos…</p>}
-          {config && !config.configured && <p role="status" className="mt-3 text-sm text-amber-800">Los avisos fuera de la aplicación todavía no están habilitados para esta tienda. Las alertas de la campana siguen disponibles.</p>}
+          {config && !config.configured && <p role="status" className="mt-3 text-sm text-amber-800">Los avisos fuera de la aplicación todavía no están habilitados para este negocio. Las alertas de la campana siguen disponibles.</p>}
           {config?.reason === 'server-configuration' && <p className="mt-2 text-xs text-amber-800">Falta completar la configuración privada de envío en el servidor. Conceder permiso al teléfono no basta.</p>}
           {config?.reason === 'database-configuration' && <p className="mt-2 text-xs text-amber-800">El servidor no pudo consultar el estado de envíos. Revisa las tablas y permisos de push en Supabase.</p>}
           {configError && <p role="alert" className="mt-3 text-sm text-amber-800">{configError}</p>}

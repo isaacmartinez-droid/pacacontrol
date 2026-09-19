@@ -4,9 +4,9 @@ export const dashboardKpiOptions = [
   { id: 'netResult', label: 'Ganancia o pérdida neta' },
   { id: 'collected', label: 'Dinero cobrado' },
   { id: 'receivables', label: 'Dinero por cobrar' },
-  { id: 'baleInvestment', label: 'Inversión de la paca seleccionada' },
-  { id: 'baleInvestmentRemaining', label: 'Inversión por recuperar de esta paca' },
-  { id: 'baleCollected', label: 'Cobrado de prendas de esta paca' },
+  { id: 'baleInvestment', label: 'Inversión de la compra seleccionada' },
+  { id: 'baleInvestmentRemaining', label: 'Inversión por recuperar de esta compra' },
+  { id: 'baleCollected', label: 'Cobrado de productos de esta compra' },
   { id: 'inventoryValue', label: 'Valor del inventario disponible' },
   { id: 'operatingExpenses', label: 'Gastos del negocio' },
   { id: 'monthlyExpenseReserve', label: 'Reserva mensual para gastos' },
@@ -14,9 +14,22 @@ export const dashboardKpiOptions = [
   { id: 'cashCollected', label: 'Cobros en efectivo' },
   { id: 'transferCollected', label: 'Cobros por transferencia' },
   { id: 'pendingDeliveries', label: 'Entregas pendientes' },
-  { id: 'availablePieces', label: 'Piezas disponibles' },
-  { id: 'damagedPieces', label: 'Piezas dañadas' },
+  { id: 'availablePieces', label: 'Productos disponibles' },
+  { id: 'damagedPieces', label: 'Productos dañados' },
 ]
+
+export function getDashboardKpiOptions(terms) {
+  return dashboardKpiOptions.map((option) => ({
+    ...option,
+    label: ({
+      baleInvestment: `Inversión de la ${terms.purchaseSingularLower} seleccionada`,
+      baleInvestmentRemaining: `Inversión por recuperar de esta ${terms.purchaseSingularLower}`,
+      baleCollected: `Cobrado de ${terms.inventoryUnitPluralLower} de esta ${terms.purchaseSingularLower}`,
+      availablePieces: `${terms.inventoryUnitPlural} disponibles`,
+      damagedPieces: `${terms.inventoryUnitPlural} con daños`,
+    })[option.id] ?? option.label,
+  }))
+}
 
 const validKpiIds = new Set(dashboardKpiOptions.map((option) => option.id))
 const validPeriods = new Set(['today', 'week', 'month'])

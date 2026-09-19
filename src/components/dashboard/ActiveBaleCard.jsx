@@ -8,8 +8,12 @@ import {
 import { formatCurrency } from '../../utils/currency'
 import { formatShortDate } from '../../utils/dates'
 import { calculateBaleFinancials } from '../../utils/baleFinancials'
+import { usePacaData } from '../../context/PacaDataContext'
+import { getBusinessTerms } from '../../utils/businessProfile'
 
 function ActiveBaleCard({ bale }) {
+  const { data } = usePacaData()
+  const terms = getBusinessTerms(data.businessProfile)
   const availablePieces = getAvailablePieces(bale)
   const soldPercentage = Math.round(getSoldPercentage(bale))
   const financials = calculateBaleFinancials(bale)
@@ -30,7 +34,7 @@ function ActiveBaleCard({ bale }) {
             </div>
             <p className="mt-1 flex items-center gap-1.5 text-xs text-slate-500">
               <CalendarDays aria-hidden="true" size={13} />
-              Comprada el {formatShortDate(bale.purchaseDate)}
+              Registro: {formatShortDate(bale.purchaseDate)}
             </p>
           </div>
         </div>
@@ -44,7 +48,7 @@ function ActiveBaleCard({ bale }) {
           </p>
         </div>
         <div className="bg-white px-5 py-4">
-          <p className="text-xs font-medium text-slate-500">Cobrado de prendas</p>
+          <p className="text-xs font-medium text-slate-500">Cobrado de {terms.inventoryUnitPluralLower}</p>
           <p className="mt-1 text-lg font-extrabold text-emerald-700">
             {formatCurrency(financials.collected)}
           </p>
@@ -55,7 +59,7 @@ function ActiveBaleCard({ bale }) {
         <div className="mb-5 rounded-2xl bg-brand-50 p-4">
           <p className="text-xs font-semibold text-brand-800">Inversión pendiente de recuperar</p>
           <p className="mt-1 text-xl font-extrabold text-brand-950">{formatCurrency(financials.investmentRemaining)}</p>
-          <p className="mt-1 text-xs text-slate-500">Ventas: {formatCurrency(financials.revenue)} · por cobrar de prendas: {formatCurrency(financials.pending)}</p>
+          <p className="mt-1 text-xs text-slate-500">Ventas: {formatCurrency(financials.revenue)} · por cobrar: {formatCurrency(financials.pending)}</p>
         </div>
         <div className="bale-piece-grid grid gap-2 text-center">
           <PieceCount label="Recibidas" value={bale.receivedPieces} />
@@ -73,7 +77,7 @@ function ActiveBaleCard({ bale }) {
             className="bale-progress block"
             value={soldPercentage}
             max="100"
-            aria-label={`${soldPercentage}% de la paca vendida`}
+            aria-label={`${soldPercentage}% vendido de ${terms.purchaseSingularLower}`}
           />
         </div>
 

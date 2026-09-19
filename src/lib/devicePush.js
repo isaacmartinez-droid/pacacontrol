@@ -7,7 +7,7 @@ export function pushAvailability() {
   const installed = window.matchMedia('(display-mode: standalone)').matches || navigator.standalone === true
   if (isAppleMobile && !installed) return {
     supported: false,
-    reason: 'En iPhone o iPad, usa Compartir → Añadir a pantalla de inicio. Abre Tienda J&F desde ese icono y activa los avisos allí. Requiere iOS/iPadOS 16.4 o posterior.',
+    reason: 'En iPhone o iPad, usa Compartir → Añadir a pantalla de inicio. Abre la aplicación desde ese icono y activa los avisos allí. Requiere iOS/iPadOS 16.4 o posterior.',
   }
   if (!window.isSecureContext || !('serviceWorker' in navigator) || !('PushManager' in window) || !('Notification' in window)) {
     return { supported: false, reason: 'Este navegador no permite notificaciones push. Abre la aplicación con HTTPS en un navegador compatible.' }
@@ -25,7 +25,7 @@ export async function testLocalDeviceNotification() {
   }
   await navigator.serviceWorker.register('/sw.js')
   const registration = await navigator.serviceWorker.ready
-  await registration.showNotification('Tienda J&F', {
+  await registration.showNotification('Avisos del negocio', {
     body: 'Prueba local: este dispositivo tiene permiso para mostrar avisos.',
     icon: '/icons/icon-192.png', badge: '/icons/badge-96.png',
     tag: 'pacacontrol-prueba-local', renotify: true, data: { url: '/alertas' },

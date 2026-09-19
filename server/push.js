@@ -2,6 +2,7 @@ import { createECDH, timingSafeEqual } from 'node:crypto'
 import { createClient } from '@supabase/supabase-js'
 import webpush from 'web-push'
 import { buildAlerts, normalizeAlertSettings, reconcileAlertReads } from '../src/utils/alerts.js'
+import { getBusinessTerms } from '../src/utils/businessProfile.js'
 
 export function validVapidKeyPair(publicKey, privateKey) {
   try {
@@ -50,13 +51,15 @@ export function validPushEndpoint(endpoint) {
 }
 
 export function makePushPlan(data, subscription, now = Date.now()) {
+  const terms = getBusinessTerms(data.businessProfile)
   const alerts = buildAlerts(data, normalizeAlertSettings(subscription.settings), now)
   const previous = subscription.notified ?? {}
   const notified = reconcileAlertReads(previous, alerts)
   const fresh = alerts.filter((alert) => notified[alert.id] !== alert.revision)
   for (const alert of fresh) notified[alert.id] = alert.revision
   return { notified, payloads: fresh.map((alert) => ({
-    title: ({ debt: 'Cobro pendiente', stock: 'Inventario bajo', delivery: 'Entrega pendiente', damage: 'Daños elevados', bale: 'Paca agotada' })[alert.type] || 'Tienda J&F',
+    title: ({ debt: 'Cobro pendiente', stock: 'Inventario bajo', delivery: 'Entrega pendiente', damage: 'Daños elevados', bale: `${terms.purchaseSingular} sin existencias` })[alert.type]
+      || data.businessProfile?.businessName || 'Alerta del negocio',
     body: alert.type === 'debt'
       ? 'Un cliente tiene un pago pendiente desde hace más de 24 horas. Abre la aplicación para revisar el historial.'
       : 'Una alerta necesita tu atención. Abre la aplicación para revisar los detalles.',
@@ -88,12 +91,14 @@ async function allRows(query, deadline) {
 }
 
 export async function loadOwnerAlertsData(admin, ownerId, deadline) {
-  const [categories, bales, sales] = await Promise.all([
+  const [categories, bales, sales, profiles] = await Promise.all([
     allRows(() => admin.from('inventory_summary').select('category_id,name,received_pieces,available_pieces').eq('owner_id', ownerId).order('category_id'), deadline),
     allRows(() => admin.from('bale_summary').select('id,code,received_pieces,sold_pieces,damaged_pieces,available_pieces,archived_at').eq('owner_id', ownerId).order('id'), deadline),
     allRows(() => admin.from('sales').select('*,customer:customers(name),sale_items(sale_item_allocations(inventory:bale_inventory(bale:bales(archived_at))))').eq('owner_id', ownerId).not('customer_id', 'is', null).order('id'), deadline),
+    allRows(() => admin.from('business_profiles').select('business_name,vocabulary').eq('owner_id', ownerId).order('owner_id'), deadline),
   ])
   return {
+    businessProfile: profiles[0] ? { businessName: profiles[0].business_name ?? '', vocabulary: profiles[0].vocabulary } : null,
     categories: categories.map((row) => ({ id: row.category_id, name: row.name, receivedPieces: row.received_pieces, availablePieces: row.available_pieces })),
     bales: bales.map((row) => ({ id: row.id, code: row.code, isArchived: Boolean(row.archived_at), receivedPieces: row.received_pieces, soldPieces: row.sold_pieces, damagedPieces: row.damaged_pieces, availablePieces: row.available_pieces })),
     sales: sales.map((row) => ({ id: row.id, customerId: row.customer_id, customerName: row.customer?.name ?? 'Cliente', soldAt: row.sold_at,

@@ -1,5 +1,6 @@
-import { Navigate, Route, Routes } from 'react-router-dom'
+import { Navigate, Outlet, Route, Routes } from 'react-router-dom'
 import ProtectedRoute from './components/auth/ProtectedRoute'
+import BusinessOnboardingGate from './components/auth/BusinessOnboardingGate'
 import AppShell from './components/layout/AppShell'
 import { AlertsProvider } from './context/AlertsContext'
 import { useAuth } from './context/AuthContext'
@@ -26,22 +27,25 @@ import SalesPage from './pages/SalesPage'
 import AlertsPage from './pages/AlertsPage'
 import BusinessPreferencesPage from './pages/BusinessPreferencesPage'
 import SettingsPage from './pages/SettingsPage'
+import BusinessOnboardingPage from './pages/BusinessOnboardingPage'
 import EditBalePage from './pages/EditBalePage'
 import EditCustomerPage from './pages/EditCustomerPage'
 import EditSalePage from './pages/EditSalePage'
 
-function StoreShell() {
+function StoreDataShell() {
   const { isAdmin } = useAuth()
 
   if (isAdmin) return <Navigate to="/admin" replace />
 
   return (
     <PacaDataProvider>
-      <AlertsProvider>
-        <AppShell />
-      </AlertsProvider>
+      <Outlet />
     </PacaDataProvider>
   )
+}
+
+function StoreShell() {
+  return <AlertsProvider><AppShell /></AlertsProvider>
 }
 
 function App() {
@@ -51,29 +55,34 @@ function App() {
       <Route path="legal" element={<LegalPage />} />
       <Route element={<ProtectedRoute />}>
         <Route path="admin" element={<AdminPage />} />
-        <Route element={<StoreShell />}>
-          <Route index element={<DashboardPage />} />
-          <Route path="pacas" element={<BalesPage />} />
-          <Route path="pacas/nueva" element={<NewBalePage />} />
-          <Route path="pacas/:baleId/editar" element={<EditBalePage />} />
-          <Route path="inventario" element={<InventoryPage />} />
-          <Route path="ventas/nueva" element={<NewSalePage />} />
-          <Route path="ventas/:saleId/editar" element={<EditSalePage />} />
-          <Route path="ventas" element={<SalesPage />} />
-          <Route path="clientes/nuevo" element={<NewCustomerPage />} />
-          <Route path="clientes" element={<CustomersPage />} />
-          <Route path="clientes/:customerId" element={<CustomerDetailPage />} />
-          <Route path="clientes/:customerId/editar" element={<EditCustomerPage />} />
-          <Route path="gastos" element={<ExpensesPage />} />
-          <Route path="caja" element={<CashReconciliationPage />} />
-          <Route path="historial" element={<HistoryPage />} />
-          <Route path="productos-danados" element={<DamagedProductsPage />} />
-          <Route path="reportes" element={<ReportsPage />} />
-          <Route path="mas" element={<MorePage />} />
-          <Route path="alertas" element={<AlertsPage />} />
-          <Route path="preferencias" element={<BusinessPreferencesPage />} />
-          <Route path="ajustes" element={<SettingsPage />} />
-          <Route path="*" element={<NotFoundPage />} />
+        <Route element={<StoreDataShell />}>
+          <Route path="configurar-negocio" element={<BusinessOnboardingPage />} />
+          <Route element={<BusinessOnboardingGate />}>
+            <Route element={<StoreShell />}>
+              <Route index element={<DashboardPage />} />
+              <Route path="pacas" element={<BalesPage />} />
+              <Route path="pacas/nueva" element={<NewBalePage />} />
+              <Route path="pacas/:baleId/editar" element={<EditBalePage />} />
+              <Route path="inventario" element={<InventoryPage />} />
+              <Route path="ventas/nueva" element={<NewSalePage />} />
+              <Route path="ventas/:saleId/editar" element={<EditSalePage />} />
+              <Route path="ventas" element={<SalesPage />} />
+              <Route path="clientes/nuevo" element={<NewCustomerPage />} />
+              <Route path="clientes" element={<CustomersPage />} />
+              <Route path="clientes/:customerId" element={<CustomerDetailPage />} />
+              <Route path="clientes/:customerId/editar" element={<EditCustomerPage />} />
+              <Route path="gastos" element={<ExpensesPage />} />
+              <Route path="caja" element={<CashReconciliationPage />} />
+              <Route path="historial" element={<HistoryPage />} />
+              <Route path="productos-danados" element={<DamagedProductsPage />} />
+              <Route path="reportes" element={<ReportsPage />} />
+              <Route path="mas" element={<MorePage />} />
+              <Route path="alertas" element={<AlertsPage />} />
+              <Route path="preferencias" element={<BusinessPreferencesPage />} />
+              <Route path="ajustes" element={<SettingsPage />} />
+              <Route path="*" element={<NotFoundPage />} />
+            </Route>
+          </Route>
         </Route>
       </Route>
     </Routes>

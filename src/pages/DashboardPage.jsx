@@ -25,6 +25,7 @@ import { useAuth } from '../context/AuthContext'
 import { usePacaData } from '../context/PacaDataContext'
 import { calculateDashboardFinancials } from '../utils/dashboardFinancials'
 import { calculateBaleFinancials, getActiveBale, getBaleSales } from '../utils/baleFinancials'
+import { getBusinessTerms } from '../utils/businessProfile'
 
 const dashboardPeriods = [
   { id: 'today', label: 'Hoy', resultSuffix: 'de hoy', collectedSuffix: 'hoy' },
@@ -40,6 +41,7 @@ function DashboardPage() {
   const [currentHour, setCurrentHour] = useState(() => getBusinessHour())
   const firstName = getFirstName(user)
   const greeting = getGreeting(currentHour)
+  const terms = getBusinessTerms(data.businessProfile)
 
   useEffect(() => {
     const timer = window.setInterval(() => setCurrentHour(getBusinessHour()), 60_000)
@@ -67,16 +69,16 @@ function DashboardPage() {
       icon: hasProfit ? TrendingUp : TriangleAlert,
       label: `${hasProfit ? 'Ganancia neta' : 'Pérdida neta'} ${period.resultSuffix}`,
       value: formatCurrency(Math.abs(financials.netResult)),
-      detail: 'Después de prendas, delivery y gastos', badge: 'Estimado', tone: hasProfit ? 'positive' : 'warning',
+      detail: `Después de ${terms.inventoryUnitPluralLower}, delivery y gastos`, badge: 'Estimado', tone: hasProfit ? 'positive' : 'warning',
     },
     collected: {
       icon: CircleDollarSign, label: `Dinero cobrado ${period.collectedSuffix}`, value: formatCurrency(financials.collected),
       detail: financials.receivables > 0 ? `Por cobrar: ${formatCurrency(financials.receivables)}` : 'Sin saldos pendientes', badge: 'Cobros', tone: financials.receivables > 0 ? 'warning' : 'positive',
     },
     receivables: { icon: HandCoins, label: 'Dinero por cobrar', value: formatCurrency(financials.receivables), detail: financials.receivables > 0 ? 'Saldos pendientes de clientes' : 'Sin saldos pendientes', badge: 'Pendiente', tone: financials.receivables > 0 ? 'warning' : 'positive', to: '/clientes' },
-    baleInvestment: { icon: WalletCards, label: 'Inversión de esta paca', value: formatCurrency(financials.baleInvestment), detail: activeBale ? `${activeBale.code} · faltan ${formatCurrency(baleFinancials.investmentRemaining)}` : 'Sin paca activa', badge: 'Capital', tone: 'neutral', to: activeBale ? `/pacas?paca=${activeBale.id}` : '/pacas' },
-    baleInvestmentRemaining: { icon: WalletCards, label: 'Inversión por recuperar', value: formatCurrency(baleFinancials?.investmentRemaining), detail: activeBale?.code ?? 'Sin paca activa', badge: 'Recuperar', tone: 'neutral', to: activeBale ? `/pacas?paca=${activeBale.id}` : '/pacas' },
-    baleCollected: { icon: CircleDollarSign, label: 'Cobrado de esta paca', value: formatCurrency(baleFinancials?.collected), detail: activeBale ? `${activeBale.code} · solo prendas, sin delivery` : 'Sin paca activa', badge: 'Paca', tone: 'positive', to: activeBale ? `/pacas?paca=${activeBale.id}` : '/pacas' },
+    baleInvestment: { icon: WalletCards, label: `Inversión de esta ${terms.purchaseSingularLower}`, value: formatCurrency(financials.baleInvestment), detail: activeBale ? `${activeBale.code} · faltan ${formatCurrency(baleFinancials.investmentRemaining)}` : 'Sin registro activo', badge: 'Capital', tone: 'neutral', to: activeBale ? `/pacas?paca=${activeBale.id}` : '/pacas' },
+    baleInvestmentRemaining: { icon: WalletCards, label: 'Inversión por recuperar', value: formatCurrency(baleFinancials?.investmentRemaining), detail: activeBale?.code ?? 'Sin registro activo', badge: 'Recuperar', tone: 'neutral', to: activeBale ? `/pacas?paca=${activeBale.id}` : '/pacas' },
+    baleCollected: { icon: CircleDollarSign, label: `Cobrado de esta ${terms.purchaseSingularLower}`, value: formatCurrency(baleFinancials?.collected), detail: activeBale ? `${activeBale.code} · sin delivery` : 'Sin registro activo', badge: terms.purchaseSingular, tone: 'positive', to: activeBale ? `/pacas?paca=${activeBale.id}` : '/pacas' },
     inventoryValue: { icon: Boxes, label: 'Valor del inventario disponible', value: formatCurrency(financials.inventoryValue), detail: 'Valor estimado al costo', badge: 'Inventario', tone: 'neutral', to: '/inventario' },
     operatingExpenses: { icon: ReceiptText, label: `Gastos ${period.resultSuffix}`, value: formatCurrency(financials.operatingExpenses), detail: 'Gastos operativos registrados', badge: 'Gastos', tone: 'warning', to: '/gastos' },
     monthlyExpenseReserve: { icon: ReceiptText, label: 'Reserva mensual para gastos', value: formatCurrency(financials.monthlyExpenseReserve), detail: 'Presupuesto, no gasto duplicado', badge: 'Mensual', tone: 'neutral', to: '/gastos' },
@@ -84,15 +86,15 @@ function DashboardPage() {
     cashCollected: { icon: Banknote, label: `Efectivo cobrado ${period.collectedSuffix}`, value: formatCurrency(financials.cashCollected), detail: 'Pagos recibidos en efectivo', badge: 'Efectivo', tone: 'positive' },
     transferCollected: { icon: CircleDollarSign, label: `Transferencias ${period.collectedSuffix}`, value: formatCurrency(financials.transferCollected), detail: 'Pagos recibidos por transferencia', badge: 'Banco', tone: 'positive' },
     pendingDeliveries: { icon: Truck, label: 'Entregas pendientes', value: financials.pendingDeliveries, detail: 'Pedidos aún no entregados', badge: 'Delivery', tone: financials.pendingDeliveries > 0 ? 'warning' : 'positive', to: '/ventas' },
-    availablePieces: { icon: PackageCheck, label: 'Piezas disponibles', value: summary.availablePieces, detail: 'Listas para vender', badge: 'Stock', tone: 'neutral', to: '/inventario' },
-    damagedPieces: { icon: TriangleAlert, label: 'Piezas dañadas', value: summary.damagedPieces, detail: 'Requieren atención', badge: 'Revisar', tone: 'warning', to: '/productos-danados' },
+    availablePieces: { icon: PackageCheck, label: `${terms.inventoryUnitPlural} disponibles`, value: summary.availablePieces, detail: 'En existencia para vender', badge: 'Stock', tone: 'neutral', to: '/inventario' },
+    damagedPieces: { icon: TriangleAlert, label: 'Daños registrados', value: summary.damagedPieces, detail: `${terms.inventoryUnitPlural} que requieren atención`, badge: 'Revisar', tone: 'warning', to: '/productos-danados' },
   }
   const visibleKpis = data.settings.dashboardKpis.map((id) => kpiCards[id]).filter(Boolean).slice(0, 4)
 
   return (
     <div className="min-h-full bg-brand-50">
       <Topbar
-        eyebrow="Mi tienda"
+        eyebrow="Mi negocio"
         title={`${greeting}${firstName ? ` ${firstName}` : ''}`}
         description="Este es el resumen de tu negocio"
       />
@@ -135,15 +137,15 @@ function DashboardPage() {
             {visibleKpis.map((card) => <SummaryCard key={card.label} {...card} />)}
           </div>
           <div className="mt-3 rounded-2xl bg-white p-4 text-sm ring-1 ring-slate-100">
-            <label className="block font-bold text-slate-700">Paca para inversión y recuperación
+            <label className="block font-bold text-slate-700">{terms.purchaseSingular} para inversión y recuperación
               <select value={activeBales.some((bale) => bale.id === selectedBaleId) ? selectedBaleId : ''} onChange={(event) => setSelectedBaleId(event.target.value)} className="sale-input mt-2 max-w-md">
                 {activeBales.length > 0 && <option value="">Automática: {automaticBale?.code} · {automaticBale?.availablePieces > 0 ? 'más antigua con existencias' : 'sin existencias'}</option>}
-                {!activeBales.length && <option value="">Sin paca activa</option>}
+                {!activeBales.length && <option value="">Sin registros activos</option>}
                 {activeBales.map((bale) => <option key={bale.id} value={bale.id}>{bale.code} · {formatCurrency(bale.purchaseCost + bale.acquisitionTransport + bale.otherExpenses)}</option>)}
               </select>
             </label>
-            <p className="mt-2 text-xs text-slate-500">Hoy, semana y mes filtran ganancia, ventas, cobros y gastos por fecha (semana desde el lunes, hora de Nicaragua). Existencias, valor del inventario, daños, saldos y entregas pendientes muestran el estado actual; inversión y recuperación, el acumulado de la paca elegida. La reserva es un presupuesto mensual.</p>
-            <p className="mt-2 text-xs text-slate-500">Los pedidos muestran todo el historial de la paca elegida, sin filtro de fecha. En automática se sigue la más antigua con existencias y, al agotarse, la siguiente; puedes seleccionar otra para consultar sus pedidos.</p>
+            <p className="mt-2 text-xs text-slate-500">Hoy, semana y mes filtran ganancia, ventas, cobros y gastos por fecha (semana desde el lunes, hora de Nicaragua). Existencias, valor del inventario, daños, saldos y entregas pendientes muestran el estado actual; inversión y recuperación, el acumulado del registro elegido. La reserva es un presupuesto mensual.</p>
+            <p className="mt-2 text-xs text-slate-500">Los pedidos muestran todo el historial del registro elegido, sin filtro de fecha. En automática se sigue el más antiguo con existencias y, al agotarse, el siguiente; puedes seleccionar otro para consultar sus pedidos.</p>
           </div>
         </section>
 
@@ -165,7 +167,7 @@ function DashboardPage() {
             <QuickAction
               to="/pacas/nueva"
               icon={Plus}
-              title="Registrar paca"
+              title={`Registrar ${terms.purchaseSingularLower}`}
               description="Nueva inversión"
             />
           </div>
@@ -175,20 +177,20 @@ function DashboardPage() {
           <section aria-labelledby="active-bale-title" key={activeBale?.id}>
             <div className="mb-3">
               <h2 id="active-bale-title" className="text-lg font-extrabold tracking-tight text-slate-900">
-                Paca activa
+                {terms.purchaseSingular} actual
               </h2>
               <p className="mt-0.5 text-xs text-slate-500">Sigue el avance de tu inversión actual</p>
             </div>
-            {activeBale ? <ActiveBaleCard bale={activeBale} /> : <p className="rounded-2xl bg-white p-5 text-sm font-semibold text-slate-500">Aún no has registrado una paca.</p>}
+            {activeBale ? <ActiveBaleCard bale={activeBale} /> : <p className="rounded-2xl bg-white p-5 text-sm font-semibold text-slate-500">Aún no registraste: {terms.purchaseSingularLower}.</p>}
           </section>
 
           <section aria-labelledby="recent-sales-title">
-            <SectionTitle title={`Pedidos de ${activeBale?.code ?? 'esta paca'}`} linkTo={activeBale ? `/ventas?paca=${encodeURIComponent(activeBale.id)}` : '/ventas'} linkLabel="Ver todos" />
+            <SectionTitle title={`Pedidos de ${activeBale?.code ?? terms.purchaseSingularLower}`} linkTo={activeBale ? `/ventas?paca=${encodeURIComponent(activeBale.id)}` : '/ventas'} linkLabel="Ver todos" />
             <div className="mt-3 space-y-2.5">
               {baleSales.map((sale) => (
                 <RecentSaleCard key={sale.id} sale={sale} />
               ))}
-              {!isLoading && baleSales.length === 0 && <p className="rounded-2xl bg-white p-5 text-sm font-semibold text-slate-500">Esta paca aún no tiene pedidos registrados.</p>}
+              {!isLoading && baleSales.length === 0 && <p className="rounded-2xl bg-white p-5 text-sm font-semibold text-slate-500">Este registro aún no tiene pedidos.</p>}
             </div>
           </section>
         </div>

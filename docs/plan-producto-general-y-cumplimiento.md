@@ -1,6 +1,6 @@
 # Plan maestro: producto comercial general, acceso y cumplimiento
 
-Fecha de consolidación: 17 de septiembre de 2026.
+Fecha de consolidación: 18 de septiembre de 2026.
 
 Este documento reúne dos planes acordados previamente y añade la decisión de
 evolucionar el producto hacia una plataforma para comercios en general. El nombre
@@ -63,7 +63,7 @@ la migración o configuración correspondiente ya esté aplicada en producción.
 | Detalle de otros gastos de compra | Hito 1 cerrado y verificado en producción | Ninguna |
 | Códigos de prueba y campañas | Pendiente | Diseño seguro, administración y reglas legales |
 | Avisos de vencimiento de prueba | Pendiente | Depende de campañas y vigencia de cuenta |
-| Perfil y asistente de negocio | Fundamento del perfil cerrado y verificado en producción | Construir el asistente visual en el Hito 3 |
+| Perfil y asistente de negocio | Hito 3 implementado y verificado localmente | Recorrido remoto con una cuenta nueva en staging |
 | Documentos legales definitivos | Investigación iniciada | Dependen de identidad y modelo comercial definitivos |
 
 ### Hito 0. Cerrar la estabilización actual
@@ -131,6 +131,9 @@ La implementación y el procedimiento de verificación se registran en
 
 Condición de salida: una cuenta de tienda general puede completar el flujo sin ver
 ropa o pacas, mientras una cuenta existente conserva su forma de trabajo.
+
+La implementación y el procedimiento de verificación se registran en
+[`docs/hito-3-asistente-experiencia-neutral.md`](hito-3-asistente-experiencia-neutral.md).
 
 ### Hito 4. Identidad y acceso comercial
 

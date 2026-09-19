@@ -2,16 +2,18 @@ import { useEffect, useState } from 'react'
 import { TriangleAlert } from 'lucide-react'
 import PageHeader from '../components/common/PageHeader'
 import { usePacaData } from '../context/PacaDataContext'
+import { getBusinessTerms } from '../utils/businessProfile'
 
 function DamagedProductsPage() {
   const { data, registerDamage } = usePacaData()
+  const terms = getBusinessTerms(data.businessProfile)
   const [showArchived, setShowArchived] = useState(false)
   const damagedProducts = data.damagedProducts.filter((item) => Boolean(item.isArchived) === showArchived)
   const damagedTotal = damagedProducts.reduce((total, item) => total + item.quantity, 0)
   const availableInventory = data.baleInventory.filter((inventory) => inventory.isActive !== false && inventory.availablePieces > 0)
   const [inventoryId, setInventoryId] = useState(availableInventory[0]?.id ?? '')
   const [quantity, setQuantity] = useState(1)
-  const [reason, setReason] = useState('Daño descubierto después de registrar la paca')
+  const [reason, setReason] = useState(`Daño descubierto después de registrar ${terms.purchaseSingularLower}`)
   const [error, setError] = useState('')
   const [saving, setSaving] = useState(false)
 
@@ -21,7 +23,7 @@ function DamagedProductsPage() {
 
   async function handleSubmit(event) {
     event.preventDefault()
-    if (!inventoryId || Number(quantity) < 1 || !reason.trim()) { setError('Selecciona una paca, cantidad y motivo.'); return }
+    if (!inventoryId || Number(quantity) < 1 || !reason.trim()) { setError(`Selecciona ${terms.purchaseSingularLower}, cantidad y motivo.`); return }
     setSaving(true); setError('')
     try { await registerDamage({ baleInventoryId: inventoryId, quantity: Number(quantity), reason }) }
     catch (submitError) { setError(submitError.message || 'No fue posible registrar el daño.') }
@@ -33,11 +35,11 @@ function DamagedProductsPage() {
       <PageHeader
         eyebrow="Mermas"
         title="Productos dañados"
-        description="Consulta las prendas que no pueden venderse y el motivo registrado."
+        description={`Consulta ${terms.inventoryUnitPluralLower} que no pueden venderse y el motivo registrado.`}
         backTo="/mas"
       />
       <div className="page-content grid items-start gap-5 py-5 md:py-8 lg:grid-cols-[minmax(15rem,0.7fr)_minmax(0,1.3fr)] lg:gap-8">
-        <label className="flex items-center gap-2 text-sm font-bold text-slate-600 lg:col-span-2"><input type="checkbox" checked={showArchived} onChange={(event) => setShowArchived(event.target.checked)} />Consultar daños de pacas archivadas</label>
+        <label className="flex items-center gap-2 text-sm font-bold text-slate-600 lg:col-span-2"><input type="checkbox" checked={showArchived} onChange={(event) => setShowArchived(event.target.checked)} />Consultar daños del archivo de {terms.purchasePluralLower}</label>
         <section className="rounded-3xl border border-amber-100 bg-amber-50 p-5">
           <div className="flex items-center gap-3">
             <div className="grid size-11 place-items-center rounded-2xl bg-white text-amber-700 shadow-sm">
@@ -45,16 +47,16 @@ function DamagedProductsPage() {
             </div>
             <div>
               <p className="text-sm font-medium text-amber-800">Total identificado</p>
-              <p className="text-2xl font-extrabold text-amber-950">{damagedTotal} piezas</p>
+              <p className="text-2xl font-extrabold text-amber-950">{damagedTotal} {terms.inventoryUnitPluralLower}</p>
             </div>
           </div>
         </section>
 
         <form onSubmit={handleSubmit} className="rounded-3xl bg-white p-5 shadow-soft ring-1 ring-slate-100 lg:col-span-2">
           <h2 className="text-lg font-extrabold text-slate-900">Registrar daño descubierto</h2>
-          <p className="mt-1 text-sm text-slate-500">Elige la paca física para descontar las piezas correctas.</p>
+          <p className="mt-1 text-sm text-slate-500">Elige el registro de origen para descontar el inventario correcto.</p>
           <div className="mt-4 grid gap-3 sm:grid-cols-3">
-            <label className="text-sm font-bold text-slate-700">Paca<select value={inventoryId} onChange={(event) => setInventoryId(event.target.value)} className="sale-input mt-2">{availableInventory.map((inventory) => <option key={inventory.id} value={inventory.id}>{inventory.baleCode} · {inventory.categoryName} · {inventory.availablePieces} disponibles</option>)}</select></label>
+            <label className="text-sm font-bold text-slate-700">{terms.purchaseSingular}<select value={inventoryId} onChange={(event) => setInventoryId(event.target.value)} className="sale-input mt-2">{availableInventory.map((inventory) => <option key={inventory.id} value={inventory.id}>{inventory.baleCode} · {inventory.categoryName} · {inventory.availablePieces} disponibles</option>)}</select></label>
             <label className="text-sm font-bold text-slate-700">Cantidad<input type="number" min="1" value={quantity} onChange={(event) => setQuantity(event.target.value)} className="sale-input mt-2" /></label>
             <label className="text-sm font-bold text-slate-700">Motivo<input value={reason} onChange={(event) => setReason(event.target.value)} className="sale-input mt-2" /></label>
           </div>

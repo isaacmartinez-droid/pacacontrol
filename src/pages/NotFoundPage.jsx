@@ -8,7 +8,7 @@ function NotFoundPage() {
       <PageHeader
         eyebrow="Página no encontrada"
         title="Esta pantalla no existe"
-        description="La dirección que abriste no pertenece a ningún módulo de Tienda J&F."
+        description="La dirección que abriste no pertenece a ningún módulo de la aplicación."
       />
       <div className="page-content pb-6 pt-16 md:pt-24">
         <div className="mx-auto max-w-2xl">

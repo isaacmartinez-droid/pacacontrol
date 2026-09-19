@@ -1,8 +1,8 @@
 {
   "id": "/",
-  "name": "Tienda J&F",
-  "short_name": "Tienda J&F",
-  "description": "Inventario, ventas y alertas de tu tienda.",
+  "name": "Sistema de ventas",
+  "short_name": "Mis ventas",
+  "description": "Inventario, ventas y alertas de tu negocio.",
   "lang": "es",
   "start_url": "/",
   "scope": "/",

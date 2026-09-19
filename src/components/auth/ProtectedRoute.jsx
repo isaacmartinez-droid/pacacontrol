@@ -21,7 +21,7 @@ function ProtectedRoute() {
   if (isLoading) {
     return (
       <div className="grid min-h-dvh place-items-center bg-brand-50 px-4 text-center text-sm font-bold text-brand-800">
-        Cargando tu tienda…
+        Cargando tu negocio…
       </div>
     )
   }

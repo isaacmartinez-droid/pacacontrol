@@ -1,3 +1,5 @@
+import { getBusinessTerms, inventoryQuantityLabel } from './businessProfile.js'
+
 export const defaultAlertSettings = Object.freeze({
   stockEnabled: true,
   stockLimit: 10,
@@ -23,6 +25,7 @@ export function normalizeAlertSettings(value = {}) {
 
 export function buildAlerts(data, settings = defaultAlertSettings, now = Date.now()) {
   const rules = normalizeAlertSettings(settings)
+  const terms = getBusinessTerms(data.businessProfile)
   const alerts = []
 
   if (rules.stockEnabled) {
@@ -36,8 +39,8 @@ export function buildAlerts(data, settings = defaultAlertSettings, now = Date.no
         type: 'stock',
         priority: empty ? 0 : 2,
         title: empty ? `Sin existencias: ${category.name}` : `Poco inventario: ${category.name}`,
-        description: `${Math.max(0, category.availablePieces)} piezas disponibles. Revisa si necesitas reponer esta categoría.`,
-        detail: `Límite: ${rules.stockLimit} piezas`,
+        description: `${Math.max(0, category.availablePieces)} ${inventoryQuantityLabel(Math.max(0, category.availablePieces), terms)} disponibles. Revisa si necesitas reponer esta categoría.`,
+        detail: `Límite: ${rules.stockLimit} ${inventoryQuantityLabel(rules.stockLimit, terms)}`,
         to: `/inventario?categoria=${encodeURIComponent(category.id)}`,
         action: 'Revisar inventario',
       })
@@ -108,11 +111,11 @@ export function buildAlerts(data, settings = defaultAlertSettings, now = Date.no
           revision: 'exhausted',
           type: 'bale',
           priority: 1,
-          title: `Paca agotada: ${bale.code}`,
-          description: 'Esta paca ya no tiene piezas vendibles. Revisa su resultado antes de abrir otra compra.',
-          detail: `${bale.soldPieces} vendidas · ${bale.damagedPieces || 0} dañadas`,
+          title: `Sin existencias en ${terms.purchaseSingularLower}: ${bale.code}`,
+          description: `Este registro ya no tiene ${terms.inventoryUnitPluralLower} disponibles. Revisa su resultado antes de abrir otra ${terms.purchaseSingularLower}.`,
+          detail: `${bale.soldPieces} vendidos · ${bale.damagedPieces || 0} dañados`,
           to: `/pacas?paca=${encodeURIComponent(bale.id)}`,
-          action: 'Revisar paca',
+          action: `Revisar ${terms.purchaseSingularLower}`,
         })
       }
       if (!(bale.receivedPieces > 0) || !(bale.damagedPieces > 0)) continue
@@ -124,10 +127,10 @@ export function buildAlerts(data, settings = defaultAlertSettings, now = Date.no
         type: 'damage',
         priority: 2,
         title: `Daños elevados: ${bale.code}`,
-        description: `${bale.damagedPieces} de ${bale.receivedPieces} piezas están dañadas (${percentage.toLocaleString('es', { maximumFractionDigits: 1 })} %). Revisa esta compra.`,
-        detail: `Límite: ${rules.damagePercent} % por paca`,
+        description: `${bale.damagedPieces} de ${bale.receivedPieces} ${terms.inventoryUnitPluralLower} tienen daños (${percentage.toLocaleString('es', { maximumFractionDigits: 1 })} %). Revisa esta ${terms.purchaseSingularLower}.`,
+        detail: `Límite: ${rules.damagePercent} % por ${terms.purchaseSingularLower}`,
         to: `/pacas?paca=${encodeURIComponent(bale.id)}`,
-        action: 'Revisar paca',
+        action: `Revisar ${terms.purchaseSingularLower}`,
       })
     }
   }

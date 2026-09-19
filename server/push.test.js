@@ -70,6 +70,16 @@ test('cada dispositivo conserva sus propios límites y el mensaje no contiene da
   assert.doesNotMatch(JSON.stringify(plan.payloads), /Nombre privado|Camisas/)
 })
 
+test('la notificación usa el vocabulario configurado sin exponer datos operativos', () => {
+  const plan = makePushPlan({
+    categories: [], sales: [],
+    businessProfile: { businessName: 'Mercado Luna', vocabulary: { purchaseSingular: 'Pedido de compra', purchasePlural: 'Pedidos de compra', inventoryUnitSingular: 'Artículo', inventoryUnitPlural: 'Artículos' } },
+    bales: [{ id: 'batch', code: 'CMP-1', receivedPieces: 3, soldPieces: 3, damagedPieces: 0, availablePieces: 0 }],
+  }, subscription)
+  assert.equal(plan.payloads[0].title, 'Pedido de compra sin existencias')
+  assert.doesNotMatch(JSON.stringify(plan.payloads), /Paca|Tienda J&F|CMP-1/)
+})
+
 function fakeAdmin() {
   const calls = []
   return {

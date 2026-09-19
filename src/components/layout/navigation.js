@@ -1,8 +1,8 @@
 import { ClipboardList, Grid2X2, Home, Package, Users } from 'lucide-react'
 
-export const navigationItems = [
+export function getNavigationItems(purchasePlural = 'Compras') { return [
   { label: 'Inicio', to: '/', icon: Home, matches: ['/'] },
-  { label: 'Pacas', to: '/pacas', icon: Package, matches: ['/pacas'] },
+  { label: purchasePlural, to: '/pacas', icon: Package, matches: ['/pacas'] },
   { label: 'Pedidos', to: '/ventas', icon: ClipboardList, featured: true, matches: ['/ventas'] },
   { label: 'Clientes', to: '/clientes', icon: Users, matches: ['/clientes'] },
   {
@@ -11,7 +11,7 @@ export const navigationItems = [
     icon: Grid2X2,
     matches: ['/mas', '/ajustes', '/preferencias', '/alertas', '/inventario', '/gastos', '/productos-danados', '/reportes'],
   },
-]
+] }
 
 export function isNavigationItemActive(item, pathname) {
   return item.matches.some((path) =>

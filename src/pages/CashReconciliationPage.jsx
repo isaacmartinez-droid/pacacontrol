@@ -6,9 +6,11 @@ import { getSupabaseClient } from '../lib/supabaseClient'
 import { getBusinessDateKey } from '../utils/dashboardFinancials'
 import { calculateCashReconciliation } from '../utils/cashReconciliation'
 import { formatCurrency } from '../utils/currency'
+import { getBusinessTerms } from '../utils/businessProfile'
 
 export default function CashReconciliationPage() {
   const { data, isLoading, error: dataError } = usePacaData()
+  const terms = getBusinessTerms(data.businessProfile)
   const today = getBusinessDateKey(new Date())
   const [form, setForm] = useState({ startDate: today, endDate: today, opening: '', otherIncome: '0', otherOutflows: '0', counted: '', notes: '' })
   const [rows, setRows] = useState([])
@@ -52,7 +54,7 @@ export default function CashReconciliationPage() {
   return <div>
     <PageHeader title="Arqueo de caja" eyebrow="Control de efectivo" description="Compara el dinero contado con lo que debería quedar en caja." backTo="/mas" />
     <div className="page-content max-w-5xl space-y-5 py-5 md:py-8">
-      <p className="rounded-2xl bg-brand-100 p-4 text-sm text-brand-900">Efectivo esperado = saldo inicial + cobros en efectivo + otras entradas − gastos pagados en efectivo − otras salidas. No incluye transferencias, tarjetas ni deudas pendientes. No es la ganancia de una paca.</p>
+      <p className="rounded-2xl bg-brand-100 p-4 text-sm text-brand-900">Efectivo esperado = saldo inicial + cobros en efectivo + otras entradas − gastos pagados en efectivo − otras salidas. No incluye transferencias, tarjetas ni deudas pendientes. No es la ganancia de una {terms.purchaseSingularLower}.</p>
       <form onSubmit={submit} className="space-y-4 rounded-3xl bg-white p-5 ring-1 ring-slate-100">
         <div className="grid gap-4 sm:grid-cols-2">
           <Field label="Desde"><input className="sale-input" required type="date" max={today} value={form.startDate} onChange={(e) => setForm({ ...form, startDate: e.target.value })} /></Field>
@@ -62,7 +64,7 @@ export default function CashReconciliationPage() {
           <Money label="Otras salidas de efectivo" name="otherOutflows" form={form} setForm={setForm} />
           <Money label="Efectivo contado en caja" name="counted" form={form} setForm={setForm} />
         </div>
-        <p className="text-sm text-slate-500">En otras salidas incluye compras de pacas, pagos de delivery y retiros que realmente pagaste de caja y que no estén registrados como gasto en efectivo. No los cuentes dos veces. El saldo inicial corresponde al inicio de la fecha Desde; las fechas usan hora de Nicaragua.</p>
+        <p className="text-sm text-slate-500">En otras salidas incluye pagos de {terms.purchasePluralLower}, delivery y retiros que realmente pagaste de caja y que no estén registrados como gasto en efectivo. No los cuentes dos veces. El saldo inicial corresponde al inicio de la fecha Desde; las fechas usan hora de Nicaragua.</p>
         <Field label="Notas del arqueo"><textarea className="sale-input" maxLength="1000" value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} placeholder="Detalla entradas, retiros y pagos adicionales." /></Field>
         <div className="grid gap-3 sm:grid-cols-2">
           <Metric label="Cobros en efectivo del período" amount={summary.collected} />

@@ -5,12 +5,14 @@ import { usePacaData } from '../context/PacaDataContext'
 import { formatCurrency } from '../utils/currency'
 import { getBusinessDateKey } from '../utils/dashboardFinancials'
 import { expenseCategories, summarizeExpenses } from '../utils/expensePlanning'
+import { getBusinessTerms } from '../utils/businessProfile'
 
 const today = () => getBusinessDateKey(new Date())
 const initialExpense = () => ({ concept: '', amount: '', expenseDate: today(), category: 'supplies', paymentMethod: 'cash', baleId: '', notes: '' })
 
 export default function ExpensesPage() {
   const { data, createExpense, updateExpense, saveMonthlyExpense, setMonthlyExpenseActive, isLoading } = usePacaData()
+  const terms = getBusinessTerms(data.businessProfile)
   const [month, setMonth] = useState(today().slice(0, 7))
   const [form, setForm] = useState(initialExpense)
   const [commitment, setCommitment] = useState({ concept: '', category: 'utilities', monthlyAmount: '' })
@@ -60,7 +62,7 @@ export default function ExpensesPage() {
   }
 
   return <div>
-    <PageHeader eyebrow="Salidas y planificación" title="Gastos del negocio" description="Registra lo que pagas y planea cuánto reservar cada mes para mantener la tienda." backTo="/mas" />
+    <PageHeader eyebrow="Salidas y planificación" title="Gastos del negocio" description="Registra lo que pagas y planea cuánto reservar cada mes para mantener el negocio." backTo="/mas" />
     <div className="page-content space-y-5 py-5 md:py-8">
       <label className="block max-w-xs text-sm font-bold text-slate-700">Mes a consultar<input className="sale-input mt-2" type="month" required value={month} onChange={(event) => { if (event.target.value) setMonth(event.target.value) }} /></label>
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
@@ -69,7 +71,7 @@ export default function ExpensesPage() {
         <Metric label="Equivalente a reservar por día" value={summary.reserve / days} />
         <Metric label="Resultado del mes después de gastos" value={monthlyGross - summary.spent} />
       </div>
-      <p className="rounded-2xl bg-brand-100 p-4 text-sm text-brand-900">Las metas son un presupuesto mensual vigente, no pagos automáticos ni una reserva de caja comprobada. Solo los gastos registrados se descuentan de la ganancia. Si un insumo ya está incluido en el costo de compra de una paca, no lo registres de nuevo.</p>
+      <p className="rounded-2xl bg-brand-100 p-4 text-sm text-brand-900">Las metas son un presupuesto mensual vigente, no pagos automáticos ni una reserva de caja comprobada. Solo los gastos registrados se descuentan de la ganancia. Si un insumo ya está incluido en el costo de una {terms.purchaseSingularLower}, no lo registres de nuevo.</p>
       {message && <p role="status" className="rounded-xl bg-white p-4 text-sm font-bold text-brand-900">{message}</p>}
       <div className="grid items-start gap-5 lg:grid-cols-2">
         <form onSubmit={submitExpense} className="rounded-3xl bg-white p-5 shadow-soft ring-1 ring-slate-100">
@@ -79,7 +81,7 @@ export default function ExpensesPage() {
             <div className="grid gap-3 sm:grid-cols-2"><Money label="Monto en córdobas" value={form.amount} onChange={(amount) => setForm({ ...form, amount })} /><Field label="Fecha del pago"><input className="sale-input" type="date" required value={form.expenseDate} onChange={(event) => setForm({ ...form, expenseDate: event.target.value })} /></Field></div>
             <Category value={form.category} onChange={(category) => setForm({ ...form, category })} />
             <Field label="Medio de pago del gasto"><select className="sale-input" value={form.paymentMethod} onChange={(event) => setForm({ ...form, paymentMethod: event.target.value })}>{Object.entries(expensePaymentLabels).map(([id, label]) => <option key={id} value={id}>{label}</option>)}</select></Field>
-            <Field label="Asignar a una paca (opcional)"><select className="sale-input" value={form.baleId ?? ''} onChange={(event) => setForm({ ...form, baleId: event.target.value })}><option value="">Gasto general de la tienda</option>{data.bales.filter((bale) => !bale.isArchived || bale.id === form.baleId).map((bale) => <option key={bale.id} value={bale.id}>{bale.code}{bale.isArchived ? ' (archivada)' : ''}</option>)}</select></Field>
+            <Field label={`Asignar a una ${terms.purchaseSingularLower} (opcional)`}><select className="sale-input" value={form.baleId ?? ''} onChange={(event) => setForm({ ...form, baleId: event.target.value })}><option value="">Gasto general del negocio</option>{data.bales.filter((bale) => !bale.isArchived || bale.id === form.baleId).map((bale) => <option key={bale.id} value={bale.id}>{bale.code}{bale.isArchived ? ' (en archivo)' : ''}</option>)}</select></Field>
             <Field label="Notas"><textarea className="sale-input" rows="2" maxLength="1000" value={form.notes} onChange={(event) => setForm({ ...form, notes: event.target.value })} /></Field>
             <Submit disabled={Boolean(saving) || isLoading} saving={saving === 'expense'} text={form.id ? 'Guardar cambios del gasto' : 'Guardar gasto pagado'} />
             {form.id && <button type="button" disabled={Boolean(saving)} onClick={() => setForm(initialExpense())} className="ml-3 min-h-10 text-sm font-bold text-slate-500">Cancelar edición del gasto</button>}
@@ -100,7 +102,7 @@ export default function ExpensesPage() {
       </div>
       <section className="max-w-5xl">
         <h2 className="text-lg font-extrabold text-slate-900">Movimientos del mes ({summary.movements.length})</h2>
-        <div className="mt-3 space-y-3">{summary.movements.map((expense) => <article key={expense.id} className="flex flex-wrap items-start justify-between gap-4 rounded-2xl bg-white p-4 ring-1 ring-slate-100"><div className="min-w-0"><h3 className="break-words text-sm font-bold text-slate-900">{expense.concept}</h3><p className="mt-1 text-xs text-slate-500">{expense.dateLabel} · {categoryLabel(expense.category)} · {expensePaymentLabels[expense.paymentMethod] ?? 'Sin especificar'}{expense.baleId ? ' · ' + (data.bales.find((bale) => bale.id === expense.baleId)?.code ?? 'Paca') : ''}</p>{expense.notes && <p className="mt-1 text-xs text-slate-500">{expense.notes}</p>}</div><div><b className="block text-sm text-slate-900">{formatCurrency(expense.amount)}</b><button type="button" disabled={Boolean(saving)} onClick={() => { setForm({ ...expense, baleId: expense.baleId ?? '', paymentMethod: expense.paymentMethod ?? 'unknown' }); setMessage(''); window.scrollTo({ top: 0, behavior: 'smooth' }) }} className="min-h-10 text-sm font-bold text-brand-800">Editar gasto</button></div></article>)}
+        <div className="mt-3 space-y-3">{summary.movements.map((expense) => <article key={expense.id} className="flex flex-wrap items-start justify-between gap-4 rounded-2xl bg-white p-4 ring-1 ring-slate-100"><div className="min-w-0"><h3 className="break-words text-sm font-bold text-slate-900">{expense.concept}</h3><p className="mt-1 text-xs text-slate-500">{expense.dateLabel} · {categoryLabel(expense.category)} · {expensePaymentLabels[expense.paymentMethod] ?? 'Sin especificar'}{expense.baleId ? ' · ' + (data.bales.find((bale) => bale.id === expense.baleId)?.code ?? terms.purchaseSingular) : ''}</p>{expense.notes && <p className="mt-1 text-xs text-slate-500">{expense.notes}</p>}</div><div><b className="block text-sm text-slate-900">{formatCurrency(expense.amount)}</b><button type="button" disabled={Boolean(saving)} onClick={() => { setForm({ ...expense, baleId: expense.baleId ?? '', paymentMethod: expense.paymentMethod ?? 'unknown' }); setMessage(''); window.scrollTo({ top: 0, behavior: 'smooth' }) }} className="min-h-10 text-sm font-bold text-brand-800">Editar gasto</button></div></article>)}
           {!summary.movements.length && <p className="rounded-2xl bg-white p-5 text-sm text-slate-500">No hay gastos registrados en este mes.</p>}
         </div>
       </section>

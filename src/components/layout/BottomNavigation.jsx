@@ -1,8 +1,12 @@
 import { Link, useLocation } from 'react-router-dom'
-import { isNavigationItemActive, navigationItems } from './navigation'
+import { isNavigationItemActive, getNavigationItems } from './navigation'
+import { usePacaData } from '../../context/PacaDataContext'
+import { getBusinessTerms } from '../../utils/businessProfile'
 
 function BottomNavigation() {
   const { pathname } = useLocation()
+  const { data } = usePacaData()
+  const navigationItems = getNavigationItems(getBusinessTerms(data.businessProfile).purchasePlural)
 
   return (
     <nav

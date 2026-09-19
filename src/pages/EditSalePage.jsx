@@ -4,6 +4,7 @@ import { useNavigate, useParams } from 'react-router-dom'
 import EmptyState from '../components/common/EmptyState'
 import PageHeader from '../components/common/PageHeader'
 import { usePacaData } from '../context/PacaDataContext'
+import { getBusinessTerms } from '../utils/businessProfile'
 import { formatCurrency } from '../utils/currency'
 import { summarizePriceLines } from '../utils/pricing'
 
@@ -30,6 +31,7 @@ export default function EditSalePage() {
   const { saleId } = useParams()
   const navigate = useNavigate()
   const { data, isLoading, updateSaleOrder } = usePacaData()
+  const terms = getBusinessTerms(data.businessProfile)
   const sale = data.sales.find((item) => item.id === saleId)
   const [form, setForm] = useState(null)
   const [message, setMessage] = useState('')
@@ -70,7 +72,7 @@ export default function EditSalePage() {
 
   if (!sale && !isLoading) return <div><PageHeader title="Pedido no encontrado" backTo="/ventas" /><div className="page-content py-6"><EmptyState icon={CircleAlert} title="Este pedido no está disponible" description="Puede no pertenecer a esta cuenta o haber sido eliminado." /></div></div>
   if (!form) return <div><PageHeader title="Cargando pedido…" backTo="/ventas" /></div>
-  if (sale.hasArchivedInventory) return <div><PageHeader title="Pedido de una paca archivada" backTo="/ventas" /><div className="page-content py-6"><p className="rounded-2xl bg-white p-5 text-sm text-slate-600">Reactiva las pacas de este pedido desde Pacas → Archivadas antes de corregir sus artículos. Los pagos y la deuda se conservan.</p></div></div>
+  if (sale.hasArchivedInventory) return <div><PageHeader title="Pedido con inventario en archivo" backTo="/ventas" /><div className="page-content py-6"><p className="rounded-2xl bg-white p-5 text-sm text-slate-600">Reactiva las compras de este pedido desde {terms.purchasePlural} → En archivo antes de corregir sus artículos. Los pagos y la deuda se conservan.</p></div></div>
 
   const hasDelivery = form.fulfillmentMethod === 'delivery'
   const deliveryCost = hasDelivery ? Number(form.deliveryCost) || 0 : 0
@@ -110,11 +112,11 @@ export default function EditSalePage() {
 
   async function submit(event) {
     event.preventDefault()
-    if (calculatedItems.some((item) => !item.category || !item.inventory || item.inventory.isActive === false)) return setMessage('Selecciona la categoría y la paca de cada artículo.')
-    if (new Set(calculatedItems.map((item) => item.baleInventoryId)).size !== calculatedItems.length) return setMessage('No repitas la misma categoría y paca; reúne sus precios en un solo artículo.')
+    if (calculatedItems.some((item) => !item.category || !item.inventory || item.inventory.isActive === false)) return setMessage(`Selecciona la categoría y ${terms.purchaseSingularLower} de cada artículo.`)
+    if (new Set(calculatedItems.map((item) => item.baleInventoryId)).size !== calculatedItems.length) return setMessage(`No repitas la misma categoría y ${terms.purchaseSingularLower}; reúne sus precios en un solo artículo.`)
     for (const item of calculatedItems) {
       if (item.normalizedPriceLines.some((line) => !Number.isInteger(line.quantity) || line.quantity < 1 || line.unitPrice <= 0)) return setMessage('Cada precio necesita una cantidad entera y un monto mayores que cero.')
-      if (item.quantity > item.availablePieces) return setMessage(`${item.inventory.baleCode} solo permite ${item.availablePieces} piezas en este pedido.`)
+      if (item.quantity > item.availablePieces) return setMessage(`${item.inventory.baleCode} solo permite ${item.availablePieces} ${terms.inventoryUnitPluralLower} en este pedido.`)
     }
     if (hasDelivery && form.customerId === 'walk-in') return setMessage('Elige un cliente para realizar el envío.')
     if (hasDelivery && deliveryCost <= 0) return setMessage('Ingresa el costo real del delivery.')
@@ -143,14 +145,14 @@ export default function EditSalePage() {
       <form onSubmit={submit} className="grid items-start gap-5 lg:grid-cols-[minmax(0,1.35fr)_minmax(19rem,0.65fr)] lg:gap-8">
         <div className="space-y-5">
           {sale.deliveryStatus === 'delivered' && <p className="rounded-2xl bg-amber-50 p-4 text-sm font-semibold text-amber-800">Estás corrigiendo un pedido entregado. El cambio quedará en el historial y no alterará los pagos recibidos.</p>}
-          <Section title="Artículos del pedido" description="Puedes agregar, quitar o corregir piezas y precios.">
+          <Section title="Artículos del pedido" description={`Puedes agregar, quitar o corregir ${terms.inventoryUnitPluralLower} y precios.`}>
             <button type="button" onClick={addItem} className="mb-4 inline-flex min-h-10 items-center gap-1 rounded-xl bg-brand-900 px-4 text-xs font-extrabold text-white"><Plus size={16} />Agregar artículo</button>
             <div className="space-y-4">{calculatedItems.map((item, index) => {
               const options = data.baleInventory.filter((inventory) => inventory.isActive !== false && inventory.categoryId === item.categoryId && ((inventory.availablePieces + (originalQuantityByInventory.get(inventory.id) ?? 0)) > 0 || inventory.id === item.baleInventoryId))
               return <article key={item.id} className="rounded-2xl border border-slate-200 p-4">
                 <div className="flex items-center justify-between"><b>Artículo {index + 1}</b>{form.items.length > 1 && <button type="button" onClick={() => removeItem(item.id)} className="p-2 text-red-600" aria-label={`Quitar artículo ${index + 1}`}><Trash2 size={18} /></button>}</div>
-                <div className="mt-3 grid gap-3 sm:grid-cols-2"><Field label="Categoría"><select className="sale-input" value={item.categoryId} onChange={(event) => updateItem(item.id, 'categoryId', event.target.value)}>{data.categories.map((category) => <option key={category.id} value={category.id}>{category.name}</option>)}</select></Field><Field label="Paca de origen"><select className="sale-input" required value={item.baleInventoryId} onChange={(event) => updateItem(item.id, 'baleInventoryId', event.target.value)}><option value="">Selecciona una paca</option>{options.map((inventory) => <option key={inventory.id} value={inventory.id}>{inventory.baleCode} · {inventory.availablePieces + (originalQuantityByInventory.get(inventory.id) ?? 0)} disponibles para editar</option>)}</select></Field></div>
-                <div className="mt-3 space-y-2">{item.priceLines.map((line) => <div key={line.id} className="grid grid-cols-[1fr_1fr_auto] items-end gap-2"><Field label="Cantidad"><input className="sale-input" type="number" min="1" step="1" value={line.quantity} onChange={(event) => updateLine(item.id, line.id, 'quantity', event.target.value)} /></Field><Money label="Precio por pieza" value={line.unitPrice} onChange={(value) => updateLine(item.id, line.id, 'unitPrice', value)} required /><button type="button" disabled={item.priceLines.length === 1} onClick={() => removeLine(item.id, line.id)} className="mb-1 grid size-10 place-items-center rounded-xl text-red-600 disabled:opacity-25" aria-label="Quitar precio"><Trash2 size={17} /></button></div>)}</div>
+                <div className="mt-3 grid gap-3 sm:grid-cols-2"><Field label="Categoría"><select className="sale-input" value={item.categoryId} onChange={(event) => updateItem(item.id, 'categoryId', event.target.value)}>{data.categories.map((category) => <option key={category.id} value={category.id}>{category.name}</option>)}</select></Field><Field label={`${terms.purchaseSingular} de origen`}><select className="sale-input" required value={item.baleInventoryId} onChange={(event) => updateItem(item.id, 'baleInventoryId', event.target.value)}><option value="">Selecciona {terms.purchaseSingularLower}</option>{options.map((inventory) => <option key={inventory.id} value={inventory.id}>{inventory.baleCode} · {inventory.availablePieces + (originalQuantityByInventory.get(inventory.id) ?? 0)} disponibles para editar</option>)}</select></Field></div>
+                <div className="mt-3 space-y-2">{item.priceLines.map((line) => <div key={line.id} className="grid grid-cols-[1fr_1fr_auto] items-end gap-2"><Field label="Cantidad"><input className="sale-input" type="number" min="1" step="1" value={line.quantity} onChange={(event) => updateLine(item.id, line.id, 'quantity', event.target.value)} /></Field><Money label={`Precio por ${terms.inventoryUnitSingularLower}`} value={line.unitPrice} onChange={(value) => updateLine(item.id, line.id, 'unitPrice', value)} required /><button type="button" disabled={item.priceLines.length === 1} onClick={() => removeLine(item.id, line.id)} className="mb-1 grid size-10 place-items-center rounded-xl text-red-600 disabled:opacity-25" aria-label="Quitar precio"><Trash2 size={17} /></button></div>)}</div>
                 <button type="button" onClick={() => addLine(item.id)} className="mt-3 text-xs font-extrabold text-brand-800">+ Otro precio en este artículo</button>
               </article>
             })}</div>
@@ -158,7 +160,7 @@ export default function EditSalePage() {
 
           <Section title="Cliente y entrega" description="Un cliente registrado también puede recoger su pedido.">
             <Field label="Cliente"><select className="sale-input" value={form.customerId} onChange={(event) => update('customerId', event.target.value)}><option value="walk-in">Venta de mostrador</option>{data.customers.map((customer) => <option key={customer.id} value={customer.id}>{customer.name}</option>)}</select></Field>
-            <div className="mt-4 grid grid-cols-2 gap-2"><Choice selected={!hasDelivery} onClick={() => update('fulfillmentMethod', 'pickup')} icon={Store} label="Recoge en tienda" /><Choice selected={hasDelivery} onClick={() => update('fulfillmentMethod', 'delivery')} icon={Truck} label="Enviar al cliente" /></div>
+            <div className="mt-4 grid grid-cols-2 gap-2"><Choice selected={!hasDelivery} onClick={() => update('fulfillmentMethod', 'pickup')} icon={Store} label="Retiro en punto de venta" /><Choice selected={hasDelivery} onClick={() => update('fulfillmentMethod', 'delivery')} icon={Truck} label="Enviar al cliente" /></div>
             {hasDelivery && <div className="mt-4 grid gap-3 sm:grid-cols-2"><Money label="Costo real del delivery" value={form.deliveryCost} onChange={(value) => update('deliveryCost', value)} required /><Money label="Cobro de delivery al cliente" value={form.deliveryCharge} onChange={(value) => update('deliveryCharge', value)} /></div>}
             <Field label="Notas"><textarea className="sale-input mt-2 resize-y" rows="3" maxLength="1000" value={form.notes} onChange={(event) => update('notes', event.target.value)} /></Field>
           </Section>
@@ -166,7 +168,7 @@ export default function EditSalePage() {
 
         <aside className="rounded-3xl bg-brand-950 p-5 text-white shadow-lg lg:sticky lg:top-8">
           <h2 className="flex items-center gap-2 font-extrabold"><PackageCheck size={20} />Nuevo resumen</h2>
-          <dl className="mt-5 space-y-3 border-y border-white/10 py-5 text-sm"><Row label="Total prendas" value={formatCurrency(merchandiseTotal)} /><Row label="Cobro delivery" value={formatCurrency(deliveryCharge)} /><Row label="Nuevo total" value={formatCurrency(total)} /><Row label="Ya pagado" value={formatCurrency(sale.paidAmount)} /><Row label="Saldo resultante" value={formatCurrency(Math.max(0, balance))} /><Row label="Ganancia estimada" value={formatCurrency(estimatedProfit)} /></dl>
+          <dl className="mt-5 space-y-3 border-y border-white/10 py-5 text-sm"><Row label="Total de productos" value={formatCurrency(merchandiseTotal)} /><Row label="Cobro delivery" value={formatCurrency(deliveryCharge)} /><Row label="Nuevo total" value={formatCurrency(total)} /><Row label="Ya pagado" value={formatCurrency(sale.paidAmount)} /><Row label="Saldo resultante" value={formatCurrency(Math.max(0, balance))} /><Row label="Ganancia estimada" value={formatCurrency(estimatedProfit)} /></dl>
           <p className="mt-4 rounded-xl bg-white/10 p-3 text-xs leading-5 text-brand-100">Los pagos anteriores no se modifican. Si el nuevo total queda debajo de lo pagado, primero debes resolver la devolución.</p>
           {message && <p role="alert" className="mt-4 rounded-xl bg-red-400/15 p-3 text-sm font-semibold text-red-100">{message}</p>}
           <button type="submit" disabled={isSaving} className="mt-5 flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-white px-5 text-sm font-extrabold text-brand-950 disabled:opacity-60">{isSaving ? <LoaderCircle className="animate-spin" size={18} /> : <Save size={18} />}{isSaving ? 'Guardando…' : 'Guardar pedido'}</button>

@@ -12,7 +12,7 @@ export const termsSections = [
   {
     title: '1. Servicio',
     body: [
-      'El sistema permite administrar pacas, inventario, categorias, ventas, pagos, entregas, clientes, gastos, productos danados, alertas y reportes operativos del negocio.',
+      'El sistema permite administrar compras, inventario, categorías, ventas, pagos, entregas, clientes, gastos, productos dañados, alertas y reportes operativos del negocio.',
       'El servicio se presta como una herramienta de apoyo para la administracion diaria. No sustituye revision fisica de inventario, control de caja, asesoria contable, asesoria fiscal ni obligaciones legales del usuario.',
     ],
   },
@@ -73,7 +73,7 @@ export const privacySections = [
   {
     title: '1. Datos que se guardan',
     body: [
-      'El sistema puede guardar nombre y apellido del usuario, usuario de acceso, identificador interno de cuenta, preferencias del negocio, pacas, categorias, inventario, ventas, pagos, metodos de pago, clientes, telefonos, notas, gastos, productos danados, entregas, alertas y configuracion de notificaciones.',
+      'El sistema puede guardar nombre y apellido del usuario, usuario de acceso, identificador interno de cuenta, preferencias del negocio, compras, categorías, inventario, ventas, pagos, métodos de pago, clientes, teléfonos, notas, gastos, productos dañados, entregas, alertas y configuración de notificaciones.',
       'Si se activan notificaciones del telefono o computadora, se guarda una suscripcion tecnica del navegador para enviar avisos. Las notificaciones evitan mostrar datos privados de clientes y solo indican que hay asuntos que revisar.',
     ],
   },

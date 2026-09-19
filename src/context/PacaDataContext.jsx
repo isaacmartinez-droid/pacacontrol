@@ -11,6 +11,7 @@ import {
   normalizeBusinessSettings,
 } from '../utils/businessSettings'
 import { mapBusinessProfile, mapBusinessTemplate, normalizeBusinessVocabulary } from '../utils/businessProfile'
+import { businessOnboardingSubmission, onboardingDraftForStorage } from '../utils/businessOnboarding'
 
 const PacaDataContext = createContext(null)
 
@@ -55,7 +56,7 @@ function mapBale(row, currentRevenue = 0, collectedAmount = 0) {
     targetProfitAmount,
     estimatedUnitCost,
     baseRecommendedPrice: calculateBaseRecommendedPrice(estimatedUnitCost, targetProfitAmount, sellablePieces),
-    status: row.archived_at ? 'Archivada' : row.available_pieces > 0 ? 'En venta' : row.sold_pieces > 0 ? 'Agotada' : 'Sin piezas vendibles',
+    status: row.archived_at ? 'En archivo' : row.available_pieces > 0 ? 'En venta' : row.sold_pieces > 0 ? 'Sin existencias' : 'Sin inventario vendible',
   }
 }
 
@@ -69,7 +70,7 @@ function mapSale(row) {
     baleInventoryId: allocation?.inventory?.id,
     baleId: allocation?.inventory?.bale?.id,
     baleIsArchived: Boolean(allocation?.inventory?.bale?.archived_at),
-    baleCode: allocation?.inventory?.bale?.code ?? 'Paca',
+    baleCode: allocation?.inventory?.bale?.code ?? 'Compra',
     quantity: allocation?.quantity ?? item.quantity,
     unitPrice: asNumber(item.unit_price),
     referenceUnitCost: asNumber(item.reference_unit_cost),
@@ -259,7 +260,7 @@ function AccountPacaDataProvider({ userId, children }) {
             id: row.id,
             baleId: row.bale_id,
             isActive: row.is_active !== false && !row.bale_archived_at,
-            baleCode: row.bale_code ?? 'Paca',
+            baleCode: row.bale_code ?? 'Compra',
             categoryId: row.category_id,
             categoryName: row.category_name ?? 'Categoría',
             receivedPieces: row.received_quantity,
@@ -273,7 +274,7 @@ function AccountPacaDataProvider({ userId, children }) {
             baseRecommendedPrice: asNumber(row.base_recommended_price),
             recommendedUnitPrice: asNumber(row.recommended_unit_price),
           })),
-          damagedProducts: damagedProducts.data.map((row) => ({ id: row.id, isArchived: Boolean(row.inventory?.bale?.archived_at), baleCode: row.inventory?.bale?.code ?? 'Paca', category: row.inventory?.category?.name ?? 'Sin categoría', quantity: row.quantity, reason: row.reason })),
+          damagedProducts: damagedProducts.data.map((row) => ({ id: row.id, isArchived: Boolean(row.inventory?.bale?.archived_at), baleCode: row.inventory?.bale?.code ?? 'Compra', category: row.inventory?.category?.name ?? 'Sin categoría', quantity: row.quantity, reason: row.reason })),
         },
       })
     } catch (error) {
@@ -557,6 +558,42 @@ function AccountPacaDataProvider({ userId, children }) {
     return mapped
   }, [refresh])
 
+  const saveBusinessOnboardingDraft = useCallback(async (step, draft) => {
+    const { data: updated, error } = await getSupabaseClient().rpc('save_business_onboarding_draft', {
+      p_step: step,
+      p_draft: onboardingDraftForStorage(draft),
+    })
+    if (error) throw error
+    const mapped = mapBusinessProfile(updated)
+    setState((current) => ({
+      ...current,
+      data: { ...current.data, businessProfile: mapped },
+    }))
+    return mapped
+  }, [])
+
+  const completeBusinessOnboarding = useCallback(async (draft) => {
+    const values = businessOnboardingSubmission(draft)
+    const { data: updated, error } = await getSupabaseClient().rpc('complete_business_onboarding', {
+      p_business_name: values.businessName,
+      p_template_key: values.templateKey,
+      p_inventory_mode: values.inventoryMode,
+      p_tracks_variants: values.tracksVariants,
+      p_sales_mode: values.salesMode,
+      p_fulfillment_methods: values.fulfillmentMethods,
+      p_categories: values.categories,
+      p_activity_description: values.activityDescription || null,
+    })
+    if (error) throw error
+    const mapped = mapBusinessProfile(updated)
+    setState((current) => ({
+      ...current,
+      data: { ...current.data, businessProfile: mapped },
+    }))
+    await refresh()
+    return mapped
+  }, [refresh])
+
   const createCategory = useCallback(async (rawName) => {
     const name = rawName.trim().replace(/\s+/g, ' ')
     if (!name || name.length > 80) throw new Error('Escribe una categoría de entre 1 y 80 caracteres.')
@@ -583,8 +620,8 @@ function AccountPacaDataProvider({ userId, children }) {
   }, [refresh])
 
   const value = useMemo(
-    () => ({ ...state, refresh, createBale, updateBale, archiveBale, createExpense, updateExpense, saveMonthlyExpense, setMonthlyExpenseActive, createCustomer, updateCustomer, registerSale, updateSaleOrder, registerDamage, updateSaleDeliveryStatus, updateSalePayment, completeSalePayment, saveBusinessSettings, saveBusinessProfile, saveCategoryPrices, createCategory }),
-    [state, refresh, createBale, updateBale, archiveBale, createExpense, updateExpense, saveMonthlyExpense, setMonthlyExpenseActive, createCustomer, updateCustomer, registerSale, updateSaleOrder, registerDamage, updateSaleDeliveryStatus, updateSalePayment, completeSalePayment, saveBusinessSettings, saveBusinessProfile, saveCategoryPrices, createCategory],
+    () => ({ ...state, refresh, createBale, updateBale, archiveBale, createExpense, updateExpense, saveMonthlyExpense, setMonthlyExpenseActive, createCustomer, updateCustomer, registerSale, updateSaleOrder, registerDamage, updateSaleDeliveryStatus, updateSalePayment, completeSalePayment, saveBusinessSettings, saveBusinessProfile, saveBusinessOnboardingDraft, completeBusinessOnboarding, saveCategoryPrices, createCategory }),
+    [state, refresh, createBale, updateBale, archiveBale, createExpense, updateExpense, saveMonthlyExpense, setMonthlyExpenseActive, createCustomer, updateCustomer, registerSale, updateSaleOrder, registerDamage, updateSaleDeliveryStatus, updateSalePayment, completeSalePayment, saveBusinessSettings, saveBusinessProfile, saveBusinessOnboardingDraft, completeBusinessOnboarding, saveCategoryPrices, createCategory],
   )
   return <PacaDataContext.Provider value={value}>{children}</PacaDataContext.Provider>
 }

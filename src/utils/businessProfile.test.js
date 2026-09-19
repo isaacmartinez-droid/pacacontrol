@@ -1,6 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { mapBusinessProfile, mapBusinessTemplate, normalizeBusinessVocabulary } from './businessProfile.js'
+import { getBusinessTerms, inventoryQuantityLabel, mapBusinessProfile, mapBusinessTemplate, normalizeBusinessVocabulary } from './businessProfile.js'
 
 test('normaliza vocabulario incompleto sin aceptar espacios ni textos excesivos', () => {
   assert.deepEqual(normalizeBusinessVocabulary({ purchaseSingular: '  Lote  ', inventoryUnitPlural: '' }), {
@@ -27,4 +27,12 @@ test('mapea perfil y plantilla sin compartir arreglos mutables', () => {
   const template = mapBusinessTemplate({ template_key: 'manual', version: 1, name: 'Manual', description: 'Libre', config: { suggested_categories: ['Zapatos'] } })
   assert.deepEqual(template.suggestedCategories, ['Zapatos'])
   assert.equal(template.vocabulary.purchaseSingular, 'Compra')
+})
+
+test('convierte el vocabulario en términos visibles con singular y plural', () => {
+  const terms = getBusinessTerms({ vocabulary: { purchaseSingular: 'Lote', purchasePlural: 'Lotes', inventoryUnitSingular: 'Artículo', inventoryUnitPlural: 'Artículos' } })
+  assert.equal(terms.purchaseSingularLower, 'lote')
+  assert.equal(terms.purchasePlural, 'Lotes')
+  assert.equal(inventoryQuantityLabel(1, terms), 'artículo')
+  assert.equal(inventoryQuantityLabel(2, terms), 'artículos')
 })

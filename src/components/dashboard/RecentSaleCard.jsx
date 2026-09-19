@@ -2,6 +2,8 @@ import { useState } from 'react'
 import { Check, CircleDollarSign, PackageCheck, Pencil, ShoppingBag, Truck } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { formatCurrency } from '../../utils/currency'
+import { usePacaData } from '../../context/PacaDataContext'
+import { getBusinessTerms, inventoryQuantityLabel } from '../../utils/businessProfile'
 
 const deliverySteps = [
   { id: 'to_prepare', label: 'Preparar', icon: CircleDollarSign },
@@ -17,6 +19,8 @@ const pickupSteps = [
 ]
 
 function RecentSaleCard({ sale, onAdvanceStatus, onConfirmPayment, isUpdating = false }) {
+  const { data } = usePacaData()
+  const terms = getBusinessTerms(data.businessProfile)
   const [finalPaymentMethod, setFinalPaymentMethod] = useState('cash')
   const steps = sale.fulfillmentMethod === 'delivery' ? deliverySteps : pickupSteps
   const currentStep = Math.max(
@@ -36,12 +40,12 @@ function RecentSaleCard({ sale, onAdvanceStatus, onConfirmPayment, isUpdating = 
             <div className="min-w-0">
               <h3 className="truncate text-sm font-bold text-slate-900">{sale.customerName}</h3>
               <p className="mt-0.5 text-xs text-slate-500">
-                {sale.pieces} {sale.pieces === 1 ? 'pieza' : 'piezas'} · {sale.dateLabel}
+                {sale.pieces} {inventoryQuantityLabel(sale.pieces, terms)} · {sale.dateLabel}
               </p>
               {sale.baleCodes?.length > 0 && (
-                <p className="mt-0.5 truncate text-xs font-semibold text-brand-700">Paca: {sale.baleCodes.join(', ')}</p>
+                <p className="mt-0.5 truncate text-xs font-semibold text-brand-700">{terms.purchaseSingular}: {sale.baleCodes.join(', ')}</p>
               )}
-              <p className="mt-0.5 text-[0.68rem] font-semibold text-slate-500">{sale.fulfillmentMethod === 'delivery' ? 'Envío al cliente' : 'Recoge en tienda'}</p>
+              <p className="mt-0.5 text-[0.68rem] font-semibold text-slate-500">{sale.fulfillmentMethod === 'delivery' ? 'Envío al cliente' : 'Retiro en punto de venta'}</p>
             </div>
             <p className="shrink-0 text-sm font-extrabold text-slate-900">{formatCurrency(sale.total)}</p>
           </div>
@@ -54,7 +58,7 @@ function RecentSaleCard({ sale, onAdvanceStatus, onConfirmPayment, isUpdating = 
 
       {!sale.hasArchivedInventory && <Link to={`/ventas/${sale.id}/editar`} className="mt-3 flex min-h-11 w-full items-center justify-center gap-2 rounded-xl border border-brand-200 bg-brand-50 px-4 text-xs font-extrabold text-brand-800 transition hover:bg-brand-100"><Pencil size={15} />Editar artículos, cliente o entrega</Link>}
 
-      {sale.hasArchivedInventory && <p className="mt-3 rounded-xl bg-slate-100 p-3 text-xs font-bold text-slate-600">Contiene una paca archivada. Reactívala para corregir sus artículos. Las deudas y pagos se conservan.</p>}
+      {sale.hasArchivedInventory && <p className="mt-3 rounded-xl bg-slate-100 p-3 text-xs font-bold text-slate-600">Contiene {terms.purchaseSingularLower} en archivo. Reactívala para corregir sus artículos. Las deudas y pagos se conservan.</p>}
       {(sale.items?.length ?? 0) > 0 && <details className="mt-3 rounded-xl bg-slate-50 px-3 py-2"><summary className="cursor-pointer text-xs font-extrabold text-slate-700">Ver artículos individuales ({sale.items.length})</summary><div className="mt-2 space-y-2">{sale.items.map((item) => sale.hasArchivedInventory ? <div key={item.id} className="flex justify-between gap-3 border-t border-slate-200 pt-2 text-xs"><ItemDescription item={item} /><b className="shrink-0 text-slate-900">{formatCurrency(item.quantity * item.unitPrice)}</b></div> : <Link key={item.id} to={`/ventas/${sale.id}/editar`} className="flex justify-between gap-3 border-t border-slate-200 pt-2 text-xs transition hover:text-brand-800"><ItemDescription item={item} /><span className="flex shrink-0 items-center gap-1 font-extrabold"><Pencil size={12} />Editar</span></Link>)}</div></details>}
 
       <div className={`mt-4 grid ${steps.length === 4 ? 'grid-cols-4' : 'grid-cols-3'}`} aria-label={`Estado del pedido: ${steps[currentStep].label}`}>

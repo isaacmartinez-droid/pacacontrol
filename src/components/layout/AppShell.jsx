@@ -18,7 +18,7 @@ function AppShell() {
               <div className="flex min-w-0 items-start gap-3">
                 <CircleAlert aria-hidden="true" className="mt-0.5 shrink-0" size={20} />
                 <div>
-                  <p className="text-sm font-extrabold">No pudimos cargar los datos de tu tienda.</p>
+                  <p className="text-sm font-extrabold">No pudimos cargar los datos de tu negocio.</p>
                   <p className="mt-1 break-words text-xs leading-5">{error}</p>
                 </div>
               </div>

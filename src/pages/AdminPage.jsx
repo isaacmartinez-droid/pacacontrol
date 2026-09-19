@@ -490,7 +490,7 @@ function AccountCard({ account, draft, hasChanges, isSaving, isSaveBlocked, onCh
           <dl className="mt-4 grid gap-3 text-sm sm:grid-cols-2 xl:grid-cols-5">
             <Info label="Plan" value={planLabels[account.servicePlan] ?? account.servicePlan} />
             <Info label="Legal" value={account.termsAcceptedAt && account.privacyAcceptedAt ? 'Aceptado' : 'Pendiente'} />
-            <Info label="Pacas" value={account.balesCount} />
+            <Info label="Compras o lotes" value={account.balesCount} />
             <Info label="Ventas" value={account.salesCount} />
             <Info label="Total vendido" value={formatCurrency(account.salesTotal)} />
           </dl>

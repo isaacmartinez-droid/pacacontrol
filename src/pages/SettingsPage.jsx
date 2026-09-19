@@ -106,7 +106,7 @@ export default function SettingsPage() {
 
           <div className="mt-6 grid gap-5">
             <label className="text-sm font-bold text-slate-700">Nombre visible del negocio
-              <input className="sale-input mt-2" maxLength="120" value={draft.businessName} onChange={(event) => change('businessName', event.target.value)} placeholder="Ej. Mi tienda" disabled={!profile || isSaving} />
+              <input className="sale-input mt-2" maxLength="120" value={draft.businessName} onChange={(event) => change('businessName', event.target.value)} placeholder="Ej. Mi negocio" disabled={!profile || isSaving} />
             </label>
             <label className="text-sm font-bold text-slate-700">¿Qué vende o cómo trabaja?
               <textarea className="sale-input mt-2 min-h-24 resize-y" maxLength="500" value={draft.activityDescription} onChange={(event) => change('activityDescription', event.target.value)} placeholder="Describe brevemente tu actividad" disabled={!profile || isSaving} />

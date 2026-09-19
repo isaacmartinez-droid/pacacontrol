@@ -45,11 +45,17 @@ const businessProfile = {
   onboarding_draft: {},
   completed_at: soldAt,
 }
-const businessTemplates = [{ template_key: 'legacy_bales', version: 1, name: 'Venta por pacas o lotes', description: 'Compatible', is_active: true, config: { suggested_categories: [], vocabulary: businessProfile.vocabulary } }]
+const businessTemplates = [
+  { template_key: 'legacy_bales', version: 1, name: 'Venta por pacas o lotes', description: 'Compatible', is_active: true, config: { suggested_categories: [], vocabulary: businessProfile.vocabulary } },
+  { template_key: 'general_store', version: 1, name: 'Tienda general', description: 'Para diferentes tipos de productos.', is_active: true, config: { suggested_categories: ['Abarrotes', 'Hogar', 'Cuidado personal'], vocabulary: { purchaseSingular: 'Compra', purchasePlural: 'Compras', inventoryUnitSingular: 'Producto', inventoryUnitPlural: 'Productos' } } },
+  { template_key: 'manual', version: 1, name: 'Configuración manual', description: 'Sin sugerencias iniciales.', is_active: true, config: { suggested_categories: [], vocabulary: { purchaseSingular: 'Compra', purchasePlural: 'Compras', inventoryUnitSingular: 'Producto', inventoryUnitPlural: 'Productos' } } },
+]
 const errors = []
 let baleRegistrationCalls = 0
 let baleRegistrationBody
 let saleRegistrationBody
+let onboardingDraftCalls = 0
+let onboardingCompletionBody
 
 const server = spawn(process.execPath, [fileURLToPath(new URL('../node_modules/vite/bin/vite.js', import.meta.url)), '--host', '127.0.0.1', '--port', '5179', '--strictPort'], {
   cwd: fileURLToPath(new URL('../', import.meta.url)), windowsHide: true, stdio: 'pipe',
@@ -93,6 +99,35 @@ try {
         business_name: body.p_business_name,
         activity_description: body.p_activity_description,
         vocabulary: body.p_vocabulary,
+      })
+      result = businessProfile
+    }
+    else if (table === 'save_business_onboarding_draft') {
+      onboardingDraftCalls += 1
+      Object.assign(businessProfile, {
+        onboarding_status: 'in_progress',
+        onboarding_step: body.p_step,
+        onboarding_draft: body.p_draft,
+      })
+      result = businessProfile
+    }
+    else if (table === 'complete_business_onboarding') {
+      onboardingCompletionBody = body
+      const template = businessTemplates.find((item) => item.template_key === body.p_template_key)
+      Object.assign(businessProfile, {
+        business_name: body.p_business_name,
+        activity_description: body.p_activity_description,
+        template_key: template.template_key,
+        template_version: template.version,
+        inventory_mode: body.p_inventory_mode,
+        tracks_variants: body.p_tracks_variants,
+        sales_mode: body.p_sales_mode,
+        fulfillment_methods: body.p_fulfillment_methods,
+        vocabulary: template.config.vocabulary,
+        onboarding_status: 'completed',
+        onboarding_step: 7,
+        onboarding_draft: {},
+        completed_at: new Date().toISOString(),
       })
       result = businessProfile
     }
@@ -212,8 +247,8 @@ try {
   bales[1].available_pieces = 0
   await page.goto(origin)
   const banners = page.getByRole('complementary', { name: 'Avisos en pantalla' })
-  await banners.getByText('Paca agotada: PAC-0002', { exact: true }).waitFor()
-  await banners.getByRole('button', { name: 'Cerrar aviso: Paca agotada: PAC-0002', exact: true }).click()
+  await banners.getByText('Sin existencias en paca: PAC-0002', { exact: true }).waitFor()
+  await banners.getByRole('button', { name: 'Cerrar aviso: Sin existencias en paca: PAC-0002', exact: true }).click()
   await page.reload()
   await page.getByRole('link', { name: /Inversión de esta paca: C\$8,550/ }).waitFor()
   assert.equal(await page.getByRole('complementary', { name: 'Avisos en pantalla' }).count(), 0)
@@ -240,7 +275,7 @@ try {
   console.log('OK: precio y cantidad se vacian sin cero pegado y se envian como numeros al registrar.')
 
   await page.goto(origin + '/clientes/customer-1')
-  await page.getByRole('link', { name: 'Editar piezas y total' }).click()
+  await page.getByRole('link', { name: 'Editar artículos y total' }).click()
   const editPrice = page.getByLabel(/Precio por pieza/)
   await editPrice.fill('')
   assert.equal(await editPrice.inputValue(), '')
@@ -312,7 +347,7 @@ try {
   await page.goto(origin + '/ventas?archivo=1')
   await page.getByText('Clienta de prueba', { exact: true }).waitFor()
   await page.goto(origin + '/historial')
-  await page.getByRole('heading', { name: 'Paca archivada · PAC-0003', exact: true }).waitFor()
+  await page.getByRole('heading', { name: 'En archivo: Paca · PAC-0003', exact: true }).waitFor()
   assert.equal(orders.length, 2)
   assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth), true)
   assert.deepEqual(errors, [])
@@ -330,7 +365,7 @@ try {
   const levels = await levelOptions.evaluateAll((items) => items.map((item) => item.value))
   assert.deepEqual(levels, ['economic', 'standard', 'premium', 'custom'])
   await page.getByRole('button', { name: 'Registrar paca', exact: true }).click()
-  await page.getByText('Paca registrada', { exact: true }).waitFor()
+  await page.getByText('Registro completado', { exact: true }).waitFor()
   await page.getByRole('heading', { name: 'PAC-0004', exact: true }).waitFor()
   assert.equal(baleRegistrationCalls, 1)
   assert.deepEqual(baleRegistrationBody.p_other_expense_items, [{ concept: 'Empaque', amount: 125.5 }])
@@ -410,6 +445,47 @@ try {
   assert.equal(businessProfile.vocabulary.purchasePlural, 'Lotes')
   assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth), true)
   console.log('OK: Ajustes carga el perfil migrado y guarda identidad y vocabulario del negocio.')
+
+  Object.assign(businessProfile, {
+    business_name: '', activity_description: null, template_key: null, template_version: null,
+    inventory_mode: null, tracks_variants: false, sales_mode: null,
+    fulfillment_methods: ['pickup'], onboarding_status: 'pending', onboarding_step: 0,
+    onboarding_draft: {}, completed_at: null,
+  })
+  await page.goto(origin)
+  await page.waitForURL('**/configurar-negocio')
+  await page.getByRole('heading', { name: 'Cuéntanos sobre tu negocio', exact: true }).waitFor()
+  await page.getByLabel('Nombre del negocio').fill('Variedades Luna')
+  await page.getByRole('button', { name: 'Continuar', exact: true }).click()
+  await page.getByRole('heading', { name: '¿Qué tipo de negocio tienes?', exact: true }).waitFor()
+  assert.equal(await page.getByText('Venta por pacas o lotes', { exact: true }).count(), 0)
+  await page.getByRole('button', { name: /Tienda general/ }).click()
+  await page.getByRole('button', { name: 'Continuar', exact: true }).click()
+  await page.getByRole('button', { name: /Por unidades/ }).click()
+  await page.getByRole('button', { name: 'Continuar', exact: true }).click()
+  await page.getByRole('button', { name: /Ambas formas/ }).click()
+  await page.getByRole('button', { name: 'Continuar', exact: true }).click()
+  await page.getByRole('button', { name: /Envío o delivery/ }).click()
+  await page.getByRole('button', { name: 'Continuar', exact: true }).click()
+  await page.getByText('Abarrotes', { exact: true }).waitFor()
+  assert.equal(onboardingCompletionBody, undefined)
+  await page.getByLabel('Nueva categoría').fill('Zapatos')
+  await page.getByRole('button', { name: 'Agregar', exact: true }).click()
+  await page.getByRole('button', { name: 'Continuar', exact: true }).click()
+  await page.getByRole('button', { name: 'Preparar mi sistema', exact: true }).click()
+  await page.getByRole('heading', { name: 'Estamos adaptando tu sistema', exact: true }).waitFor()
+  await page.getByRole('heading', { name: 'Tu resumen', exact: true }).waitFor()
+  assert.ok(onboardingDraftCalls >= 6)
+  assert.equal(onboardingCompletionBody.p_business_name, 'Variedades Luna')
+  assert.equal(onboardingCompletionBody.p_template_key, 'general_store')
+  assert.deepEqual(onboardingCompletionBody.p_fulfillment_methods, ['pickup', 'delivery'])
+  assert.deepEqual(onboardingCompletionBody.p_categories, ['Abarrotes', 'Hogar', 'Cuidado personal', 'Zapatos'])
+  assert.equal(businessProfile.onboarding_status, 'completed')
+  await page.getByRole('link', { name: 'Compras', exact: true }).waitFor()
+  assert.equal(await page.getByText(/\bPacas?\b/i).count(), 0)
+  assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth), true)
+  assert.deepEqual(errors, [])
+  console.log('OK: cuenta nueva reanuda el asistente y crea categorías solo al confirmar la configuración.')
 
   const guest = await browser.newPage({ viewport: { width: 390, height: 844 } })
   await guest.goto(origin + '/acceder')

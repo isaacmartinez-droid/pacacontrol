@@ -5,8 +5,12 @@ import EmptyState from '../components/common/EmptyState'
 import AlertItem from '../components/common/AlertItem'
 import DevicePushSettings from '../components/common/DevicePushSettings'
 import { useAlerts } from '../context/AlertsContext'
+import { usePacaData } from '../context/PacaDataContext'
+import { getBusinessTerms } from '../utils/businessProfile'
 
 export default function AlertsPage() {
+  const { data } = usePacaData()
+  const terms = getBusinessTerms(data.businessProfile)
   const { notifications, unreadCount, settings, saveSettings, markAsRead, markAllAsRead, isLoading, error, storageError, lastUpdatedAt } = useAlerts()
   const [onlyUnread, setOnlyUnread] = useState(false)
   const [draft, setDraft] = useState(settings)
@@ -36,7 +40,7 @@ export default function AlertsPage() {
 
   return (
     <div>
-      <PageHeader eyebrow="Tu tienda al día" title="Alertas" description="Detecta lo que necesita atención y abre el registro para revisarlo." backTo="/mas" />
+      <PageHeader eyebrow="Tu negocio al día" title="Alertas" description="Detecta lo que necesita atención y abre el registro para revisarlo." backTo="/mas" />
       <div className="page-content grid items-start gap-6 py-6 md:py-8 lg:grid-cols-[minmax(0,1.3fr)_minmax(18rem,0.7fr)]">
         <section aria-labelledby="alerts-title" className="min-w-0">
           <DevicePushSettings />
@@ -53,11 +57,11 @@ export default function AlertsPage() {
             ))}
           </div>
           {error && <p role="status" className="mb-4 rounded-xl bg-amber-50 p-4 text-sm text-amber-800">No pudimos actualizar los datos. Las alertas pueden estar desactualizadas; reintentaremos al recuperar la conexión.</p>}
-          {isLoading ? <p role="status" className="rounded-2xl bg-white p-6 text-sm text-slate-600">Revisando inventario, pedidos y pacas…</p> : visibleAlerts.length > 0 ? (
+          {isLoading ? <p role="status" className="rounded-2xl bg-white p-6 text-sm text-slate-600">Revisando inventario, pedidos y {terms.purchasePluralLower}…</p> : visibleAlerts.length > 0 ? (
             <ul className="space-y-3">
               {visibleAlerts.map((notification) => <li key={notification.id} className="overflow-hidden rounded-2xl shadow-sm ring-1 ring-slate-100"><AlertItem notification={notification} onOpen={() => markAsRead(notification.id)} /></li>)}
             </ul>
-          ) : !error && <EmptyState icon={Bell} title={onlyUnread ? 'No hay alertas sin leer' : 'No hay alertas activas'} description={onlyUnread ? 'Puedes consultar las alertas que siguen pendientes en “Todas”.' : 'Tu tienda no tiene avisos según los límites configurados.'} />}
+          ) : !error && <EmptyState icon={Bell} title={onlyUnread ? 'No hay alertas sin leer' : 'No hay alertas activas'} description={onlyUnread ? 'Puedes consultar las alertas que siguen pendientes en “Todas”.' : 'Tu negocio no tiene avisos según los límites configurados.'} />}
           <p className="mt-4 text-xs leading-5 text-slate-500">Se revisan cada minuto mientras la aplicación está visible y al volver a ella. Los avisos desaparecen cuando los datos dejan de cumplir la regla.</p>
           {lastUpdatedAt && <p className="mt-1 text-xs text-slate-500">Última actualización: {new Date(lastUpdatedAt).toLocaleString('es-NI', { dateStyle: 'short', timeStyle: 'short', timeZone: 'America/Managua' })}</p>}
         </section>
@@ -66,14 +70,14 @@ export default function AlertsPage() {
           <h2 className="flex items-center gap-2 text-lg font-extrabold text-slate-900"><Settings2 aria-hidden="true" size={20} />Límites de las alertas</h2>
           <p className="mt-2 text-xs leading-5 text-slate-500">Personaliza qué necesita atención. Los límites y las lecturas se guardan para tu cuenta en este navegador.</p>
           <div className="mt-5 space-y-5">
-            <Rule label="Inventario bajo" enabled={draft.stockEnabled} onToggle={(value) => change('stockEnabled', value)} description="Avisa al llegar al límite o por debajo. Solo incluye categorías que ya recibieron piezas.">
-              <Limit label="Piezas disponibles" id="alert-stock" value={draft.stockLimit} min={0} max={10000} onChange={(value) => change('stockLimit', value)} />
+            <Rule label="Inventario bajo" enabled={draft.stockEnabled} onToggle={(value) => change('stockEnabled', value)} description={`Avisa al llegar al límite o por debajo. Solo incluye categorías que ya recibieron ${terms.inventoryUnitPluralLower}.`}>
+              <Limit label={`${terms.inventoryUnitPlural} disponibles`} id="alert-stock" value={draft.stockLimit} min={0} max={10000} onChange={(value) => change('stockLimit', value)} />
             </Rule>
             <Rule label="Revisar entregas" enabled={draft.deliveryEnabled} onToggle={(value) => change('deliveryEnabled', value)} description="Ventas con cliente que siguen en “Pagado” después de estas horas desde su registro. Excluye ventas de mostrador; confirma si requieren envío.">
               <Limit label="Horas desde el registro" id="alert-delivery" value={draft.deliveryHours} min={1} max={720} onChange={(value) => change('deliveryHours', value)} />
             </Rule>
             <Rule label="Cobros pendientes" enabled={draft.debtEnabled} onToggle={(value) => change('debtEnabled', value)} description="Avisa al cumplir 24 horas sin completar el pago y vuelve a notificar cada 5 horas mientras exista saldo." />
-            <Rule label="Daños por paca" enabled={draft.damageEnabled} onToggle={(value) => change('damageEnabled', value)} description="Avisa cuando las piezas dañadas alcanzan este porcentaje del total recibido en una paca.">
+            <Rule label={`Daños por ${terms.purchaseSingularLower}`} enabled={draft.damageEnabled} onToggle={(value) => change('damageEnabled', value)} description={`Avisa cuando los ${terms.inventoryUnitPluralLower} con daños alcanzan este porcentaje del total recibido en una ${terms.purchaseSingularLower}.`}>
               <Limit label="Porcentaje de daños" id="alert-damage" value={draft.damagePercent} min={1} max={100} onChange={(value) => change('damagePercent', value)} />
             </Rule>
           </div>

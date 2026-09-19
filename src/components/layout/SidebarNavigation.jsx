@@ -1,8 +1,9 @@
 import { CircleCheck, LogOut, Store, UserRound } from 'lucide-react'
 import { Link, useLocation } from 'react-router-dom'
-import { isNavigationItemActive, navigationItems } from './navigation'
+import { isNavigationItemActive, getNavigationItems } from './navigation'
 import { useAuth } from '../../context/AuthContext'
 import { usePacaData } from '../../context/PacaDataContext'
+import { getBusinessTerms } from '../../utils/businessProfile'
 
 function SidebarNavigation() {
   const { pathname } = useLocation()
@@ -10,6 +11,7 @@ function SidebarNavigation() {
   const { data } = usePacaData()
   const username = user?.user_metadata?.username ?? user?.email?.split('@')[0]
   const businessName = data.businessProfile?.businessName || 'Mi negocio'
+  const navigationItems = getNavigationItems(getBusinessTerms(data.businessProfile).purchasePlural)
 
   return (
     <aside className="sticky top-0 hidden h-dvh w-[4.75rem] shrink-0 flex-col border-r border-brand-800 bg-brand-950 px-3 py-5 text-white shadow-xl shadow-brand-950/10 lg:flex xl:w-72 xl:px-4 xl:py-6">
@@ -23,7 +25,7 @@ function SidebarNavigation() {
         </span>
         <span className="hidden xl:block">
           <span className="block truncate text-lg font-extrabold tracking-tight text-white">{businessName}</span>
-          <span className="block text-xs font-medium text-brand-200">Mi tienda</span>
+          <span className="block text-xs font-medium text-brand-200">Mi negocio</span>
         </span>
       </Link>
 

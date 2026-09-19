@@ -2,14 +2,15 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { ArrowDown, ArrowUp, BadgeDollarSign, BarChart3, Check, CircleAlert, LoaderCircle, Save, Settings2 } from 'lucide-react'
 import PageHeader from '../components/common/PageHeader'
 import { usePacaData } from '../context/PacaDataContext'
-import { dashboardKpiOptions, normalizeBusinessSettings } from '../utils/businessSettings'
+import { getDashboardKpiOptions, normalizeBusinessSettings } from '../utils/businessSettings'
 import { recordedCategories, lastRecordedOperations } from '../utils/recordedPreferences'
 import { formatCurrency } from '../utils/currency'
+import { getBusinessTerms } from '../utils/businessProfile'
 
-const tabs = [
+const tabs = (terms) => [
   { id: 'prices', label: 'Precios', icon: BadgeDollarSign },
   { id: 'dashboard', label: 'Indicadores', icon: BarChart3 },
-  { id: 'defaults', label: 'Ventas y pacas', icon: Settings2 },
+  { id: 'defaults', label: `Ventas y ${terms.purchasePluralLower}`, icon: Settings2 },
 ]
 
 const paymentMethods = [
@@ -31,6 +32,8 @@ function priceDraft(categories) {
 
 function BusinessPreferencesPage() {
   const { data, isLoading, saveBusinessSettings, saveCategoryPrices, createCategory } = usePacaData()
+  const terms = getBusinessTerms(data.businessProfile)
+  const dashboardKpiOptions = useMemo(() => getDashboardKpiOptions(terms), [data.businessProfile])
   const [activeTab, setActiveTab] = useState('prices')
   const [settings, setSettings] = useState(() => normalizeBusinessSettings(data.settings))
   const [prices, setPrices] = useState([])
@@ -76,7 +79,7 @@ function BusinessPreferencesPage() {
 
   const selectedKpis = useMemo(
     () => settings.dashboardKpis.map((id) => dashboardKpiOptions.find((option) => option.id === id)).filter(Boolean),
-    [settings.dashboardKpis],
+    [settings.dashboardKpis, dashboardKpiOptions],
   )
 
   function updateSetting(field, value) {
@@ -165,14 +168,14 @@ function BusinessPreferencesPage() {
       <div className="page-content py-6 md:py-8">
         <div className="grid items-start gap-5 lg:grid-cols-[15rem_minmax(0,1fr)] lg:gap-8">
           <nav aria-label="Secciones de preferencias" className="grid grid-cols-3 gap-2 lg:grid-cols-1">
-            {tabs.map(({ id, label, icon: Icon }) => <button key={id} type="button" onClick={() => { setActiveTab(id); setMessage(null) }} className={`flex min-h-12 items-center justify-center gap-2 rounded-2xl px-3 text-xs font-extrabold transition lg:justify-start lg:text-sm ${activeTab === id ? 'bg-brand-900 text-white shadow-lg shadow-brand-950/15' : 'bg-white text-slate-600 ring-1 ring-slate-200'}`}><Icon size={18} /><span>{label}</span></button>)}
+            {tabs(terms).map(({ id, label, icon: Icon }) => <button key={id} type="button" onClick={() => { setActiveTab(id); setMessage(null) }} className={`flex min-h-12 items-center justify-center gap-2 rounded-2xl px-3 text-xs font-extrabold transition lg:justify-start lg:text-sm ${activeTab === id ? 'bg-brand-900 text-white shadow-lg shadow-brand-950/15' : 'bg-white text-slate-600 ring-1 ring-slate-200'}`}><Icon size={18} /><span>{label}</span></button>)}
           </nav>
 
           <section className="rounded-3xl bg-white p-5 shadow-soft ring-1 ring-slate-100 sm:p-6">
             <fieldset disabled={isSaving || addingCategory || isLoading}>
             {activeTab === 'prices' && <><PricePreferences prices={prices} updatePrice={updatePrice} isLoading={isLoading} lastPrices={last.prices} /><form onSubmit={addCategory} className="mt-6 rounded-2xl bg-slate-50 p-4"><label className="block text-sm font-bold text-slate-700">Nombre de la nueva categoría<input value={categoryName} onChange={(event) => setCategoryName(event.target.value)} maxLength={80} required placeholder="Escribe el nombre que utilizas" className="sale-input mt-2" /></label><button type="submit" disabled={addingCategory || isLoading || !categoryName.trim()} className="mt-3 min-h-11 rounded-xl border border-brand-200 bg-white px-4 text-sm font-extrabold text-brand-900 disabled:opacity-50">{addingCategory ? 'Agregando…' : 'Agregar más'}</button><p className="mt-2 text-xs text-slate-500">Agrega solo lo que vendes. El nombre se recuerda para tus próximas compras.</p></form></>}
-            {activeTab === 'dashboard' && <DashboardPreferences settings={settings} selectedKpis={selectedKpis} toggleKpi={toggleKpi} moveKpi={moveKpi} updateSetting={updateSetting} />}
-            {activeTab === 'defaults' && <DefaultPreferences settings={settings} updateSetting={updateSetting} last={last} copyDefaults={copyDefaults} />}
+            {activeTab === 'dashboard' && <DashboardPreferences settings={settings} options={dashboardKpiOptions} selectedKpis={selectedKpis} toggleKpi={toggleKpi} moveKpi={moveKpi} updateSetting={updateSetting} />}
+            {activeTab === 'defaults' && <DefaultPreferences settings={settings} updateSetting={updateSetting} last={last} copyDefaults={copyDefaults} terms={terms} />}
             </fieldset>
 
             {message && <p role="status" className={`mt-6 flex items-center gap-2 rounded-2xl p-3 text-sm font-bold ${message.type === 'success' ? 'bg-emerald-50 text-emerald-800' : 'bg-red-50 text-red-700'}`}>{message.type === 'success' ? <Check size={18} /> : <CircleAlert size={18} />}{message.text}</p>}
@@ -197,19 +200,19 @@ function PricePreferences({ prices, updatePrice, isLoading, lastPrices }) {
   </>
 }
 
-function DashboardPreferences({ settings, selectedKpis, toggleKpi, moveKpi, updateSetting }) {
-  return <><Title icon={BarChart3} title="Tu resumen de inicio" description="Elige entre uno y cuatro indicadores y ordénalos como quieras verlos." /><label className="mt-6 block text-sm font-bold text-slate-700">Período predeterminado<select value={settings.dashboardPeriod} onChange={(event) => updateSetting('dashboardPeriod', event.target.value)} className="sale-input mt-2 max-w-sm"><option value="today">Hoy</option><option value="week">Esta semana</option><option value="month">Este mes</option></select></label><div className="mt-6 grid gap-6 xl:grid-cols-2"><div><h3 className="text-sm font-extrabold text-slate-900">Indicadores disponibles</h3><div className="mt-3 grid gap-2 sm:grid-cols-2 xl:grid-cols-1">{dashboardKpiOptions.map((option) => { const checked = settings.dashboardKpis.includes(option.id); return <button key={option.id} type="button" aria-pressed={checked} onClick={() => toggleKpi(option.id)} className={`flex min-h-11 items-center gap-3 rounded-xl border px-3 text-left text-sm font-bold ${checked ? 'border-brand-600 bg-brand-50 text-brand-900' : 'border-slate-200 text-slate-600'}`}><span className={`grid size-5 place-items-center rounded-md border ${checked ? 'border-brand-700 bg-brand-700 text-white' : 'border-slate-300'}`}>{checked && <Check size={14} />}</span>{option.label}</button>})}</div></div><div><h3 className="text-sm font-extrabold text-slate-900">Orden en el inicio</h3><div className="mt-3 space-y-2">{selectedKpis.map((option, index) => <div key={option.id} className="flex min-h-12 items-center gap-3 rounded-xl bg-slate-50 px-3"><span className="grid size-7 place-items-center rounded-lg bg-brand-900 text-xs font-extrabold text-white">{index + 1}</span><span className="min-w-0 flex-1 text-sm font-bold text-slate-700">{option.label}</span><button type="button" disabled={index === 0} onClick={() => moveKpi(index, -1)} className="rounded-lg p-2 text-slate-500 disabled:opacity-25" aria-label={`Subir ${option.label}`}><ArrowUp size={17} /></button><button type="button" disabled={index === selectedKpis.length - 1} onClick={() => moveKpi(index, 1)} className="rounded-lg p-2 text-slate-500 disabled:opacity-25" aria-label={`Bajar ${option.label}`}><ArrowDown size={17} /></button></div>)}</div></div></div></>
+function DashboardPreferences({ settings, options, selectedKpis, toggleKpi, moveKpi, updateSetting }) {
+  return <><Title icon={BarChart3} title="Tu resumen de inicio" description="Elige entre uno y cuatro indicadores y ordénalos como quieras verlos." /><label className="mt-6 block text-sm font-bold text-slate-700">Período predeterminado<select value={settings.dashboardPeriod} onChange={(event) => updateSetting('dashboardPeriod', event.target.value)} className="sale-input mt-2 max-w-sm"><option value="today">Hoy</option><option value="week">Esta semana</option><option value="month">Este mes</option></select></label><div className="mt-6 grid gap-6 xl:grid-cols-2"><div><h3 className="text-sm font-extrabold text-slate-900">Indicadores disponibles</h3><div className="mt-3 grid gap-2 sm:grid-cols-2 xl:grid-cols-1">{options.map((option) => { const checked = settings.dashboardKpis.includes(option.id); return <button key={option.id} type="button" aria-pressed={checked} onClick={() => toggleKpi(option.id)} className={`flex min-h-11 items-center gap-3 rounded-xl border px-3 text-left text-sm font-bold ${checked ? 'border-brand-600 bg-brand-50 text-brand-900' : 'border-slate-200 text-slate-600'}`}><span className={`grid size-5 place-items-center rounded-md border ${checked ? 'border-brand-700 bg-brand-700 text-white' : 'border-slate-300'}`}>{checked && <Check size={14} />}</span>{option.label}</button>})}</div></div><div><h3 className="text-sm font-extrabold text-slate-900">Orden en el inicio</h3><div className="mt-3 space-y-2">{selectedKpis.map((option, index) => <div key={option.id} className="flex min-h-12 items-center gap-3 rounded-xl bg-slate-50 px-3"><span className="grid size-7 place-items-center rounded-lg bg-brand-900 text-xs font-extrabold text-white">{index + 1}</span><span className="min-w-0 flex-1 text-sm font-bold text-slate-700">{option.label}</span><button type="button" disabled={index === 0} onClick={() => moveKpi(index, -1)} className="rounded-lg p-2 text-slate-500 disabled:opacity-25" aria-label={`Subir ${option.label}`}><ArrowUp size={17} /></button><button type="button" disabled={index === selectedKpis.length - 1} onClick={() => moveKpi(index, 1)} className="rounded-lg p-2 text-slate-500 disabled:opacity-25" aria-label={`Bajar ${option.label}`}><ArrowDown size={17} /></button></div>)}</div></div></div></>
 }
 
-function DefaultPreferences({ settings, updateSetting, last, copyDefaults }) {
+function DefaultPreferences({ settings, updateSetting, last, copyDefaults, terms }) {
   return <>
     <Title icon={Settings2} title="Valores habituales" description="Plantillas para comenzar una operación, no pagos ni ganancias ya registrados. Puedes ajustarlas o recuperar valores de tus registros; se conservan al guardar preferencias." />
     <DefaultsGroup title="Ventas" description="Puedes copiar el método del primer pago y el estado actual de la última venta. Cada nueva venta sigue necesitando sus importes y validaciones." action={last.sale && <CopyButton onClick={() => copyDefaults({ defaultPaymentMethod: last.sale.method, defaultPaymentStatus: last.sale.status })}>Usar valores de última venta</CopyButton>}>
       <label className="text-sm font-bold text-slate-700">Método de pago<select value={settings.defaultPaymentMethod} onChange={(event) => updateSetting('defaultPaymentMethod', event.target.value)} className="sale-input mt-2">{paymentMethods.map((method) => <option key={method.id} value={method.id}>{method.label}</option>)}</select></label>
       <label className="text-sm font-bold text-slate-700">Estado de pago<select value={settings.defaultPaymentStatus} onChange={(event) => updateSetting('defaultPaymentStatus', event.target.value)} className="sale-input mt-2"><option value="paid">Pago completo</option><option value="partial">Pago parcial</option><option value="pending">Sin pago inicial</option></select></label>
     </DefaultsGroup>
-    <DefaultsGroup title="Compras / pacas" description="La ganancia deseada es tu objetivo, no dinero ganado ni efectivo en caja." action={last.purchase && <CopyButton onClick={() => copyDefaults({ defaultTargetProfitAmount: last.purchase.targetProfitAmount })}>Usar objetivo de última compra</CopyButton>}>
-      <Money label="Ganancia deseada para nuevas pacas" value={settings.defaultTargetProfitAmount} onChange={(value) => updateSetting('defaultTargetProfitAmount', value)} />
+    <DefaultsGroup title={terms.purchasePlural} description="La ganancia deseada es tu objetivo, no dinero ganado ni efectivo en caja." action={last.purchase && <CopyButton onClick={() => copyDefaults({ defaultTargetProfitAmount: last.purchase.targetProfitAmount })}>Usar objetivo de última compra</CopyButton>}>
+      <Money label={`Ganancia deseada para nuevas ${terms.purchasePluralLower}`} value={settings.defaultTargetProfitAmount} onChange={(value) => updateSetting('defaultTargetProfitAmount', value)} />
     </DefaultsGroup>
     <DefaultsGroup title="Envíos" description="Costo: lo que pagas al repartidor. Cobro: lo que paga el cliente. Solo aplican cuando eliges delivery." action={last.delivery && <CopyButton onClick={() => copyDefaults({ defaultDeliveryCost: last.delivery.deliveryCost, defaultDeliveryCharge: last.delivery.deliveryCharge })}>Usar valores del último envío</CopyButton>}>
       <Money label="Costo habitual de delivery" value={settings.defaultDeliveryCost} onChange={(value) => updateSetting('defaultDeliveryCost', value)} />

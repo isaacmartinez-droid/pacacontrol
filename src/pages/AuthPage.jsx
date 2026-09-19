@@ -66,7 +66,7 @@ function AuthPage() {
           <span className="grid size-12 place-items-center rounded-2xl bg-white text-brand-950">
             <Store aria-hidden="true" size={24} />
           </span>
-          <h1 className="mt-5 text-2xl font-extrabold tracking-tight">Tienda J&amp;F</h1>
+          <h1 className="mt-5 text-2xl font-extrabold tracking-tight">Sistema de ventas</h1>
           <p className="mt-2 text-sm leading-6 text-brand-100">Tu inventario y ventas, protegidos en la nube.</p>
         </div>
 

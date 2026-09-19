@@ -65,10 +65,10 @@ function Topbar({ eyebrow, title, description, backTo }) {
             </button>
 
             {showNotifications && (
-              <section id="notifications-panel" aria-label="Alertas de la tienda" className="absolute right-0 top-[calc(100%+0.75rem)] w-80 max-w-[calc(100vw-2rem)] overflow-hidden rounded-2xl bg-white text-slate-900 shadow-2xl shadow-brand-950/25 ring-1 ring-slate-200">
+              <section id="notifications-panel" aria-label="Alertas del negocio" className="absolute right-0 top-[calc(100%+0.75rem)] w-80 max-w-[calc(100vw-2rem)] overflow-hidden rounded-2xl bg-white text-slate-900 shadow-2xl shadow-brand-950/25 ring-1 ring-slate-200">
                 <div className="flex items-center justify-between gap-3 border-b border-slate-100 px-4 py-3.5">
                   <div>
-                    <h2 className="text-sm font-extrabold">Alertas de la tienda</h2>
+                    <h2 className="text-sm font-extrabold">Alertas del negocio</h2>
                     <p className="mt-0.5 text-xs text-slate-500">{notifications.length} activas · {unreadCount} sin leer</p>
                   </div>
                   {unreadCount > 0 && (
@@ -78,7 +78,7 @@ function Topbar({ eyebrow, title, description, backTo }) {
                   )}
                 </div>
                 {error && <p role="status" className="bg-amber-50 px-4 py-3 text-xs text-amber-800">No pudimos actualizar las alertas. Los datos pueden estar desactualizados.</p>}
-                {isLoading ? <p role="status" className="p-5 text-sm text-slate-500">Revisando tu tienda…</p> : (
+                {isLoading ? <p role="status" className="p-5 text-sm text-slate-500">Revisando tu negocio…</p> : (
                   notifications.length > 0 ? (
                     <ul className="max-h-80 divide-y divide-slate-100 overflow-y-auto">
                       {notifications.slice(0, 5).map((notification) => (

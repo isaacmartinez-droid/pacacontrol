@@ -6,12 +6,13 @@ self.addEventListener('push', (event) => {
   let payload = {}
   try { payload = event.data?.json() ?? {} } catch { /* Mensaje sin JSON: aviso genérico. */ }
   if (typeof payload !== 'object' || Array.isArray(payload)) payload = {}
-  const titles = ['Cobro pendiente', 'Inventario bajo', 'Entrega pendiente', 'Daños elevados', 'Paca agotada']
-  const title = titles.includes(payload.title) ? payload.title : 'Tienda J&F'
+  const title = typeof payload.title === 'string' && /^[\p{L}\p{N} ._-]{1,80}$/u.test(payload.title)
+    ? payload.title
+    : 'Avisos del negocio'
   const tag = typeof payload.tag === 'string' && /^pacacontrol-[a-zA-Z0-9_-]{1,100}$/.test(payload.tag) ? payload.tag : 'pacacontrol-alertas'
   event.waitUntil((async () => {
     await self.registration.showNotification(title, {
-    body: typeof payload.body === 'string' ? payload.body.slice(0, 240) : 'Tienes avisos pendientes en tu tienda.',
+    body: typeof payload.body === 'string' ? payload.body.slice(0, 240) : 'Tienes avisos pendientes en tu negocio.',
     icon: '/icons/icon-192.png',
     badge: '/icons/badge-96.png',
     tag,

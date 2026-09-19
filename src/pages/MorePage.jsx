@@ -3,8 +3,10 @@ import { BarChart3, Bell, ChevronRight, CircleAlert, FileText, LoaderCircle, Log
 import { Link } from 'react-router-dom'
 import PageHeader from '../components/common/PageHeader'
 import { useAuth } from '../context/AuthContext'
+import { usePacaData } from '../context/PacaDataContext'
+import { getBusinessTerms } from '../utils/businessProfile'
 
-const modules = [
+const modules = (terms) => [
   {
     title: 'Ajustes',
     description: 'Identidad, operación y configuración del negocio',
@@ -15,21 +17,21 @@ const modules = [
   { title: 'Arqueo de caja', description: 'Efectivo esperado, contado y diferencias', to: '/caja', icon: ReceiptText, tone: 'emerald' },
   {
     title: 'Historial de cambios',
-    description: 'Pacas archivadas y correcciones de pedidos',
+    description: `${terms.purchasePlural} en archivo y correcciones de pedidos`,
     to: '/historial',
     icon: FileText,
     tone: 'brand',
   },
   {
     title: 'Alertas',
-    description: 'Avisos automáticos y límites de tu tienda',
+    description: 'Avisos automáticos y límites de tu negocio',
     to: '/alertas',
     icon: Bell,
     tone: 'brand',
   },
   {
     title: 'Inventario',
-    description: 'Prendas disponibles por categoría',
+    description: `${terms.inventoryUnitPlural} disponibles por categoría`,
     to: '/inventario',
     icon: PackageSearch,
     tone: 'brand',
@@ -73,6 +75,8 @@ const toneClasses = {
 
 function MorePage() {
   const { user, signOut } = useAuth()
+  const { data } = usePacaData()
+  const terms = getBusinessTerms(data.businessProfile)
   const [isSigningOut, setIsSigningOut] = useState(false)
   const [signOutError, setSignOutError] = useState('')
   const username = user?.user_metadata?.username ?? user?.email?.split('@')[0]
@@ -94,11 +98,11 @@ function MorePage() {
       <PageHeader
         eyebrow="Herramientas"
         title="Más"
-        description="Todo lo que necesitas para administrar la tienda desde un solo lugar."
+        description="Todo lo que necesitas para administrar el negocio desde un solo lugar."
       />
       <div className="page-content space-y-6 py-5 md:py-8">
         <nav aria-label="Módulos adicionales" className="max-w-5xl space-y-3 sm:grid sm:grid-cols-2 sm:gap-4 sm:space-y-0">
-          {modules.map((module) => {
+          {modules(terms).map((module) => {
             const Icon = module.icon
 
             return (
