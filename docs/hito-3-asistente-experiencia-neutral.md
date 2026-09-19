@@ -60,24 +60,27 @@ conservan donde no son texto presentado a la persona.
 - compilación de producción aprobada, con la advertencia conocida de tamaño del
   paquete principal.
 
-## Validación remota pendiente
+## Validación remota en staging
 
-El preflight de staging del 18 de septiembre confirmó la referencia separada
-`zijfywqastacydmuqswv`, registro público desactivado y recursos de perfiles y
-plantillas protegidos. Esa comprobación es de solo lectura y no sustituye el
-recorrido autenticado.
+El 18 de septiembre se validó el recorrido autenticado contra el proyecto de
+pruebas separado `zijfywqastacydmuqswv`, con registro público desactivado:
 
-Antes de cerrar el hito se necesita en el entorno de pruebas:
+1. se creó una cuenta nueva y se comprobó su perfil `pending`, paso `0`;
+2. la cuenta se activó como `owner` con plan `pilot_free` y vigencia de 30 días;
+3. el acceso mediante el usuario interno, sin exponer un correo real, funcionó;
+4. se recorrieron los siete pasos desde un navegador de escritorio;
+5. la plantilla «Ropa y calzado» no mostró la plantilla heredada de pacas;
+6. se confirmaron compra por unidades y lotes, variantes, ventas y entrega;
+7. se editaron las sugerencias y la confirmación creó una sola vez las seis
+   categorías elegidas por la persona.
 
-1. crear o disponer de una cuenta nueva cuyo `business_profiles.onboarding_status`
-   sea `pending`;
-2. recorrer el asistente desde teléfono y computadora;
-3. cerrar y volver a abrir a mitad del proceso para comprobar la reanudación;
-4. confirmar que no existen categorías antes del último paso y que aparecen una
-   sola vez después;
-5. revisar panel, navegación, inventario, ventas, alertas y reportes con el
-   vocabulario general;
-6. comprobar una notificación push real si el dispositivo ya está suscrito.
+La consulta de categorías se ejecutó después de pulsar «Preparar mi sistema» y
+devolvió seis filas. Por tanto, esa ejecución remota confirma el resultado final,
+pero no constituye evidencia directa de un conteo cero inmediatamente antes de
+confirmar. Esa invariancia permanece cubierta por las pruebas automatizadas y por
+la separación entre `save_business_onboarding_draft(...)` y
+`complete_business_onboarding(...)`.
 
-El despliegue en producción debe realizarse después de esta validación y de una
-regresión breve con una cuenta existente.
+Antes del despliegue en producción queda una regresión breve con una cuenta
+existente en staging. La prueba push real puede completarse junto con el trabajo
+de vigencia y avisos del Hito 4.

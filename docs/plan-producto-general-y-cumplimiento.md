@@ -40,7 +40,7 @@ No se mezclarán en una misma entrega una migración estructural grande, cambios
 acceso, nuevo cobro y renombrado general. Esto reduce el tamaño de los fallos y
 permite identificar qué cambio causó un problema.
 
-### Estado consolidado al 17 de septiembre de 2026
+### Estado consolidado al 18 de septiembre de 2026
 
 La palabra «implementado» en esta tabla describe el repositorio. No confirma que
 la migración o configuración correspondiente ya esté aplicada en producción.
@@ -63,7 +63,7 @@ la migración o configuración correspondiente ya esté aplicada en producción.
 | Detalle de otros gastos de compra | Hito 1 cerrado y verificado en producción | Ninguna |
 | Códigos de prueba y campañas | Pendiente | Diseño seguro, administración y reglas legales |
 | Avisos de vencimiento de prueba | Pendiente | Depende de campañas y vigencia de cuenta |
-| Perfil y asistente de negocio | Hito 3 implementado y verificado localmente | Recorrido remoto con una cuenta nueva en staging |
+| Perfil y asistente de negocio | Hito 3 implementado y recorrido con cuenta nueva en staging | Regresión breve con una cuenta existente antes de producción |
 | Documentos legales definitivos | Investigación iniciada | Dependen de identidad y modelo comercial definitivos |
 
 ### Hito 0. Cerrar la estabilización actual
