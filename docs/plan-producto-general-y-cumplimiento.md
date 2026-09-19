@@ -1,6 +1,6 @@
 # Plan maestro: producto comercial general, acceso y cumplimiento
 
-Fecha de consolidación: 18 de septiembre de 2026.
+Fecha de consolidación: 19 de septiembre de 2026.
 
 Este documento reúne dos planes acordados previamente y añade la decisión de
 evolucionar el producto hacia una plataforma para comercios en general. El nombre
@@ -40,7 +40,7 @@ No se mezclarán en una misma entrega una migración estructural grande, cambios
 acceso, nuevo cobro y renombrado general. Esto reduce el tamaño de los fallos y
 permite identificar qué cambio causó un problema.
 
-### Estado consolidado al 18 de septiembre de 2026
+### Estado consolidado al 19 de septiembre de 2026
 
 La palabra «implementado» en esta tabla describe el repositorio. No confirma que
 la migración o configuración correspondiente ya esté aplicada en producción.
@@ -65,6 +65,7 @@ la migración o configuración correspondiente ya esté aplicada en producción.
 | Avisos de vencimiento de prueba | Pendiente | Depende de campañas y vigencia de cuenta |
 | Perfil y asistente de negocio | Hito 3 desplegado en producción | Recorrido autenticado final en producción |
 | Portal administrativo independiente | Dos compilaciones y fronteras por rol verificadas localmente | Crear segundo proyecto de Vercel y validar ambos dominios |
+| Centro de control administrativo | Primera fase de interfaz implementada localmente | Validar con cuenta admin y diseñar RPC paginada |
 | Documentos legales definitivos | Investigación iniciada | Dependen de identidad y modelo comercial definitivos |
 
 ### Hito 0. Cerrar la estabilización actual

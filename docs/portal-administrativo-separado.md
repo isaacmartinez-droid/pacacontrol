@@ -109,3 +109,7 @@ pueden configurar en Project Settings, según la
 La separación está implementada y verificada localmente. No debe publicarse el
 cambio de redirección comercial hasta que el segundo proyecto de Vercel exista y
 su dominio se haya configurado en `VITE_ADMIN_APP_URL`.
+
+La primera reestructuración del centro de control se documenta en
+[`docs/centro-control-administrativo.md`](centro-control-administrativo.md). Esta
+evolución permanece en la rama del portal separado y tampoco modifica producción.

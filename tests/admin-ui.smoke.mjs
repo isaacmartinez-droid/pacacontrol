@@ -8,6 +8,7 @@ import { LEGAL_TERMS_VERSION, PRIVACY_VERSION } from '../src/legal/legalContent.
 // El portal administrativo se prueba como una compilación independiente.
 const origin = 'http://127.0.0.1:5180'
 const owner = '22222222-2222-4222-8222-222222222222'
+const customer = '33333333-3333-4333-8333-333333333333'
 let accountRole = 'owner'
 const requestedResources = []
 const errors = []
@@ -72,7 +73,41 @@ try {
         privacy_accepted_at: new Date().toISOString(),
       }]
     } else if (resource === 'admin_list_accounts') {
-      result = []
+      const now = Date.now()
+      result = [
+        {
+          user_id: owner,
+          email: 'admin.sistema@admin-ui-test.supabase.co',
+          display_name: 'Administración interna',
+          account_role: 'admin',
+          access_status: 'active',
+          service_plan: 'internal',
+          created_at: new Date(now - 30 * 86400000).toISOString(),
+          updated_at: new Date().toISOString(),
+          terms_accepted_at: new Date().toISOString(),
+          privacy_accepted_at: new Date().toISOString(),
+        },
+        {
+          user_id: customer,
+          email: 'cliente.prueba@admin-ui-test.supabase.co',
+          display_name: 'Variedades Luna',
+          account_role: 'owner',
+          access_status: 'active',
+          service_plan: 'paid_monthly',
+          next_payment_due_at: new Date(now - 86400000).toISOString(),
+          created_at: new Date(now - 60 * 86400000).toISOString(),
+          updated_at: new Date().toISOString(),
+          legal_terms_version: LEGAL_TERMS_VERSION,
+          privacy_version: PRIVACY_VERSION,
+          terms_accepted_at: new Date().toISOString(),
+          privacy_accepted_at: new Date().toISOString(),
+          bales_count: 3,
+          sales_count: 8,
+          customers_count: 4,
+          sales_total: 1200,
+          last_sale_at: new Date(now - 86400000).toISOString(),
+        },
+      ]
     }
     await route.fulfill({
       status: 200,
@@ -89,12 +124,26 @@ try {
   accountRole = 'admin'
   await page.reload()
   await page.getByRole('heading', { name: 'Panel admin', exact: true }).waitFor()
-  await page.getByText('Consola separada para monitorear clientes, planes, pagos y accesos.', { exact: true }).waitFor()
+  await page.getByText('Variedades Luna', { exact: true }).first().waitFor()
+  await page.getByText('El pago registrado está vencido.', { exact: true }).waitFor()
+
+  await page.goto(origin + '/cuentas')
+  await page.getByRole('heading', { name: 'Cuentas', exact: true }).waitFor()
+  await page.getByText('Variedades Luna', { exact: true }).last().waitFor()
+
+  await page.goto(origin + '/cuentas/' + customer)
+  await page.getByRole('heading', { name: 'Variedades Luna', exact: true }).waitFor()
+  await page.getByRole('heading', { name: 'Cumplimiento', exact: true }).waitFor()
+  await page.getByRole('heading', { name: 'Control de la cuenta', exact: true }).waitFor()
+
+  await page.goto(origin + '/sistema')
+  await page.getByRole('heading', { name: 'Sistema', exact: true }).waitFor()
+  await page.getByText('Telemetría técnica', { exact: true }).waitFor()
 
   const forbiddenBusinessResources = ['bales', 'sales', 'customers', 'expenses', 'business_profiles']
   assert.deepEqual(requestedResources.filter((resource) => forbiddenBusinessResources.includes(resource)), [])
   assert.deepEqual(errors, [])
-  console.log('OK: el portal separado rechaza clientes, acepta admins y no carga datos operativos del negocio.')
+  console.log('OK: el portal rechaza clientes, separa resumen, cuentas y expediente, y no consulta recursos operativos directamente.')
 } finally {
   await browser?.close()
   server.kill()
