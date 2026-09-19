@@ -63,7 +63,7 @@ la migración o configuración correspondiente ya esté aplicada en producción.
 | Detalle de otros gastos de compra | Hito 1 cerrado y verificado en producción | Ninguna |
 | Códigos de prueba y campañas | Pendiente | Diseño seguro, administración y reglas legales |
 | Avisos de vencimiento de prueba | Pendiente | Depende de campañas y vigencia de cuenta |
-| Perfil y asistente de negocio | Hito 3 implementado y recorrido con cuenta nueva en staging | Regresión breve con una cuenta existente antes de producción |
+| Perfil y asistente de negocio | Hito 3 aprobado con cuentas nueva y existente en staging | Aplicar migración y desplegar en producción |
 | Documentos legales definitivos | Investigación iniciada | Dependen de identidad y modelo comercial definitivos |
 
 ### Hito 0. Cerrar la estabilización actual

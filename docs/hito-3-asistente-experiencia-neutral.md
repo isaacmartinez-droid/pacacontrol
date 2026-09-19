@@ -81,6 +81,12 @@ confirmar. Esa invariancia permanece cubierta por las pruebas automatizadas y po
 la separación entre `save_business_onboarding_draft(...)` y
 `complete_business_onboarding(...)`.
 
-Antes del despliegue en producción queda una regresión breve con una cuenta
-existente en staging. La prueba push real puede completarse junto con el trabajo
-de vigencia y avisos del Hito 4.
+La regresión posterior con una cuenta existente en staging confirmó que entra
+directamente al panel, conserva sus datos y mantiene el vocabulario heredado sin
+ser forzada a repetir el asistente. Con esa comprobación, el Hito 3 queda aprobado
+en staging.
+
+La prueba push real puede completarse junto con el trabajo de vigencia y avisos
+del Hito 4. Para publicar este hito se debe aplicar primero la migración del perfil
+de negocio en producción y desplegar la interfaz únicamente después de verificar
+el esquema remoto.
