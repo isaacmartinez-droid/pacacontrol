@@ -47,17 +47,18 @@ test('invitaciones crean propietarios activos sin exponer privilegios administra
     await t.test('el administrador recibe el secreto una vez y la base conserva solo su huella', async () => {
       await login(admin)
       const invitation = await scalar(`select * from public.admin_create_account_invitation(
-        'Variedades Sol', 'Ana Pérez', 'ana.perez', 'ana@example.com', '8888-8888',
+        null, 'Ana Pérez', 'ana.perez', 'ana@example.com', '8888-8888',
         'paid_monthly', 14, 7, '2026-09-11', '2026-09-11')`)
       token = invitation.invitation_token
       assert.match(token, /^[A-Za-z0-9_-]{22}$/)
       await db.exec('reset role')
-      const stored = await scalar('select code_digest, code_hint, status from public.account_invitations')
+      const stored = await scalar('select code_digest, code_hint, status, business_name from public.account_invitations')
       digest = stored.code_digest
       assert.match(digest, /^[0-9a-f]{64}$/)
       assert.notEqual(stored.code_digest, token)
       assert.equal(stored.code_hint, token.slice(-8))
       assert.equal(stored.status, 'pending')
+      assert.equal(stored.business_name, null)
       await login(admin)
       const listed = await scalar('select username, status from public.admin_list_account_invitations()')
       assert.deepEqual(listed, { username: 'ana.perez', status: 'pending' })
@@ -78,16 +79,20 @@ test('invitaciones crean propietarios activos sin exponer privilegios administra
       assert.equal((await db.query('select * from public.claim_account_invitation($1, gen_random_uuid())', [digest])).rows.length, 0)
 
       await db.exec('reset role')
-      await db.query("insert into auth.users(id, email, raw_user_meta_data) values ($1, 'ana.perez@staging.supabase.co', $2::jsonb)", [activated, JSON.stringify({ display_name: 'Variedades Sol' })])
+      await db.query("insert into auth.users(id, email, raw_user_meta_data) values ($1, 'ana.perez@staging.supabase.co', $2::jsonb)", [activated, JSON.stringify({ display_name: 'Ana Pérez' })])
       await login(null, 'service_role')
       assert.equal((await scalar('select public.complete_account_invitation_activation($1, $2) as completed', [attempt, activated])).completed, true)
       await db.exec('reset role')
       const profile = await scalar('select display_name, access_status, service_plan, account_role from public.profiles where id=$1', [activated])
-      assert.deepEqual(profile, { display_name: 'Variedades Sol', access_status: 'active', service_plan: 'paid_monthly', account_role: 'owner' })
+      assert.deepEqual(profile, { display_name: 'Ana Pérez', access_status: 'active', service_plan: 'paid_monthly', account_role: 'owner' })
       const business = await scalar('select business_name, onboarding_status, onboarding_step from public.business_profiles where owner_id=$1', [activated])
-      assert.deepEqual(business, { business_name: 'Variedades Sol', onboarding_status: 'pending', onboarding_step: 0 })
+      assert.deepEqual(business, { business_name: null, onboarding_status: 'pending', onboarding_step: 0 })
       assert.equal((await scalar('select status from public.account_invitations')).status, 'redeemed')
       assert.equal((await db.query('select * from public.preview_account_invitation($1)', [digest])).rows.length, 0)
+
+      await db.exec('reset role')
+      await db.query("update public.business_profiles set business_name='Variedades Sol' where owner_id=$1", [activated])
+      assert.equal((await scalar('select display_name from public.profiles where id=$1', [activated])).display_name, 'Variedades Sol')
     })
 
     await t.test('una segunda activación no puede reclamar el mismo token', async () => {

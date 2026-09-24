@@ -125,6 +125,20 @@ with feature_status(feature, installed, detail) as (
       'complete_account_invitation_activation',
       to_regprocedure('public.complete_account_invitation_activation(uuid,uuid)') is not null,
       'Cuenta activa y onboarding pendiente'
+    ),
+    (
+      'account_invitations.business_name opcional',
+      exists (
+        select 1 from information_schema.columns
+        where table_schema = 'public' and table_name = 'account_invitations'
+          and column_name = 'business_name' and is_nullable = 'YES'
+      ),
+      'El propietario define el negocio durante el onboarding'
+    ),
+    (
+      'sync_business_name_to_profile',
+      to_regprocedure('public.sync_business_name_to_profile()') is not null,
+      'El directorio adopta el nombre confirmado del negocio'
     )
 ), date_defaults as (
   select

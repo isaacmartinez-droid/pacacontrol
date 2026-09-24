@@ -15,8 +15,8 @@ importe futuro de una cuenta ya identificada.
 
 ## Flujo
 
-1. El administrador abre **Cuentas > Crear cuenta** y registra negocio,
-   responsable, usuario, contacto, plan y vigencia.
+1. El administrador abre **Cuentas > Crear cuenta** y registra responsable,
+   usuario, contacto, plan y vigencia. No elige el nombre del negocio.
 2. PostgreSQL genera un token aleatorio de 128 bits representado en 22
    caracteres base64url. Guarda únicamente su huella SHA-256 y devuelve el
    token original una vez para construir el enlace.
@@ -25,7 +25,8 @@ importe futuro de una cuenta ya identificada.
 4. La Edge Function reclama la invitación de manera atómica, crea el usuario
    mediante la API administrativa y finaliza la activación. La cuenta queda
    `active`, con rol `owner` y onboarding `pending`.
-5. La aplicación inicia sesión y lleva al cliente a `/configurar-negocio`.
+5. La aplicación inicia sesión y lleva al cliente a `/configurar-negocio`,
+   donde el propietario define por primera vez el nombre y tipo de su negocio.
 
 Una invitación vencida, revocada, utilizada o que ya está siendo procesada no
 puede volver a reclamarse. Si la creación de Auth falla, el backend libera la
@@ -63,7 +64,8 @@ No volver a ejecutar `install_staging.sql` en una base existente. En
 
 1. ejecutar en SQL Editor el contenido de
    `supabase/migrations/20260919000000_account_invitations.sql` y después
-   `supabase/migrations/20260920000000_friendly_account_invitation_links.sql`;
+   `supabase/migrations/20260920000000_friendly_account_invitation_links.sql` y
+   `supabase/migrations/20260921000000_owner_first_account_invitations.sql`;
 2. desplegar la función sin verificación JWT, porque todavía no existe una
    sesión antes de activar:
 

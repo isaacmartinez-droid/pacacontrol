@@ -77,8 +77,8 @@ function ActivateAccountPage() {
 
           {(status === 'ready' || status === 'activating') && invitation && <form onSubmit={submit} className="space-y-5">
             <div className="rounded-2xl bg-brand-50 p-4 ring-1 ring-brand-100">
-              <p className="text-xs font-extrabold uppercase tracking-wide text-brand-600">Cuenta preparada para</p>
-              <p className="mt-1 text-lg font-extrabold text-brand-950">{invitation.business_name}</p>
+              <p className="text-xs font-extrabold uppercase tracking-wide text-brand-600">Invitación para</p>
+              <p className="mt-1 text-lg font-extrabold text-brand-950">{invitation.owner_name}</p>
               <p className="mt-1 text-sm font-bold text-brand-700">Usuario: {invitation.username}</p>
             </div>
 

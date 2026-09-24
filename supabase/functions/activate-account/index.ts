@@ -61,7 +61,7 @@ Deno.serve(async (request) => {
         password,
         email_confirm: true,
         user_metadata: {
-          display_name: invitation.business_name,
+          display_name: invitation.owner_name,
           owner_name: invitation.owner_name,
           legal_terms_version: invitation.legal_terms_version,
           privacy_version: invitation.privacy_version,
@@ -79,7 +79,7 @@ Deno.serve(async (request) => {
       return json({
         activated: true,
         username: invitation.username,
-        businessName: invitation.business_name,
+        ownerName: invitation.owner_name,
       }, 200, cors)
     } catch (error) {
       try {

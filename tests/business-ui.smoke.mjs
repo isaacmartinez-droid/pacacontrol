@@ -92,7 +92,7 @@ try {
     const method = request.method()
     const body = method === 'GET' ? null : request.postDataJSON()
     let result = []
-    if (table === 'activate-account') result = body?.action === 'preview' ? { invitation: { business_name: 'Negocio invitado', owner_name: 'Ana Pérez', username: 'ana.perez', legal_terms_version: LEGAL_TERMS_VERSION, privacy_version: PRIVACY_VERSION } } : { activated: true, username: 'ana.perez', businessName: 'Negocio invitado' }
+    if (table === 'activate-account') result = body?.action === 'preview' ? { invitation: { business_name: null, owner_name: 'Ana Pérez', username: 'ana.perez', legal_terms_version: LEGAL_TERMS_VERSION, privacy_version: PRIVACY_VERSION } } : { activated: true, username: 'ana.perez', ownerName: 'Ana Pérez' }
     else if (table === 'profiles') result = [{ id: owner, display_name: 'Isaac', account_role: accountRole, access_status: 'active', service_plan: accountRole === 'admin' ? 'internal' : 'trial', legal_terms_version: LEGAL_TERMS_VERSION, privacy_version: PRIVACY_VERSION, terms_accepted_at: soldAt, privacy_accepted_at: soldAt }]
     else if (table === 'business_profiles') result = [businessProfile]
     else if (table === 'business_templates') result = businessTemplates
@@ -494,13 +494,13 @@ try {
   await guest.route('https://paca-ui-test.supabase.co/**', async (route) => {
     const resource = new URL(route.request().url()).pathname.split('/').at(-1)
     const result = resource === 'activate-account'
-      ? { invitation: { business_name: 'Negocio invitado', owner_name: 'Ana Pérez', username: 'ana.perez', legal_terms_version: LEGAL_TERMS_VERSION, privacy_version: PRIVACY_VERSION } }
+      ? { invitation: { business_name: null, owner_name: 'Ana Pérez', username: 'ana.perez', legal_terms_version: LEGAL_TERMS_VERSION, privacy_version: PRIVACY_VERSION } }
       : []
     await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(result) })
   })
   await guest.goto(origin + '/bienvenida/' + 'AbCdEfGhIjKlMnOpQrSt-_')
   await guest.getByRole('heading', { name: 'Activa tu cuenta', exact: true }).waitFor()
-  await guest.getByText('Negocio invitado', { exact: true }).waitFor()
+  await guest.getByText('Ana Pérez', { exact: true }).waitFor()
   await guest.getByLabel('Crea tu contraseña').waitFor()
   await guest.goto(origin + '/acceder')
   await guest.getByRole('heading', { name: 'Bienvenido de nuevo', exact: true }).waitFor()

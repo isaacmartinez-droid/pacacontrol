@@ -6,7 +6,7 @@ import { LEGAL_TERMS_VERSION, PRIVACY_VERSION } from '../../../src/legal/legalCo
 import { EmptyPanel, PageHeading, formatAdminDate } from '../components/AdminUi'
 
 const initialForm = {
-  businessName: '', ownerName: '', username: '', contactEmail: '', contactPhone: '',
+  ownerName: '', username: '', contactEmail: '', contactPhone: '',
   servicePlan: 'pilot_free', trialDays: '30', expiresInDays: '7',
 }
 
@@ -22,7 +22,7 @@ function AdminNewAccountPage() {
   const activationUrl = useMemo(() => created && customerAppUrl
     ? `${customerAppUrl}/bienvenida/${encodeURIComponent(created.invitation_token)}` : '', [created, customerAppUrl])
   const invitationMessage = useMemo(() => created && activationUrl
-    ? `¡Tu negocio está listo para dar el siguiente paso!\n\nHola, ${created.owner_name}. Hemos preparado el espacio de ${created.business_name} en PacaControl para ayudarte a organizar tus ventas, inventario y clientes con mayor claridad.\n\nActiva tu cuenta y crea tu contraseña desde este enlace seguro:\n${activationUrl}\n\nAl ingresar, te guiaremos paso a paso para adaptar el sistema a tu forma de trabajar.\n\nEste enlace es personal, vence ${formatAdminDate(created.expires_at)} y solo puede utilizarse una vez.`
+    ? `¡Tu espacio en PacaControl está listo para comenzar!\n\nHola, ${created.owner_name}. Hemos preparado tu acceso para que configures el sistema según tu negocio y tu forma de trabajar.\n\nActiva tu cuenta y crea tu contraseña desde este enlace seguro:\n${activationUrl}\n\nAl ingresar, te guiaremos paso a paso para definir tu negocio y adaptar la gestión de ventas, inventario y clientes.\n\nEste enlace es personal, vence ${formatAdminDate(created.expires_at)} y solo puede utilizarse una vez.`
     : '', [activationUrl, created])
 
   async function loadInvitations() {
@@ -48,7 +48,7 @@ function AdminNewAccountPage() {
     try {
       if (!customerAppUrl) throw new Error('Falta configurar VITE_CUSTOMER_APP_URL en el portal administrativo.')
       const { data, error: nextError } = await getSupabaseClient().rpc('admin_create_account_invitation', {
-        p_business_name: form.businessName,
+        p_business_name: null,
         p_owner_name: form.ownerName,
         p_username: normalizeUsername(form.username),
         p_contact_email: form.contactEmail || null,
@@ -62,7 +62,6 @@ function AdminNewAccountPage() {
       if (nextError) throw nextError
       setCreated(data?.[0] ? {
         ...data[0],
-        business_name: form.businessName.trim(),
         owner_name: form.ownerName.trim(),
       } : null)
       setForm(initialForm)
@@ -100,12 +99,9 @@ function AdminNewAccountPage() {
       <div className="grid gap-6 xl:grid-cols-[minmax(0,1.15fr)_minmax(340px,.85fr)]">
         <form onSubmit={submit} className="space-y-5 rounded-2xl bg-white p-5 shadow-soft ring-1 ring-slate-100 sm:p-6">
           <div className="grid gap-4 sm:grid-cols-2">
-            <Field label="Nombre del negocio"><input className="sale-input mt-2" value={form.businessName} required maxLength="120" onChange={(event) => update('businessName', event.target.value)} /></Field>
             <Field label="Persona responsable"><input className="sale-input mt-2" value={form.ownerName} required maxLength="120" onChange={(event) => update('ownerName', event.target.value)} /></Field>
+            <Field label="Usuario de acceso" help="Formato nombre.apellido; se convierte automáticamente a minúsculas y sin tildes."><input className="sale-input mt-2" value={form.username} required placeholder="miguel.martinez" onChange={(event) => update('username', event.target.value)} /></Field>
           </div>
-          <Field label="Usuario de acceso" help="Formato nombre.apellido; se convierte automáticamente a minúsculas y sin tildes.">
-            <input className="sale-input mt-2" value={form.username} required placeholder="miguel.martinez" onChange={(event) => update('username', event.target.value)} />
-          </Field>
           <div className="grid gap-4 sm:grid-cols-2">
             <Field label="Correo de contacto (opcional)"><input className="sale-input mt-2" type="email" value={form.contactEmail} maxLength="254" onChange={(event) => update('contactEmail', event.target.value)} /></Field>
             <Field label="Teléfono / WhatsApp (opcional)"><input className="sale-input mt-2" value={form.contactPhone} maxLength="30" onChange={(event) => update('contactPhone', event.target.value)} /></Field>
@@ -147,7 +143,7 @@ function AdminNewAccountPage() {
         <h2 className="text-lg font-extrabold text-slate-950">Invitaciones recientes</h2>
         {isLoading ? <p className="mt-4 text-sm font-bold text-slate-500">Cargando invitaciones…</p> : invitations.length ? (
           <div className="mt-4 divide-y divide-slate-100">
-            {invitations.map((invitation) => <div key={invitation.invitation_id} className="flex flex-col gap-3 py-4 sm:flex-row sm:items-center sm:justify-between"><div><p className="font-extrabold text-slate-950">{invitation.business_name}</p><p className="mt-1 text-xs font-semibold text-slate-500">{invitation.username} · código termina en {invitation.code_hint} · vence {formatAdminDate(invitation.expires_at)}</p></div><div className="flex items-center gap-3"><InvitationStatus status={invitation.status} />{['pending', 'processing'].includes(invitation.status) && <button type="button" onClick={() => revoke(invitation.invitation_id)} className="inline-flex min-h-10 items-center gap-1 rounded-xl px-3 text-sm font-extrabold text-red-700 hover:bg-red-50"><XCircle size={17} />Revocar</button>}</div></div>)}
+            {invitations.map((invitation) => <div key={invitation.invitation_id} className="flex flex-col gap-3 py-4 sm:flex-row sm:items-center sm:justify-between"><div><p className="font-extrabold text-slate-950">{invitation.owner_name}</p><p className="mt-1 text-xs font-semibold text-slate-500">{invitation.username} · negocio por definir · código termina en {invitation.code_hint} · vence {formatAdminDate(invitation.expires_at)}</p></div><div className="flex items-center gap-3"><InvitationStatus status={invitation.status} />{['pending', 'processing'].includes(invitation.status) && <button type="button" onClick={() => revoke(invitation.invitation_id)} className="inline-flex min-h-10 items-center gap-1 rounded-xl px-3 text-sm font-extrabold text-red-700 hover:bg-red-50"><XCircle size={17} />Revocar</button>}</div></div>)}
           </div>
         ) : <div className="mt-4"><EmptyPanel title="Todavía no hay invitaciones" description="La primera aparecerá después de crearla." /></div>}
       </section>
