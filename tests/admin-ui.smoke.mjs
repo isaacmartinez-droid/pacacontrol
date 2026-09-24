@@ -149,7 +149,10 @@ try {
   await page.getByLabel('Usuario de acceso').fill('ana.perez')
   await page.getByRole('button', { name: 'Crear invitación', exact: true }).click()
   await page.getByText('Invitación creada', { exact: true }).waitFor()
-  await page.getByText('https://customer-ui-test.example/bienvenida/AbCdEfGhIjKlMnOpQrSt-_', { exact: true }).waitFor()
+  await page.getByText(/¡Tu negocio está listo para dar el siguiente paso!/).waitFor()
+  await page.getByText(/Hemos preparado el espacio de Variedades Sol en PacaControl/).waitFor()
+  await page.getByText(/te guiaremos paso a paso para adaptar el sistema/).waitFor()
+  await page.getByText(/https:\/\/customer-ui-test\.example\/bienvenida\/AbCdEfGhIjKlMnOpQrSt-_/).waitFor()
   await page.getByRole('button', { name: 'Copiar mensaje para el cliente', exact: true }).waitFor()
 
   await page.goto(origin + '/cuentas/' + customer)

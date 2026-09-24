@@ -90,6 +90,8 @@ No deben copiarse a `.env.local`, al frontend ni a una variable `VITE_`.
 
 1. Crear una invitación para un usuario que no exista.
 2. Copiar el enlace mostrado una sola vez.
+   El panel también prepara un mensaje personalizado que presenta el beneficio,
+   explica el siguiente paso y conserva una sola llamada a la acción.
 3. Abrirlo en una ventana privada de la aplicación comercial de pruebas.
 4. Crear la contraseña y confirmar que abre el onboarding.
 5. Verificar en el panel que la invitación figura como **Utilizada** y la cuenta
