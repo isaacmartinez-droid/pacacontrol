@@ -1,14 +1,16 @@
 import { CheckCircle2, CircleAlert, Eye, EyeOff, KeyRound, LoaderCircle, Store } from 'lucide-react'
 import { useEffect, useState } from 'react'
-import { Link, useNavigate, useSearchParams } from 'react-router-dom'
+import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { getSupabaseClient } from '../lib/supabaseClient'
 
 function ActivateAccountPage() {
   const [searchParams] = useSearchParams()
+  const { token: pathToken } = useParams()
   const navigate = useNavigate()
   const { signIn, user } = useAuth()
-  const token = searchParams.get('token')?.trim() ?? ''
+  // /activar?token=... se conserva para invitaciones ya emitidas.
+  const token = pathToken?.trim() || searchParams.get('token')?.trim() || ''
   const [invitation, setInvitation] = useState(null)
   const [password, setPassword] = useState('')
   const [confirmation, setConfirmation] = useState('')

@@ -110,6 +110,13 @@ try {
       ]
     } else if (resource === 'admin_list_account_invitations') {
       result = []
+    } else if (resource === 'admin_create_account_invitation') {
+      result = [{
+        invitation_id: '44444444-4444-4444-8444-444444444444',
+        invitation_token: 'AbCdEfGhIjKlMnOpQrSt-_',
+        username: 'ana.perez',
+        expires_at: new Date(Date.now() + 7 * 86400000).toISOString(),
+      }]
     }
     await route.fulfill({
       status: 200,
@@ -137,6 +144,13 @@ try {
   await page.getByRole('heading', { name: 'Crear cuenta', exact: true }).waitFor()
   await page.getByLabel('Nombre del negocio').waitFor()
   await page.getByText('El enlace aparecerá aquí', { exact: true }).waitFor()
+  await page.getByLabel('Nombre del negocio').fill('Variedades Sol')
+  await page.getByLabel('Persona responsable').fill('Ana Pérez')
+  await page.getByLabel('Usuario de acceso').fill('ana.perez')
+  await page.getByRole('button', { name: 'Crear invitación', exact: true }).click()
+  await page.getByText('Invitación creada', { exact: true }).waitFor()
+  await page.getByText('https://customer-ui-test.example/bienvenida/AbCdEfGhIjKlMnOpQrSt-_', { exact: true }).waitFor()
+  await page.getByRole('button', { name: 'Copiar mensaje para el cliente', exact: true }).waitFor()
 
   await page.goto(origin + '/cuentas/' + customer)
   await page.getByRole('heading', { name: 'Variedades Luna', exact: true }).waitFor()

@@ -17,9 +17,10 @@ importe futuro de una cuenta ya identificada.
 
 1. El administrador abre **Cuentas > Crear cuenta** y registra negocio,
    responsable, usuario, contacto, plan y vigencia.
-2. PostgreSQL genera un token aleatorio. Guarda únicamente su huella SHA-256 y
-   devuelve el token original una vez para construir el enlace.
-3. El cliente abre `/activar`, revisa la cuenta preparada, acepta términos y
+2. PostgreSQL genera un token aleatorio de 128 bits representado en 22
+   caracteres base64url. Guarda únicamente su huella SHA-256 y devuelve el
+   token original una vez para construir el enlace.
+3. El cliente abre `/bienvenida/{código}`, revisa la cuenta preparada, acepta términos y
    privacidad y define una contraseña de al menos 10 caracteres.
 4. La Edge Function reclama la invitación de manera atómica, crea el usuario
    mediante la API administrativa y finaliza la activación. La cuenta queda
@@ -41,6 +42,8 @@ liberarla.
 - La tabla no tiene permisos para `anon` ni `authenticated` y tiene RLS activa.
 - El token completo no se puede recuperar después de cerrar el resultado de
   creación; solo se conserva una pista de ocho caracteres para soporte.
+- Los enlaces históricos `/activar?token=...` continúan funcionando hasta su
+  vencimiento, pero todas las invitaciones nuevas usan la ruta breve.
 - El alta siempre produce `account_role = 'owner'`. El formulario no ofrece
   crear administradores ni el plan interno.
 
@@ -59,7 +62,8 @@ No volver a ejecutar `install_staging.sql` en una base existente. En
 `Sistema-Pacas-Pruebas`:
 
 1. ejecutar en SQL Editor el contenido de
-   `supabase/migrations/20260919000000_account_invitations.sql`;
+   `supabase/migrations/20260919000000_account_invitations.sql` y después
+   `supabase/migrations/20260920000000_friendly_account_invitation_links.sql`;
 2. desplegar la función sin verificación JWT, porque todavía no existe una
    sesión antes de activar:
 

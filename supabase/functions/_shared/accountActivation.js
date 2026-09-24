@@ -1,7 +1,10 @@
-export const INVITATION_TOKEN_PATTERN = /^[0-9a-f]{64}$/
+export const INVITATION_TOKEN_PATTERN = /^(?:[A-Za-z0-9_-]{22}|[0-9a-f]{64})$/
 
 export function normalizeInvitationToken(value) {
-  return String(value ?? '').trim().toLowerCase()
+  const token = String(value ?? '').trim()
+  // Los tokens históricos eran hexadecimales y no distinguían mayúsculas.
+  // Los nuevos usan base64url y deben conservar exactamente sus caracteres.
+  return /^[0-9a-f]{64}$/i.test(token) ? token.toLowerCase() : token
 }
 
 export function isValidInvitationToken(value) {

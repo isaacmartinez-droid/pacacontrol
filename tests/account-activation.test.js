@@ -8,11 +8,16 @@ import {
   validateActivationPassword,
 } from '../supabase/functions/_shared/accountActivation.js'
 
-test('normaliza y valida únicamente tokens completos de invitación', async () => {
-  const token = 'A'.repeat(64)
-  assert.equal(normalizeInvitationToken(`  ${token}  `), 'a'.repeat(64))
-  assert.equal(isValidInvitationToken(token), true)
+test('normaliza y valida tokens cortos y enlaces históricos', async () => {
+  const legacyToken = 'A'.repeat(64)
+  const friendlyToken = 'AbCdEfGhIjKlMnOpQrSt-_'
+  assert.equal(normalizeInvitationToken(`  ${legacyToken}  `), 'a'.repeat(64))
+  assert.equal(normalizeInvitationToken(`  ${friendlyToken}  `), friendlyToken)
+  assert.equal(isValidInvitationToken(legacyToken), true)
+  assert.equal(isValidInvitationToken(friendlyToken), true)
+  assert.equal(isValidInvitationToken(friendlyToken.toLowerCase()), true)
   assert.equal(isValidInvitationToken('a'.repeat(63)), false)
+  assert.equal(isValidInvitationToken('a'.repeat(21)), false)
   assert.equal(isValidInvitationToken('g'.repeat(64)), false)
   assert.equal(await sha256Hex('abc'), 'ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad')
 })

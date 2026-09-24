@@ -17,10 +17,13 @@ function AdminNewAccountPage() {
   const [error, setError] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [isLoading, setIsLoading] = useState(true)
-  const [copied, setCopied] = useState(false)
+  const [copied, setCopied] = useState('')
   const customerAppUrl = String(import.meta.env.VITE_CUSTOMER_APP_URL ?? '').replace(/\/$/, '')
   const activationUrl = useMemo(() => created && customerAppUrl
-    ? `${customerAppUrl}/activar?token=${encodeURIComponent(created.invitation_token)}` : '', [created, customerAppUrl])
+    ? `${customerAppUrl}/bienvenida/${encodeURIComponent(created.invitation_token)}` : '', [created, customerAppUrl])
+  const invitationMessage = useMemo(() => created && activationUrl
+    ? `Hola, ${created.owner_name}. Tu espacio para ${created.business_name} está listo.\n\nAbre este enlace seguro para crear tu contraseña y comenzar:\n${activationUrl}\n\nEste enlace es personal, vence ${formatAdminDate(created.expires_at)} y solo puede utilizarse una vez.`
+    : '', [activationUrl, created])
 
   async function loadInvitations() {
     setIsLoading(true)
@@ -57,7 +60,11 @@ function AdminNewAccountPage() {
         p_privacy_version: PRIVACY_VERSION,
       })
       if (nextError) throw nextError
-      setCreated(data?.[0] ?? null)
+      setCreated(data?.[0] ? {
+        ...data[0],
+        business_name: form.businessName.trim(),
+        owner_name: form.ownerName.trim(),
+      } : null)
       setForm(initialForm)
       await loadInvitations()
     } catch (nextError) {
@@ -69,8 +76,14 @@ function AdminNewAccountPage() {
 
   async function copyLink() {
     await navigator.clipboard.writeText(activationUrl)
-    setCopied(true)
-    window.setTimeout(() => setCopied(false), 2000)
+    setCopied('link')
+    window.setTimeout(() => setCopied(''), 2000)
+  }
+
+  async function copyMessage() {
+    await navigator.clipboard.writeText(invitationMessage)
+    setCopied('message')
+    window.setTimeout(() => setCopied(''), 2000)
   }
 
   async function revoke(invitationId) {
@@ -115,9 +128,10 @@ function AdminNewAccountPage() {
             {created ? <>
               <span className="grid size-11 place-items-center rounded-xl bg-emerald-100 text-emerald-700"><KeyRound size={21} /></span>
               <h2 className="mt-4 text-lg font-extrabold text-slate-950">Invitación creada</h2>
-              <p className="mt-2 text-sm leading-6 text-slate-600">Copia este enlace ahora. Por seguridad, el token completo no volverá a mostrarse.</p>
+              <p className="mt-2 text-sm leading-6 text-slate-600">Comparte el mensaje preparado. Por seguridad, el código completo no volverá a mostrarse.</p>
               <div className="mt-4 break-all rounded-xl bg-white p-3 text-xs font-bold text-slate-700 ring-1 ring-emerald-200">{activationUrl}</div>
-              <button type="button" onClick={copyLink} className="mt-3 inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl bg-emerald-700 px-4 font-extrabold text-white hover:bg-emerald-800">{copied ? <Check size={18} /> : <Clipboard size={18} />}{copied ? 'Enlace copiado' : 'Copiar enlace de activación'}</button>
+              <button type="button" onClick={copyMessage} className="mt-3 inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl bg-emerald-700 px-4 font-extrabold text-white hover:bg-emerald-800">{copied === 'message' ? <Check size={18} /> : <Send size={18} />}{copied === 'message' ? 'Mensaje copiado' : 'Copiar mensaje para el cliente'}</button>
+              <button type="button" onClick={copyLink} className="mt-2 inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl bg-white px-4 font-extrabold text-emerald-800 ring-1 ring-emerald-200 hover:bg-emerald-100">{copied === 'link' ? <Check size={18} /> : <Clipboard size={18} />}{copied === 'link' ? 'Enlace copiado' : 'Copiar solo el enlace'}</button>
               <p className="mt-3 text-xs font-bold text-emerald-800">Usuario: {created.username} · vence {formatAdminDate(created.expires_at)}</p>
             </> : <EmptyPanel title="El enlace aparecerá aquí" description="Compártelo directamente con la persona responsable por un canal confiable." />}
           </section>

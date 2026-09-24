@@ -50,7 +50,7 @@ test('invitaciones crean propietarios activos sin exponer privilegios administra
         'Variedades Sol', 'Ana Pérez', 'ana.perez', 'ana@example.com', '8888-8888',
         'paid_monthly', 14, 7, '2026-09-11', '2026-09-11')`)
       token = invitation.invitation_token
-      assert.match(token, /^[0-9a-f]{64}$/)
+      assert.match(token, /^[A-Za-z0-9_-]{22}$/)
       await db.exec('reset role')
       const stored = await scalar('select code_digest, code_hint, status from public.account_invitations')
       digest = stored.code_digest

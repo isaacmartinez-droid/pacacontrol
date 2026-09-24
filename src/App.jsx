@@ -48,6 +48,7 @@ function App() {
   return (
     <Routes>
       <Route path="acceder" element={<AuthPage />} />
+      <Route path="bienvenida/:token" element={<ActivateAccountPage />} />
       <Route path="activar" element={<ActivateAccountPage />} />
       <Route path="legal" element={<LegalPage />} />
       <Route element={<ProtectedRoute />}>

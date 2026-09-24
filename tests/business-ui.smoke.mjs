@@ -498,7 +498,7 @@ try {
       : []
     await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(result) })
   })
-  await guest.goto(origin + '/activar?token=' + 'a'.repeat(64))
+  await guest.goto(origin + '/bienvenida/' + 'AbCdEfGhIjKlMnOpQrSt-_')
   await guest.getByRole('heading', { name: 'Activa tu cuenta', exact: true }).waitFor()
   await guest.getByText('Negocio invitado', { exact: true }).waitFor()
   await guest.getByLabel('Crea tu contraseña').waitFor()
