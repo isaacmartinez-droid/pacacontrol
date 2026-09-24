@@ -219,7 +219,7 @@ export default function BusinessOnboardingPage() {
         completeBusinessOnboarding(draft),
         new Promise((resolve) => window.setTimeout(resolve, 900)),
       ])
-      navigate('/', { replace: true })
+      navigate('/recorrido-inicial', { replace: true })
     } catch (finishError) {
       setPhase('editing')
       setMessage(finishError.message || 'No pudimos completar la configuración.')

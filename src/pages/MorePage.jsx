@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { BarChart3, Bell, ChevronRight, CircleAlert, FileText, LoaderCircle, LogOut, PackageSearch, PackageX, ReceiptText, SlidersHorizontal, UserRound } from 'lucide-react'
+import { BarChart3, Bell, ChevronRight, CircleAlert, Compass, FileText, LoaderCircle, LogOut, PackageSearch, PackageX, ReceiptText, SlidersHorizontal, UserRound } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import PageHeader from '../components/common/PageHeader'
 import { useAuth } from '../context/AuthContext'
@@ -7,6 +7,13 @@ import { usePacaData } from '../context/PacaDataContext'
 import { getBusinessTerms } from '../utils/businessProfile'
 
 const modules = (terms) => [
+  {
+    title: 'Primeros pasos',
+    description: 'Guía práctica para registrar, vender y controlar tu negocio',
+    to: '/primeros-pasos',
+    icon: Compass,
+    tone: 'brand',
+  },
   {
     title: 'Ajustes',
     description: 'Identidad, operación y configuración del negocio',

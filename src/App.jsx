@@ -31,6 +31,8 @@ import EditBalePage from './pages/EditBalePage'
 import EditCustomerPage from './pages/EditCustomerPage'
 import EditSalePage from './pages/EditSalePage'
 import ActivateAccountPage from './pages/ActivateAccountPage'
+import GettingStartedPage from './pages/GettingStartedPage'
+import ProductIntroductionPage from './pages/ProductIntroductionPage'
 
 function StoreDataShell() {
   return (
@@ -56,6 +58,7 @@ function App() {
           <Route element={<StoreDataShell />}>
             <Route path="configurar-negocio" element={<BusinessOnboardingPage />} />
             <Route element={<BusinessOnboardingGate />}>
+              <Route path="recorrido-inicial" element={<ProductIntroductionPage />} />
               <Route element={<StoreShell />}>
                 <Route index element={<DashboardPage />} />
                 <Route path="pacas" element={<BalesPage />} />
@@ -75,6 +78,7 @@ function App() {
                 <Route path="productos-danados" element={<DamagedProductsPage />} />
                 <Route path="reportes" element={<ReportsPage />} />
                 <Route path="mas" element={<MorePage />} />
+                <Route path="primeros-pasos" element={<GettingStartedPage />} />
                 <Route path="alertas" element={<AlertsPage />} />
                 <Route path="preferencias" element={<BusinessPreferencesPage />} />
                 <Route path="ajustes" element={<SettingsPage />} />
