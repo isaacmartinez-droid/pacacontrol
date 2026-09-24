@@ -134,6 +134,11 @@ try {
   await page.reload()
   await page.getByRole('heading', { name: 'Panel admin', exact: true }).waitFor()
   assert.equal(await page.title(), 'ControlShop | Centro de control')
+  await page.getByRole('button', { name: 'Abrir navegación', exact: true }).click()
+  const adminBrand = page.getByRole('img', { name: 'ControlShop', exact: true })
+  assert.equal(await adminBrand.getAttribute('src'), '/brand/controlshop-symbol-white.png')
+  assert.equal(await adminBrand.evaluate((image) => image.complete && image.naturalWidth > 0), true)
+  await page.getByRole('button', { name: 'Cerrar navegación', exact: true }).first().click()
   await page.getByText('Variedades Luna', { exact: true }).first().waitFor()
   await page.getByText('El pago registrado está vencido.', { exact: true }).waitFor()
 

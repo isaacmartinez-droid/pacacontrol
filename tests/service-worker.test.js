@@ -74,3 +74,15 @@ test('el manifiesto incluye iconos PNG con las dimensiones declaradas', async ()
     assert.equal(`${png.readUInt32BE(16)}x${png.readUInt32BE(20)}`, icon.sizes)
   }
 })
+
+test('ambos portales usan el símbolo blanco como favicon', async () => {
+  const [customerHtml, adminHtml, favicon] = await Promise.all([
+    readFile(new URL('../index.html', import.meta.url), 'utf8'),
+    readFile(new URL('../admin/index.html', import.meta.url), 'utf8'),
+    readFile(new URL('../public/icons/favicon-white-32.png', import.meta.url)),
+  ])
+  assert.match(customerHtml, /href="\/icons\/favicon-white-32\.png"/)
+  assert.match(adminHtml, /href="\/icons\/favicon-white-32\.png"/)
+  assert.equal(favicon.toString('ascii', 1, 4), 'PNG')
+  assert.equal(`${favicon.readUInt32BE(16)}x${favicon.readUInt32BE(20)}`, '32x32')
+})
