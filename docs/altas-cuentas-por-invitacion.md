@@ -103,4 +103,21 @@ No deben copiarse a `.env.local`, al frontend ni a una variable `VITE_`.
 8. Iniciar sesión con una cuenta normal y comprobar que no accede al portal
    administrativo ni a sus RPC.
 
-Producción permanece sin cambios hasta aprobar este recorrido en pruebas.
+## Estado en producción
+
+Desplegado el 23 de septiembre de 2026 sobre el proyecto
+`nqwnvxjnkprwwkxtczgm`:
+
+- las tres migraciones están aplicadas y registradas en el historial remoto;
+- `account_invitations` y sus RPC rechazan acceso anónimo;
+- `activate-account` está activa con `verify_jwt = false`, necesario antes de
+  que el invitado tenga sesión;
+- `ALLOWED_ACTIVATION_ORIGINS` admite únicamente
+  `https://pacacontrol.vercel.app`;
+- una solicitud desde otro origen devuelve `403` y un token inexistente desde
+  el origen permitido devuelve `404`;
+- el registro público de Supabase permanece desactivado.
+
+La prueba productiva que crea una invitación real debe realizarse desde una
+sesión administrativa y usar un usuario nuevo; no forma parte de las
+comprobaciones anónimas posteriores al despliegue.

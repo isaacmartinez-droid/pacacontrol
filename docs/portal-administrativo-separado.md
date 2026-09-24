@@ -106,10 +106,19 @@ pueden configurar en Project Settings, según la
 
 ## Estado
 
-La separación está implementada y verificada localmente. No debe publicarse el
-cambio de redirección comercial hasta que el segundo proyecto de Vercel exista y
-su dominio se haya configurado en `VITE_ADMIN_APP_URL`.
+Desplegado en producción el 23 de septiembre de 2026:
+
+- portal comercial: `https://pacacontrol.vercel.app`;
+- portal administrativo: `https://controlshop-admin.vercel.app`;
+- ambos portales apuntan al proyecto productivo correcto de Supabase;
+- las URLs cruzadas están configuradas en Vercel;
+- el registro público continúa desactivado;
+- las rutas profundas, recursos de marca y separación de aplicaciones fueron
+  comprobados después del despliegue.
+
+El portal administrativo usa `vercel.admin.json` y se publica con
+`npm run build:admin`; esta configuración no incluye las funciones de
+notificaciones pertenecientes al portal comercial.
 
 La primera reestructuración del centro de control se documenta en
-[`docs/centro-control-administrativo.md`](centro-control-administrativo.md). Esta
-evolución permanece en la rama del portal separado y tampoco modifica producción.
+[`docs/centro-control-administrativo.md`](centro-control-administrativo.md).
