@@ -164,6 +164,12 @@ try {
   await page.getByRole('heading', { name: 'Sistema', exact: true }).waitFor()
   await page.getByText('Telemetría técnica', { exact: true }).waitFor()
 
+  const guest = await browser.newPage({ viewport: { width: 390, height: 844 } })
+  await guest.goto(origin + '/acceder')
+  await guest.getByRole('heading', { name: 'Centro de control', exact: true }).waitFor()
+  assert.equal(await guest.getByRole('img', { name: 'ControlShop', exact: true }).evaluate((image) => image.complete && image.naturalWidth > 0), true)
+  await guest.close()
+
   const forbiddenBusinessResources = ['bales', 'sales', 'customers', 'expenses', 'business_profiles']
   assert.deepEqual(requestedResources.filter((resource) => forbiddenBusinessResources.includes(resource)), [])
   assert.deepEqual(errors, [])

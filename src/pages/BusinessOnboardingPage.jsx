@@ -6,6 +6,7 @@ import {
 } from 'lucide-react'
 import { Navigate, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
+import { BrandSymbol } from '../components/common/BrandLogo'
 import { usePacaData } from '../context/PacaDataContext'
 import {
   BUSINESS_ONBOARDING_LAST_STEP,
@@ -231,7 +232,7 @@ export default function BusinessOnboardingPage() {
     <div className="min-h-dvh bg-brand-50">
       <header className="border-b border-brand-100 bg-white/95 px-4 py-4 backdrop-blur sm:px-6">
         <div className="mx-auto flex max-w-6xl items-center justify-between gap-4">
-          <div className="flex items-center gap-3"><span className="grid size-10 place-items-center rounded-2xl bg-brand-950 text-white"><Store size={20} /></span><div><p className="text-sm font-extrabold text-brand-950">Configura tu negocio</p><p className="text-xs text-slate-500">Tus datos se guardan mientras avanzas</p></div></div>
+          <div className="flex items-center gap-3"><BrandSymbol className="size-10" /><div><p className="text-sm font-extrabold text-brand-950">Configura tu negocio</p><p className="text-xs text-slate-500">Tus datos se guardan mientras avanzas</p></div></div>
           <div className="flex items-center gap-3">
             <span className={`hidden items-center gap-1.5 text-xs font-bold sm:flex ${saveState === 'error' ? 'text-coral-600' : 'text-slate-500'}`}>
               {saveState === 'saving' || saveState === 'pending' ? <LoaderCircle className="animate-spin" size={14} /> : saveState === 'error' ? <CircleAlert size={14} /> : <Save size={14} />}

@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react'
-import { CircleAlert, Eye, EyeOff, LoaderCircle, LockKeyhole, Store, UserPlus } from 'lucide-react'
+import { CircleAlert, Eye, EyeOff, LoaderCircle, LockKeyhole, UserPlus } from 'lucide-react'
 import { Link, Navigate, useLocation } from 'react-router-dom'
+import { BrandWordmark } from '../components/common/BrandLogo'
 import { useAuth } from '../context/AuthContext'
 
 function AuthPage() {
@@ -63,11 +64,9 @@ function AuthPage() {
     <main className="grid min-h-dvh place-items-center bg-brand-50 px-4 py-8">
       <section className="w-full max-w-md overflow-hidden rounded-3xl bg-white shadow-soft ring-1 ring-slate-100">
         <div className="bg-brand-950 p-6 text-white sm:p-8">
-          <span className="grid size-12 place-items-center rounded-2xl bg-white text-brand-950">
-            <Store aria-hidden="true" size={24} />
-          </span>
-          <h1 className="mt-5 text-2xl font-extrabold tracking-tight">ControlShop</h1>
-          <p className="mt-2 text-sm leading-6 text-brand-100">Control que impulsa tu negocio.</p>
+          <BrandWordmark surface="dark" className="h-12 w-auto max-w-[17rem]" />
+          <h1 className="sr-only">ControlShop</h1>
+          <p className="mt-4 text-sm leading-6 text-brand-100">Control que impulsa tu negocio.</p>
         </div>
 
         <div className="p-6 sm:p-8">

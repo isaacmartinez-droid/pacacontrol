@@ -1,6 +1,7 @@
-import { CheckCircle2, CircleAlert, Eye, EyeOff, KeyRound, LoaderCircle, Store } from 'lucide-react'
+import { CheckCircle2, CircleAlert, Eye, EyeOff, KeyRound, LoaderCircle } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
+import { BrandWordmark } from '../components/common/BrandLogo'
 import { useAuth } from '../context/AuthContext'
 import { getSupabaseClient } from '../lib/supabaseClient'
 
@@ -64,7 +65,7 @@ function ActivateAccountPage() {
     <main className="grid min-h-dvh place-items-center bg-brand-50 px-4 py-8">
       <section className="w-full max-w-lg overflow-hidden rounded-3xl bg-white shadow-soft ring-1 ring-slate-100">
         <div className="bg-brand-950 p-6 text-white sm:p-8">
-          <span className="grid size-12 place-items-center rounded-2xl bg-white text-brand-950"><Store size={24} /></span>
+          <BrandWordmark surface="dark" className="h-11 w-auto max-w-[16rem]" />
           <p className="mt-5 text-xs font-extrabold uppercase tracking-[0.18em] text-brand-200">Invitación privada</p>
           <h1 className="mt-2 text-2xl font-extrabold tracking-tight">Activa tu cuenta</h1>
           <p className="mt-2 text-sm leading-6 text-brand-100">Tú eliges la contraseña. El administrador nunca podrá verla.</p>

@@ -1,6 +1,7 @@
-import { BellRing, Building2, CreditCard, Gauge, HeartPulse, LoaderCircle, LogOut, Menu, ShieldCheck, X } from 'lucide-react'
+import { BellRing, Building2, CreditCard, Gauge, HeartPulse, LoaderCircle, LogOut, Menu, X } from 'lucide-react'
 import { useState } from 'react'
 import { NavLink, Outlet } from 'react-router-dom'
+import { BrandWordmark } from '../../src/components/common/BrandLogo'
 import { useAuth } from '../../src/context/AuthContext'
 
 const navigation = [
@@ -26,9 +27,9 @@ function AdminShell() {
       <aside className={`${menuOpen ? 'fixed inset-0 z-40 flex' : 'hidden'} bg-slate-950 text-white lg:sticky lg:top-0 lg:flex lg:h-dvh lg:flex-col`}>
         <div className="flex w-full max-w-[18rem] flex-col bg-slate-950 p-4 lg:max-w-none lg:p-5">
           <div className="flex items-center justify-between gap-3">
-            <div className="flex items-center gap-3">
-              <span className="grid size-11 place-items-center rounded-2xl bg-white text-brand-950"><ShieldCheck aria-hidden="true" size={22} /></span>
-              <div><p className="text-xs font-extrabold uppercase tracking-[0.14em] text-brand-200">ControlShop</p><p className="font-extrabold">Centro de control</p></div>
+            <div>
+              <BrandWordmark surface="dark" className="h-8 w-auto max-w-[13rem]" />
+              <p className="mt-2 text-xs font-extrabold uppercase tracking-[0.14em] text-brand-200">Centro de control</p>
             </div>
             <button type="button" onClick={() => setMenuOpen(false)} aria-label="Cerrar navegación" className="grid size-10 place-items-center rounded-xl text-slate-300 hover:bg-white/10 lg:hidden"><X size={21} /></button>
           </div>

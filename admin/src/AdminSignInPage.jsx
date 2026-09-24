@@ -1,6 +1,7 @@
-import { CircleAlert, Eye, EyeOff, LoaderCircle, LockKeyhole, ShieldCheck } from 'lucide-react'
+import { CircleAlert, Eye, EyeOff, LoaderCircle, LockKeyhole } from 'lucide-react'
 import { useState } from 'react'
 import { Navigate } from 'react-router-dom'
+import { BrandWordmark } from '../../src/components/common/BrandLogo'
 import { useAuth } from '../../src/context/AuthContext'
 
 function AdminSignInPage() {
@@ -33,9 +34,9 @@ function AdminSignInPage() {
     <main className="grid min-h-dvh place-items-center bg-slate-950 px-4 py-8">
       <section className="w-full max-w-md overflow-hidden rounded-3xl bg-white shadow-2xl ring-1 ring-white/10">
         <div className="bg-brand-950 p-6 text-white sm:p-8">
-          <span className="grid size-12 place-items-center rounded-2xl bg-white text-brand-950"><ShieldCheck aria-hidden="true" size={25} /></span>
+          <BrandWordmark surface="dark" className="h-11 w-auto max-w-[16rem]" />
           <p className="mt-5 text-xs font-extrabold uppercase tracking-[0.18em] text-brand-200">Acceso interno</p>
-          <h1 className="mt-2 text-2xl font-extrabold tracking-tight">ControlShop</h1>
+          <h1 className="mt-2 text-2xl font-extrabold tracking-tight">Centro de control</h1>
           <p className="mt-2 text-sm leading-6 text-brand-100">Portal administrativo para cuentas, planes, accesos y vencimientos.</p>
         </div>
         <div className="p-6 sm:p-8">

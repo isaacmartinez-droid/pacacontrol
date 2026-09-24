@@ -18,7 +18,7 @@ export default defineConfig(({ mode }) => {
   return {
     root: resolve(projectRoot, 'admin'),
     envDir: projectRoot,
-    publicDir: false,
+    publicDir: resolve(projectRoot, 'public'),
     plugins: [react(), tailwindcss()],
     build: {
       outDir: resolve(projectRoot, 'dist-admin'),
