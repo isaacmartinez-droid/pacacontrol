@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "push:keys": "node scripts/push-keys.js",
-    "test": "node --test admin/src/adminAccounts.test.js src/lib/devicePush.test.js src/utils/alerts.test.js src/utils/alertBanners.test.js src/utils/businessLocale.test.js src/utils/businessProfile.test.js src/utils/businessOnboarding.test.js src/utils/businessSettings.test.js src/utils/portalUrl.test.js src/utils/recordedPreferences.test.js src/utils/dashboardFinancials.test.js src/utils/baleFinancials.test.js src/utils/cashReconciliation.test.js src/utils/pricing.test.js server/push.test.js tests/service-worker.test.js tests/account-activation.test.js tests/business-records.postgres.test.js tests/security.postgres.test.js tests/account-invitations.postgres.test.js tests/staging-setup.test.js",
+    "test": "node --test admin/src/adminAccounts.test.js src/lib/devicePush.test.js src/utils/alerts.test.js src/utils/alertBanners.test.js src/utils/businessLocale.test.js src/utils/businessProfile.test.js src/utils/businessOnboarding.test.js src/utils/businessSettings.test.js src/utils/portalUrl.test.js src/utils/recordedPreferences.test.js src/utils/dashboardFinancials.test.js src/utils/baleFinancials.test.js src/utils/cashReconciliation.test.js src/utils/pricing.test.js server/push.test.js tests/service-worker.test.js tests/vercel-config.test.js tests/account-activation.test.js tests/business-records.postgres.test.js tests/security.postgres.test.js tests/account-invitations.postgres.test.js tests/staging-setup.test.js",
     "audit:production": "node scripts/production-preflight.mjs",
     "audit:staging": "node scripts/production-preflight.mjs --staging",
     "dev": "vite",
