@@ -92,7 +92,8 @@ try {
     const method = request.method()
     const body = method === 'GET' ? null : request.postDataJSON()
     let result = []
-    if (table === 'profiles') result = [{ id: owner, display_name: 'Isaac', account_role: accountRole, access_status: 'active', service_plan: accountRole === 'admin' ? 'internal' : 'trial', legal_terms_version: LEGAL_TERMS_VERSION, privacy_version: PRIVACY_VERSION, terms_accepted_at: soldAt, privacy_accepted_at: soldAt }]
+    if (table === 'activate-account') result = body?.action === 'preview' ? { invitation: { business_name: 'Negocio invitado', owner_name: 'Ana Pérez', username: 'ana.perez', legal_terms_version: LEGAL_TERMS_VERSION, privacy_version: PRIVACY_VERSION } } : { activated: true, username: 'ana.perez', businessName: 'Negocio invitado' }
+    else if (table === 'profiles') result = [{ id: owner, display_name: 'Isaac', account_role: accountRole, access_status: 'active', service_plan: accountRole === 'admin' ? 'internal' : 'trial', legal_terms_version: LEGAL_TERMS_VERSION, privacy_version: PRIVACY_VERSION, terms_accepted_at: soldAt, privacy_accepted_at: soldAt }]
     else if (table === 'business_profiles') result = [businessProfile]
     else if (table === 'business_templates') result = businessTemplates
     else if (table === 'update_business_profile') {
@@ -490,6 +491,17 @@ try {
   console.log('OK: cuenta nueva reanuda el asistente y crea categorías solo al confirmar la configuración.')
 
   const guest = await browser.newPage({ viewport: { width: 390, height: 844 } })
+  await guest.route('https://paca-ui-test.supabase.co/**', async (route) => {
+    const resource = new URL(route.request().url()).pathname.split('/').at(-1)
+    const result = resource === 'activate-account'
+      ? { invitation: { business_name: 'Negocio invitado', owner_name: 'Ana Pérez', username: 'ana.perez', legal_terms_version: LEGAL_TERMS_VERSION, privacy_version: PRIVACY_VERSION } }
+      : []
+    await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(result) })
+  })
+  await guest.goto(origin + '/activar?token=' + 'a'.repeat(64))
+  await guest.getByRole('heading', { name: 'Activa tu cuenta', exact: true }).waitFor()
+  await guest.getByText('Negocio invitado', { exact: true }).waitFor()
+  await guest.getByLabel('Crea tu contraseña').waitFor()
   await guest.goto(origin + '/acceder')
   await guest.getByRole('heading', { name: 'Bienvenido de nuevo', exact: true }).waitFor()
   assert.equal(await guest.getByRole('button', { name: /Crear.*cuenta/ }).count(), 0)

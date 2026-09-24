@@ -66,6 +66,7 @@ la migración o configuración correspondiente ya esté aplicada en producción.
 | Perfil y asistente de negocio | Hito 3 desplegado en producción | Recorrido autenticado final en producción |
 | Portal administrativo independiente | Dos compilaciones y fronteras por rol verificadas localmente | Crear segundo proyecto de Vercel y validar ambos dominios |
 | Centro de control administrativo | Primera fase de interfaz implementada localmente | Validar con cuenta admin y diseñar RPC paginada |
+| Altas de cuentas por invitación | Flujo completo implementado y probado localmente | Instalar migración y Edge Function en staging; probar enlace real |
 | Documentos legales definitivos | Investigación iniciada | Dependen de identidad y modelo comercial definitivos |
 
 ### Hito 0. Cerrar la estabilización actual
@@ -162,10 +163,12 @@ Con la experiencia neutral estable:
 
 1. seleccionar y validar el nuevo nombre;
 2. cambiar identidad visual, dominio, manifest, remitentes y notificaciones;
-3. implementar campañas y códigos de prueba;
-4. añadir redención, vigencia y avisos de vencimiento;
-5. completar controles administrativos y auditoría;
-6. definir conversión a plan pagado, suspensión y recuperación.
+3. desplegar y validar las altas privadas documentadas en
+   [`docs/altas-cuentas-por-invitacion.md`](altas-cuentas-por-invitacion.md);
+4. implementar campañas y códigos de prueba, separados de las invitaciones;
+5. añadir redención, vigencia y avisos de vencimiento;
+6. completar controles administrativos y auditoría;
+7. definir conversión a plan pagado, suspensión y recuperación.
 
 Condición de salida: se puede publicar una campaña de prueba con reglas claras,
 trazabilidad y sin otorgar privilegios administrativos.

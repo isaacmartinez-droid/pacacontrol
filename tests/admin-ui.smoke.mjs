@@ -108,6 +108,8 @@ try {
           last_sale_at: new Date(now - 86400000).toISOString(),
         },
       ]
+    } else if (resource === 'admin_list_account_invitations') {
+      result = []
     }
     await route.fulfill({
       status: 200,
@@ -130,6 +132,11 @@ try {
   await page.goto(origin + '/cuentas')
   await page.getByRole('heading', { name: 'Cuentas', exact: true }).waitFor()
   await page.getByText('Variedades Luna', { exact: true }).last().waitFor()
+
+  await page.goto(origin + '/cuentas/nueva')
+  await page.getByRole('heading', { name: 'Crear cuenta', exact: true }).waitFor()
+  await page.getByLabel('Nombre del negocio').waitFor()
+  await page.getByText('El enlace aparecerá aquí', { exact: true }).waitFor()
 
   await page.goto(origin + '/cuentas/' + customer)
   await page.getByRole('heading', { name: 'Variedades Luna', exact: true }).waitFor()

@@ -105,6 +105,26 @@ with feature_status(feature, installed, detail) as (
       'update_business_profile',
       to_regprocedure('public.update_business_profile(text,text,jsonb)') is not null,
       'Edición validada de identidad y vocabulario'
+    ),
+    (
+      'account_invitations',
+      to_regclass('public.account_invitations') is not null,
+      'Invitaciones de cuenta de un solo uso'
+    ),
+    (
+      'admin_create_account_invitation',
+      to_regprocedure('public.admin_create_account_invitation(text,text,text,text,text,text,integer,integer,text,text)') is not null,
+      'Alta iniciada exclusivamente por administradores'
+    ),
+    (
+      'claim_account_invitation',
+      to_regprocedure('public.claim_account_invitation(text,uuid)') is not null,
+      'Activación atómica desde backend seguro'
+    ),
+    (
+      'complete_account_invitation_activation',
+      to_regprocedure('public.complete_account_invitation_activation(uuid,uuid)') is not null,
+      'Cuenta activa y onboarding pendiente'
     )
 ), date_defaults as (
   select

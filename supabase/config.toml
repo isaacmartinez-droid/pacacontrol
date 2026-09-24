@@ -1,0 +1,4 @@
+project_id = "sistema-pacas"
+
+[functions.activate-account]
+verify_jwt = false

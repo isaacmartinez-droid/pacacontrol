@@ -1,5 +1,5 @@
 -- SOLO PARA Sistema-Pacas-Pruebas (zijfywqastacydmuqswv).
--- Instalación inicial generada desde 31 migraciones. NO ejecutar en clientes.
+-- Instalación inicial generada desde 32 migraciones. NO ejecutar en clientes.
 -- Una sola transacción: cualquier fallo revierte toda la instalación.
 begin;
 do $staging_guard$
@@ -13,7 +13,7 @@ begin
         'business_history', 'sale_additional_payments', 'push_subscriptions',
         'push_dispatch_state', 'monthly_expense_commitments', 'admin_account_events',
         'cash_reconciliations', 'bale_other_expense_items',
-        'business_templates', 'business_profiles')
+        'business_templates', 'business_profiles', 'account_invitations')
   ) then
     raise exception 'Instalación cancelada: la base ya tiene objetos de la app. Usa solo el proyecto de pruebas vacío.';
   end if;
@@ -467,7 +467,6 @@ grant select on public.inventory_summary, public.bale_summary, public.customer_s
 grant execute on function public.register_sale(uuid, integer, numeric, text, uuid, timestamptz, text) to authenticated;
 grant execute on function public.register_damaged_product(uuid, integer, text, timestamptz) to authenticated;
 
-
 -- Migración: 20260907000000_add_delivery_status.sql
 -- Agrega seguimiento persistente a las ventas existentes y nuevas.
 
@@ -497,10 +496,8 @@ with check ((select auth.uid()) = owner_id);
 
 grant update (delivery_status) on public.sales to authenticated;
 
-
 -- Migración: 20260907010000_web_push.sql
 -- Dispositivos que autorizaron notificaciones del sistema.
-
 create table if not exists public.push_subscriptions (
   id uuid primary key default gen_random_uuid(),
   owner_id uuid not null default auth.uid() references public.profiles(id) on delete cascade,
@@ -549,7 +546,6 @@ revoke all on function public.acquire_push_dispatch_lock(uuid) from public, anon
 grant execute on function public.acquire_push_dispatch_lock(uuid) to service_role;
 
 notify pgrst, 'reload schema';
-
 
 -- Migración: 20260908000000_daily_summaries.sql
 -- Cierres diarios automáticos. Los días se calculan en hora de Guatemala.
@@ -693,7 +689,6 @@ for select to authenticated using (owner_id = (select auth.uid()));
 grant select on public.daily_summaries to authenticated;
 grant execute on function public.refresh_daily_summaries(date) to service_role;
 
-
 -- Migración: 20260908010000_bale_traceability.sql
 -- Permite elegir una paca concreta al vender, sin quitar la asignación automática.
 create or replace function public.register_sale(
@@ -768,7 +763,6 @@ end;
 $$;
 
 grant execute on function public.register_sale(uuid, integer, numeric, text, uuid, timestamptz, text, uuid) to authenticated;
-
 
 -- Migración: 20260908020000_payment_and_delivery_states.sql
 -- Pago y entrega son hechos distintos: conserva las ventas anteriores como pagadas.
@@ -888,7 +882,6 @@ grant execute on function public.update_sale_payment(uuid, text, numeric, text) 
 grant execute on function public.update_sale_delivery_status(uuid, text) to authenticated;
 grant update (payment_status, paid_amount, payment_method, delivery_status) on public.sales to authenticated;
 
-
 -- Migración: 20260908030000_sale_inventory_integrity.sql
 -- Cada fila de bale_inventory representa una categoría dentro de una paca.
 -- Esta versión única de la función siempre deja una asignación y descuenta
@@ -987,11 +980,9 @@ $$;
 
 grant execute on function public.register_sale(uuid, integer, numeric, text, uuid, timestamptz, text, uuid, text, numeric) to authenticated;
 
-
 -- Migración: 20260908040000_customer_finances.sql
 -- Historial financiero simple por cliente: un pago inicial y un pago final.
 -- El delivery se incorpora al total y a la utilidad real de cada pedido.
-
 alter table public.sales
   add column if not exists merchandise_total numeric(12, 2),
   add column if not exists delivery_cost numeric(12, 2) not null default 0,
@@ -1289,11 +1280,9 @@ revoke update(payment_status, paid_amount, payment_method) on public.sales from 
 select public.refresh_daily_summaries(((now() at time zone 'America/Guatemala')::date - 1));
 notify pgrst, 'reload schema';
 
-
 -- Migración: 20260908050000_recommended_pricing.sql
 -- Precio recomendado por paca y categoría.
 -- Usa margen real: precio = costo / (1 - margen), redondeado a C$5.
-
 alter table public.bales
   add column if not exists target_margin_percent numeric(5, 2) not null default 40;
 
@@ -1507,11 +1496,9 @@ grant select on public.bale_inventory_pricing to authenticated;
 grant execute on function public.register_sale(uuid, integer, numeric, text, uuid, timestamptz, text, uuid, text, numeric, numeric, numeric) to authenticated;
 notify pgrst, 'reload schema';
 
-
 -- Migración: 20260908060000_multi_price_sales.sql
 -- Una venta puede contener varias cantidades y precios de la misma categoría
 -- y paca. Cada grupo queda guardado como un renglón independiente.
-
 create or replace function public.register_sale_with_prices(
   p_category_id uuid,
   p_bale_inventory_id uuid,
@@ -1655,12 +1642,10 @@ $$;
 grant execute on function public.register_sale_with_prices(uuid, uuid, jsonb, text, uuid, timestamptz, text, text, numeric, numeric, numeric) to authenticated;
 notify pgrst, 'reload schema';
 
-
 -- Migración: 20260908070000_business_preferences.sql
 -- Preferencias configurables por usuario y reglas de precio por categoría.
 -- Las reglas fijas tienen prioridad; si están vacías se conserva el cálculo
 -- automático basado en costo, margen y nivel de la prenda.
-
 alter table public.categories
   add column if not exists economic_price numeric(12, 2),
   add column if not exists standard_price numeric(12, 2),
@@ -1886,10 +1871,8 @@ revoke execute on function public.apply_category_price_rule_to_sale_item() from 
 grant select on public.inventory_summary, public.bale_inventory_pricing to authenticated;
 notify pgrst, 'reload schema';
 
-
 -- Migración: 20260909000000_editable_orders_and_records.sql
 -- Pedidos con varios artículos, retiro en tienda y edición segura de pacas.
-
 alter table public.sales add column if not exists fulfillment_method text;
 update public.sales
 set fulfillment_method = case when delivery_cost > 0 or delivery_charge > 0 then 'delivery' else 'pickup' end
@@ -2263,11 +2246,9 @@ grant execute on function public.delete_empty_bale(uuid) to authenticated;
 
 notify pgrst, 'reload schema';
 
-
 -- Migración: 20260909010000_target_profit_amount.sql
 -- La rentabilidad objetivo de una paca se expresa como un monto en córdobas.
 -- Precio base = (inversión total + ganancia deseada) / piezas vendibles.
-
 alter table public.bales
   add column if not exists target_profit_amount numeric(12, 2);
 
@@ -2468,11 +2449,9 @@ grant select on public.bale_summary, public.bale_inventory_pricing to authentica
 
 notify pgrst, 'reload schema';
 
-
 -- Migración: 20260909020000_editable_sale_orders.sql
 -- Permite corregir un pedido completo sin perder pagos ni descuadrar inventario.
 -- La edición reemplaza los artículos de forma atómica y recalcula sus totales.
-
 create or replace function public.update_sale_order(
   p_sale_id uuid,
   p_items jsonb,
@@ -2688,10 +2667,8 @@ grant execute on function public.update_sale_order(uuid, jsonb, uuid, text, text
 
 notify pgrst, 'reload schema';
 
-
 -- Migración: 20260911000000_profiles_legal_access.sql
 -- Guarda aceptacion legal y prepara control basico de acceso por cuenta.
-
 alter table public.profiles add column if not exists access_status text;
 alter table public.profiles add column if not exists service_plan text;
 alter table public.profiles add column if not exists legal_terms_version text;
@@ -2819,10 +2796,8 @@ grant update (display_name) on public.profiles to authenticated;
 
 notify pgrst, 'reload schema';
 
-
 -- Migración: 20260911010000_business_pricing_rules.sql
 -- Guarda reglas generales de precio y plantillas reutilizables en preferencias.
-
 alter table public.business_settings
   add column if not exists default_pricing_rules jsonb,
   add column if not exists pricing_rule_templates jsonb;
@@ -2882,10 +2857,8 @@ alter table public.business_settings
 
 notify pgrst, 'reload schema';
 
-
 -- Migración: 20260911020000_admin_dashboard_access.sql
 -- Panel administrativo y bloqueo fuerte para cuentas suspendidas.
-
 create or replace function public.current_account_is_active()
 returns boolean
 language sql
@@ -3154,10 +3127,8 @@ grant execute on function public.admin_update_account(uuid, text, text) to authe
 
 notify pgrst, 'reload schema';
 
-
 -- Migración: 20260911030000_admin_account_controls.sql
 -- Mejora el control administrativo: rol separado, motivos, notas, fechas y auditoria.
-
 alter table public.profiles add column if not exists account_role text;
 alter table public.profiles add column if not exists suspension_reason text;
 alter table public.profiles add column if not exists admin_notes text;
@@ -3471,10 +3442,8 @@ grant execute on function public.admin_update_account(uuid, text, text, text, te
 
 notify pgrst, 'reload schema';
 
-
 -- Migración: 20260912000000_refresh_summaries_on_payment_changes.sql
 -- Mantiene los reportes diarios alineados cuando cambian ventas, cobros o entregas.
-
 create or replace function public.register_sale_with_items(
   p_items jsonb,
   p_payment_method text,
@@ -3754,10 +3723,8 @@ grant execute on function public.update_sale_delivery_status(uuid, text) to auth
 
 notify pgrst, 'reload schema';
 
-
 -- Migración: 20260915000000_bale_archives_expense_planning.sql
 -- Conserva el historial al retirar una paca y separa gastos reales de metas mensuales.
-
 alter table public.bales
   add column if not exists archived_at timestamptz,
   add column if not exists archived_reason text;
@@ -4104,11 +4071,9 @@ alter table public.business_settings add constraint business_settings_kpis_check
 
 notify pgrst, 'reload schema';
 
-
 -- Migración: 20260915010000_order_corrections_with_history.sql
 -- Permite corregir un pedido completo sin perder pagos ni descuadrar inventario.
 -- La edición reemplaza los artículos de forma atómica y recalcula sus totales.
-
 create or replace function public.sale_order_snapshot(p_sale_id uuid)
 returns jsonb language sql security definer set search_path = public as $$
   select jsonb_build_object(
@@ -4349,10 +4314,8 @@ grant execute on function public.update_sale_order(uuid, jsonb, uuid, text, text
 
 notify pgrst, 'reload schema';
 
-
 -- Migración: 20260915020000_supplemental_order_payments.sql
 -- Un pedido corregido puede necesitar cobros adicionales sin sobrescribir pagos antiguos.
-
 alter table public.sales
   add column if not exists additional_paid_amount numeric(12, 2) not null default 0 check (additional_paid_amount >= 0),
   add column if not exists last_additional_payment_at timestamptz;
@@ -4432,10 +4395,8 @@ grant execute on function public.complete_sale_payment(uuid, text) to authentica
 
 notify pgrst, 'reload schema';
 
-
 -- Migración: 20260915030000_refresh_expense_and_payment_reports.sql
 -- Los gastos reales y cobros adicionales actualizan el cierre diario.
-
 create or replace function public.refresh_daily_summaries(
   p_summary_date date default ((now() at time zone 'America/Guatemala')::date - 1)
 )
@@ -4545,11 +4506,9 @@ revoke execute on function public.refresh_expense_daily_summaries() from public,
 
 notify pgrst, 'reload schema';
 
-
 -- Migración: 20260916000000_business_security_hardening.sql
 -- Fase 1: defensa en profundidad también para RPC antiguas SECURITY DEFINER.
 -- No suspende usuarios existentes ni borra datos.
-
 -- Una llamada directa a Auth no debe habilitar una nueva cuenta de negocio.
 -- El administrador debe aprobarla; la fase de códigos sustituirá este flujo.
 alter table public.profiles alter column access_status set default 'suspended';
@@ -4670,10 +4629,8 @@ revoke update (payment_status, paid_amount, payment_method, delivery_status) on 
 
 notify pgrst, 'reload schema';
 
-
 -- Migración: 20260916010000_atomic_bale_registration.sql
 -- La paca, sus categorías, inventario y daños se crean en una transacción RPC.
-
 create or replace function public.create_bale_with_inventory(
   p_purchase_date date,
   p_purchase_cost numeric,
@@ -4777,11 +4734,9 @@ revoke execute on function public.create_bale_with_inventory(date, numeric, nume
 grant execute on function public.create_bale_with_inventory(date, numeric, numeric, numeric, numeric, jsonb) to authenticated;
 notify pgrst, 'reload schema';
 
-
 -- Migración: 20260916020000_timezone_safe_business_timestamps.sql
 -- Guarda instantes reales, sin depender del TimeZone de la sesión.
 -- No desplaza fechas históricas ni recalcula cierres existentes.
-
 do $$
 declare
   v_column record;
@@ -4838,7 +4793,6 @@ notify pgrst, 'reload schema';
 
 -- Migración: 20260917000000_expense_edits_cash_reconciliation.sql
 -- Edición auditada de gastos y arqueos de efectivo independientes de la ganancia.
-
 alter table public.expenses add column if not exists payment_method text not null default 'unknown';
 alter table public.expenses drop constraint if exists expenses_payment_method_check;
 alter table public.expenses add constraint expenses_payment_method_check
@@ -4974,6 +4928,7 @@ where bi.id is null or b.id is not null
 group by c.id;
 grant select on public.inventory_summary to authenticated;
 notify pgrst, 'reload schema';
+
 -- Migración: 20260917020000_nicaragua_business_timezone.sql
 -- Fecha comercial de Nicaragua. No mueve instantes ni reescribe datos históricos.
 do $$
@@ -5000,6 +4955,7 @@ alter table public.bales alter column purchase_date
 alter table public.expenses alter column expense_date
   set default ((now() at time zone 'America/Managua')::date);
 notify pgrst, 'reload schema';
+
 -- Migración: 20260917030000_bale_other_expense_details.sql
 -- Desglose explicable de otros gastos de compra, sin inventar conceptos históricos.
 create table if not exists public.bale_other_expense_items (
@@ -5248,7 +5204,6 @@ notify pgrst, 'reload schema';
 -- Migración: 20260918000000_business_onboarding_foundation.sql
 -- Fundamento del perfil general del negocio y onboarding reanudable.
 -- Las plantillas sugieren valores; nunca crean categorías antes de confirmarlas.
-
 create table if not exists public.business_templates (
   template_key text not null check (template_key ~ '^[a-z0-9_]+$'),
   version integer not null check (version > 0),
@@ -5591,6 +5546,340 @@ revoke execute on function public.update_business_profile(text,text,jsonb) from 
 grant execute on function public.save_business_onboarding_draft(integer,jsonb) to authenticated;
 grant execute on function public.complete_business_onboarding(text,text,text,boolean,text,text[],text[],text) to authenticated;
 grant execute on function public.update_business_profile(text,text,jsonb) to authenticated;
+
+notify pgrst, 'reload schema';
+
+-- Migración: 20260919000000_account_invitations.sql
+-- Altas controladas: el administrador invita y el cliente define su clave.
+-- El token original se entrega una sola vez y nunca se guarda en la base.
+create table if not exists public.account_invitations (
+  id uuid primary key default gen_random_uuid(),
+  code_digest text not null unique check (code_digest ~ '^[0-9a-f]{64}$'),
+  code_hint text not null check (char_length(code_hint) = 8),
+  business_name text not null check (char_length(trim(business_name)) between 1 and 120),
+  owner_name text not null check (char_length(trim(owner_name)) between 1 and 120),
+  username text not null check (username ~ '^[a-z0-9]+(\.[a-z0-9]+)+$' and char_length(username) between 3 and 80),
+  contact_email text check (contact_email is null or char_length(trim(contact_email)) between 3 and 254),
+  contact_phone text check (contact_phone is null or char_length(trim(contact_phone)) between 7 and 30),
+  service_plan text not null default 'pilot_free' check (service_plan in ('pilot_free', 'paid_monthly', 'demo')),
+  trial_days integer not null default 30 check (trial_days between 0 and 365),
+  legal_terms_version text not null check (char_length(trim(legal_terms_version)) between 1 and 40),
+  privacy_version text not null check (char_length(trim(privacy_version)) between 1 and 40),
+  status text not null default 'pending' check (status in ('pending', 'processing', 'redeemed', 'revoked', 'expired')),
+  expires_at timestamptz not null,
+  processing_attempt_id uuid,
+  processing_started_at timestamptz,
+  created_by uuid not null references public.profiles(id) on delete restrict,
+  redeemed_by uuid references public.profiles(id) on delete set null,
+  redeemed_at timestamptz,
+  revoked_at timestamptz,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  constraint account_invitations_expiration check (expires_at > created_at),
+  constraint account_invitations_redemption check (
+    (status = 'redeemed' and redeemed_by is not null and redeemed_at is not null)
+    or (status <> 'redeemed' and redeemed_at is null)
+  )
+);
+
+create unique index if not exists account_invitations_pending_username_idx
+  on public.account_invitations(lower(username))
+  where status in ('pending', 'processing');
+create index if not exists account_invitations_status_created_idx
+  on public.account_invitations(status, created_at desc);
+
+drop trigger if exists account_invitations_set_updated_at on public.account_invitations;
+create trigger account_invitations_set_updated_at before update on public.account_invitations
+for each row execute procedure public.set_updated_at();
+
+alter table public.account_invitations enable row level security;
+revoke all on public.account_invitations from public, anon, authenticated;
+grant all on public.account_invitations to service_role;
+
+create or replace function public.admin_create_account_invitation(
+  p_business_name text,
+  p_owner_name text,
+  p_username text,
+  p_contact_email text,
+  p_contact_phone text,
+  p_service_plan text,
+  p_trial_days integer,
+  p_expires_in_days integer,
+  p_legal_terms_version text,
+  p_privacy_version text
+)
+returns table (
+  invitation_id uuid,
+  invitation_token text,
+  username text,
+  expires_at timestamptz
+)
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  v_token text;
+  v_username text := lower(trim(p_username));
+  v_id uuid;
+  v_expires_at timestamptz;
+begin
+  if not public.current_account_is_admin() then
+    raise exception 'No tienes permisos de administrador.' using errcode = '42501';
+  end if;
+  if p_business_name is null or char_length(trim(p_business_name)) not between 1 and 120
+    or p_owner_name is null or char_length(trim(p_owner_name)) not between 1 and 120 then
+    raise exception 'Completa el negocio y la persona responsable.';
+  end if;
+  if v_username !~ '^[a-z0-9]+(\.[a-z0-9]+)+$' or char_length(v_username) not between 3 and 80 then
+    raise exception 'El usuario debe usar el formato nombre.apellido, sin espacios ni tildes.';
+  end if;
+  if p_contact_email is not null and char_length(trim(p_contact_email)) not between 3 and 254 then
+    raise exception 'El correo de contacto no es válido.';
+  end if;
+  if p_contact_phone is not null and char_length(trim(p_contact_phone)) not between 7 and 30 then
+    raise exception 'El teléfono de contacto no es válido.';
+  end if;
+  if p_service_plan not in ('pilot_free', 'paid_monthly', 'demo') then
+    raise exception 'El plan seleccionado no es válido.';
+  end if;
+  if p_trial_days is null or p_trial_days not between 0 and 365
+    or p_expires_in_days is null or p_expires_in_days not between 1 and 30 then
+    raise exception 'La vigencia de la invitación o prueba no es válida.';
+  end if;
+  if p_legal_terms_version is null or char_length(trim(p_legal_terms_version)) not between 1 and 40
+    or p_privacy_version is null or char_length(trim(p_privacy_version)) not between 1 and 40 then
+    raise exception 'Las versiones legales no son válidas.';
+  end if;
+  if exists (
+    select 1 from auth.users u
+    where lower(split_part(u.email, '@', 1)) = v_username
+  ) then
+    raise exception 'Ese usuario ya existe.' using errcode = '23505';
+  end if;
+  if exists (
+    select 1 from public.account_invitations i
+    where lower(i.username) = v_username and i.status in ('pending', 'processing')
+  ) then
+    raise exception 'Ya existe una invitación pendiente para ese usuario.' using errcode = '23505';
+  end if;
+
+  v_token := replace(gen_random_uuid()::text, '-', '') || replace(gen_random_uuid()::text, '-', '');
+  v_expires_at := now() + make_interval(days => p_expires_in_days);
+
+  insert into public.account_invitations (
+    code_digest, code_hint, business_name, owner_name, username,
+    contact_email, contact_phone, service_plan, trial_days,
+    legal_terms_version, privacy_version, expires_at, created_by
+  ) values (
+    encode(pg_catalog.sha256(convert_to(v_token, 'UTF8')), 'hex'), right(v_token, 8),
+    trim(p_business_name), trim(p_owner_name), v_username,
+    nullif(trim(p_contact_email), ''), nullif(trim(p_contact_phone), ''), p_service_plan, p_trial_days,
+    trim(p_legal_terms_version), trim(p_privacy_version), v_expires_at, auth.uid()
+  ) returning id into v_id;
+
+  return query select v_id, v_token, v_username, v_expires_at;
+end;
+$$;
+
+create or replace function public.admin_list_account_invitations()
+returns table (
+  invitation_id uuid,
+  business_name text,
+  owner_name text,
+  username text,
+  contact_email text,
+  contact_phone text,
+  service_plan text,
+  trial_days integer,
+  status text,
+  code_hint text,
+  expires_at timestamptz,
+  redeemed_by uuid,
+  redeemed_at timestamptz,
+  created_at timestamptz
+)
+language plpgsql
+security definer
+set search_path = ''
+as $$
+begin
+  if not public.current_account_is_admin() then
+    raise exception 'No tienes permisos de administrador.' using errcode = '42501';
+  end if;
+  update public.account_invitations i
+  set status = 'expired'
+  where i.status = 'pending' and i.expires_at <= now();
+
+  return query
+  select i.id, i.business_name, i.owner_name, i.username, i.contact_email,
+    i.contact_phone, i.service_plan, i.trial_days, i.status, i.code_hint,
+    i.expires_at, i.redeemed_by, i.redeemed_at, i.created_at
+  from public.account_invitations i
+  order by i.created_at desc;
+end;
+$$;
+
+create or replace function public.admin_revoke_account_invitation(p_invitation_id uuid)
+returns boolean
+language plpgsql
+security definer
+set search_path = ''
+as $$
+begin
+  if not public.current_account_is_admin() then
+    raise exception 'No tienes permisos de administrador.' using errcode = '42501';
+  end if;
+  update public.account_invitations
+  set status = 'revoked', revoked_at = now(), processing_attempt_id = null, processing_started_at = null
+  where id = p_invitation_id and status in ('pending', 'processing');
+  return found;
+end;
+$$;
+
+-- Estas RPC solo pueden ser invocadas por el backend con service_role.
+create or replace function public.preview_account_invitation(p_code_digest text)
+returns table (
+  business_name text,
+  owner_name text,
+  username text,
+  legal_terms_version text,
+  privacy_version text,
+  expires_at timestamptz
+)
+language sql
+security definer
+set search_path = ''
+as $$
+  select i.business_name, i.owner_name, i.username,
+    i.legal_terms_version, i.privacy_version, i.expires_at
+  from public.account_invitations i
+  where i.code_digest = p_code_digest
+    and (
+      i.status = 'pending'
+      or (i.status = 'processing' and i.processing_started_at < now() - interval '15 minutes')
+    )
+    and i.expires_at > now();
+$$;
+
+create or replace function public.claim_account_invitation(p_code_digest text, p_attempt_id uuid)
+returns table (
+  invitation_id uuid,
+  business_name text,
+  owner_name text,
+  username text,
+  service_plan text,
+  trial_days integer,
+  legal_terms_version text,
+  privacy_version text
+)
+language plpgsql
+security definer
+set search_path = ''
+as $$
+begin
+  return query
+  update public.account_invitations i
+  set status = 'processing', processing_attempt_id = p_attempt_id, processing_started_at = now()
+  where i.code_digest = p_code_digest
+    and (
+      i.status = 'pending'
+      or (i.status = 'processing' and i.processing_started_at < now() - interval '15 minutes')
+    )
+    and i.expires_at > now()
+  returning i.id, i.business_name, i.owner_name, i.username, i.service_plan,
+    i.trial_days, i.legal_terms_version, i.privacy_version;
+end;
+$$;
+
+create or replace function public.release_account_invitation(p_attempt_id uuid)
+returns boolean
+language plpgsql
+security definer
+set search_path = ''
+as $$
+begin
+  update public.account_invitations
+  set status = case when expires_at > now() then 'pending' else 'expired' end,
+    processing_attempt_id = null, processing_started_at = null
+  where processing_attempt_id = p_attempt_id and status = 'processing';
+  return found;
+end;
+$$;
+
+create or replace function public.complete_account_invitation_activation(p_attempt_id uuid, p_user_id uuid)
+returns boolean
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare v_invitation public.account_invitations;
+begin
+  select * into v_invitation
+  from public.account_invitations
+  where processing_attempt_id = p_attempt_id and status = 'processing'
+  for update;
+  if not found then
+    raise exception 'La invitación ya no está disponible.' using errcode = 'P0002';
+  end if;
+  if not exists (select 1 from auth.users where id = p_user_id) then
+    raise exception 'La cuenta de acceso no existe.' using errcode = '23503';
+  end if;
+
+  update public.profiles
+  set display_name = v_invitation.business_name,
+    access_status = 'active', service_plan = v_invitation.service_plan,
+    account_role = 'owner', suspension_reason = null,
+    trial_ends_at = case when v_invitation.trial_days > 0
+      then now() + make_interval(days => v_invitation.trial_days) else null end,
+    legal_terms_version = v_invitation.legal_terms_version, terms_accepted_at = now(),
+    privacy_version = v_invitation.privacy_version, privacy_accepted_at = now(),
+    last_admin_action_at = now(), last_admin_action_by = v_invitation.created_by
+  where id = p_user_id;
+  if not found then
+    raise exception 'No se creó el perfil de la cuenta.';
+  end if;
+
+  update public.business_profiles
+  set business_name = v_invitation.business_name,
+    onboarding_status = 'pending', onboarding_step = 0,
+    onboarding_draft = jsonb_build_object(
+      'businessName', v_invitation.business_name,
+      'ownerName', v_invitation.owner_name
+    )
+  where owner_id = p_user_id;
+
+  update public.account_invitations
+  set status = 'redeemed', redeemed_by = p_user_id, redeemed_at = now(),
+    processing_attempt_id = null, processing_started_at = null
+  where id = v_invitation.id;
+
+  insert into public.admin_account_events (
+    target_user_id, actor_user_id, action, new_access_status,
+    new_service_plan, new_account_role, admin_notes
+  ) values (
+    p_user_id, v_invitation.created_by, 'account_activated', 'active',
+    v_invitation.service_plan, 'owner', 'Cuenta activada mediante invitación de un solo uso.'
+  );
+  return true;
+end;
+$$;
+
+revoke execute on function public.admin_create_account_invitation(text,text,text,text,text,text,integer,integer,text,text) from public, anon;
+revoke execute on function public.admin_list_account_invitations() from public, anon;
+revoke execute on function public.admin_revoke_account_invitation(uuid) from public, anon;
+grant execute on function public.admin_create_account_invitation(text,text,text,text,text,text,integer,integer,text,text) to authenticated;
+grant execute on function public.admin_list_account_invitations() to authenticated;
+grant execute on function public.admin_revoke_account_invitation(uuid) to authenticated;
+
+revoke execute on function public.preview_account_invitation(text) from public, anon, authenticated;
+revoke execute on function public.claim_account_invitation(text,uuid) from public, anon, authenticated;
+revoke execute on function public.release_account_invitation(uuid) from public, anon, authenticated;
+revoke execute on function public.complete_account_invitation_activation(uuid,uuid) from public, anon, authenticated;
+grant execute on function public.preview_account_invitation(text) to service_role;
+grant execute on function public.claim_account_invitation(text,uuid) to service_role;
+grant execute on function public.release_account_invitation(uuid) to service_role;
+grant execute on function public.complete_account_invitation_activation(uuid,uuid) to service_role;
 
 notify pgrst, 'reload schema';
 commit;

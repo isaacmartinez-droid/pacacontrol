@@ -8,6 +8,7 @@ import AdminSignInPage from './AdminSignInPage'
 
 const AdminAccountDetailPage = lazy(() => import('./pages/AdminAccountDetailPage'))
 const AdminAccountsPage = lazy(() => import('./pages/AdminAccountsPage'))
+const AdminNewAccountPage = lazy(() => import('./pages/AdminNewAccountPage'))
 const AdminAlertsPage = lazy(() => import('./pages/AdminAlertsPage'))
 const AdminBillingPage = lazy(() => import('./pages/AdminBillingPage'))
 const AdminOverviewPage = lazy(() => import('./pages/AdminOverviewPage'))
@@ -22,6 +23,7 @@ function AdminApp() {
           <Route element={<AdminDataProvider><AdminShell /></AdminDataProvider>}>
             <Route index element={<LazyPage><AdminOverviewPage /></LazyPage>} />
             <Route path="cuentas" element={<LazyPage><AdminAccountsPage /></LazyPage>} />
+            <Route path="cuentas/nueva" element={<LazyPage><AdminNewAccountPage /></LazyPage>} />
             <Route path="cuentas/:accountId" element={<LazyPage><AdminAccountDetailPage /></LazyPage>} />
             <Route path="alertas" element={<LazyPage><AdminAlertsPage /></LazyPage>} />
             <Route path="cobros" element={<LazyPage><AdminBillingPage /></LazyPage>} />

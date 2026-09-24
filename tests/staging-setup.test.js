@@ -25,12 +25,15 @@ test('staging exige URL separada y rechaza sustitución por la URL de clientes',
   // No depende de archivos .env privados: también funciona en CI/checkout limpio.
   const env = { VITE_STAGING_PROJECT_REF: 'staging-fixture',
     VITE_SUPABASE_URL: 'https://staging-fixture.supabase.co',
-    VITE_SUPABASE_PUBLISHABLE_KEY: 'sb_publishable_fixture_not_real' }
+    VITE_SUPABASE_PUBLISHABLE_KEY: 'sb_publishable_fixture_not_real',
+    VITE_ADMIN_APP_URL: 'http://127.0.0.1:5175',
+    VITE_CUSTOMER_APP_URL: 'http://127.0.0.1:5174' }
   const production = 'https://production-fixture.supabase.co'
   assert.doesNotThrow(() => validateStagingEnvironment(env, production))
   assert.throws(() => validateStagingEnvironment({ ...env, VITE_SUPABASE_URL: production }, production), /proyecto de pruebas/)
   assert.throws(() => validateStagingEnvironment(env, env.VITE_SUPABASE_URL), /proyecto de pruebas/)
   assert.throws(() => validateStagingEnvironment({}, production), /Configura/)
+  assert.throws(() => validateStagingEnvironment({ ...env, VITE_ADMIN_APP_URL: env.VITE_CUSTOMER_APP_URL }, production), /separados/)
   assert.throws(() => validateStagingEnvironment({ ...env, VITE_SUPABASE_URL: 'http://staging-fixture.supabase.co' }, production), /proyecto de pruebas/)
 })
 
@@ -40,12 +43,14 @@ test('instalador crea base completa y rechaza ejecutarse de nuevo sin tocar dato
     const sql = await installer()
     await db.exec(sql)
     await db.exec(await audit())
-    const { rows } = await db.query("select to_regprocedure('public.create_bale_with_inventory(date,numeric,numeric,numeric,numeric,jsonb)')::text as rpc, to_regprocedure('public.create_bale_with_expense_details(date,numeric,numeric,numeric,jsonb,jsonb)')::text as detailed_rpc, to_regclass('public.bale_other_expense_items')::text as detail_table, to_regclass('public.business_profiles')::text as profile_table, to_regprocedure('public.complete_business_onboarding(text,text,text,boolean,text,text[],text[],text)')::text as onboarding_rpc")
+    const { rows } = await db.query("select to_regprocedure('public.create_bale_with_inventory(date,numeric,numeric,numeric,numeric,jsonb)')::text as rpc, to_regprocedure('public.create_bale_with_expense_details(date,numeric,numeric,numeric,jsonb,jsonb)')::text as detailed_rpc, to_regclass('public.bale_other_expense_items')::text as detail_table, to_regclass('public.business_profiles')::text as profile_table, to_regprocedure('public.complete_business_onboarding(text,text,text,boolean,text,text[],text[],text)')::text as onboarding_rpc, to_regclass('public.account_invitations')::text as invitations_table, to_regprocedure('public.admin_create_account_invitation(text,text,text,text,text,text,integer,integer,text,text)')::text as invitation_rpc")
     assert.ok(rows[0].rpc)
     assert.ok(rows[0].detailed_rpc)
     assert.equal(rows[0].detail_table, 'bale_other_expense_items')
     assert.equal(rows[0].profile_table, 'business_profiles')
     assert.ok(rows[0].onboarding_rpc)
+    assert.equal(rows[0].invitations_table, 'account_invitations')
+    assert.ok(rows[0].invitation_rpc)
     const defaults = (await db.query("select column_default from information_schema.columns where table_schema='public' and table_name='sales' and column_name='sold_at'")).rows
     assert.equal(defaults[0].column_default, 'now()')
     await assert.rejects(db.exec(sql), /base ya tiene objetos/)

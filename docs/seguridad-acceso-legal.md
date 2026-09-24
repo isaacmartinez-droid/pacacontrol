@@ -14,7 +14,7 @@ Esta guia deja el sistema listo para promocionarlo sin abrir el registro al publ
 
 1. Ejecutar `supabase/migrations/20260911000000_profiles_legal_access.sql` en SQL Editor.
 2. En Supabase Auth, desactivar los registros publicos si el sistema ya se promociona en redes.
-3. Crear cuentas de clientes manualmente desde el panel de Supabase o por el flujo administrativo que decidas usar.
+3. Crear cuentas de clientes desde **Cuentas > Crear cuenta** en el portal administrativo y compartir el enlace privado de activación. No crear contraseñas de clientes ni utilizar el registro público.
 4. Mantener `VITE_ALLOW_PUBLIC_SIGNUP` sin configurar o en `false` en Vercel.
 
 > Importante: ocultar el boton de registro en la app no basta si Supabase Auth permite registros publicos. El cierre real debe hacerse tambien en la configuracion de Auth.

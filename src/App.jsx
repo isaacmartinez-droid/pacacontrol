@@ -30,6 +30,7 @@ import BusinessOnboardingPage from './pages/BusinessOnboardingPage'
 import EditBalePage from './pages/EditBalePage'
 import EditCustomerPage from './pages/EditCustomerPage'
 import EditSalePage from './pages/EditSalePage'
+import ActivateAccountPage from './pages/ActivateAccountPage'
 
 function StoreDataShell() {
   return (
@@ -47,6 +48,7 @@ function App() {
   return (
     <Routes>
       <Route path="acceder" element={<AuthPage />} />
+      <Route path="activar" element={<ActivateAccountPage />} />
       <Route path="legal" element={<LegalPage />} />
       <Route element={<ProtectedRoute />}>
         <Route element={<BusinessAccountRoute />}>

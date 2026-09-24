@@ -76,6 +76,8 @@ negocio.
 - bandeja de alertas calculada con datos existentes;
 - vista provisional de cobros;
 - inventario visible de controles técnicos pendientes.
+- alta de cuentas mediante invitaciones privadas de un solo uso;
+- revocación y seguimiento de invitaciones sin revelar nuevamente su token.
 
 ## Límites conocidos y siguiente fase
 
@@ -99,7 +101,7 @@ los campos necesarios y tener pruebas negativas para cuentas normales.
 
 ## Verificación local
 
-- 124 pruebas automatizadas aprobadas;
+- 131 pruebas automatizadas aprobadas;
 - humo visual comercial y administrativo aprobado;
 - cuenta normal rechazada por el portal;
 - resumen, directorio, expediente y sistema recorridos con datos simulados;

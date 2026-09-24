@@ -3,27 +3,28 @@
 Proyecto: `Sistema-Pacas-Pruebas`, referencia `zijfywqastacydmuqswv`.
 No modificar `.env.local`, las variables de Vercel Production ni datos de clientes.
 La configuración local de pruebas está en `.env.staging.local`, excluida de Git.
-Solo contiene la URL y clave publicable: no necesita contraseñas ni claves secretas.
+Solo contiene la URL, clave publicable y direcciones públicas de ambos portales:
+no necesita contraseñas ni claves secretas.
 
 ## Instalación inicial de la base vacía
 
 1. Confirmar el nombre del proyecto en Supabase antes de abrir SQL Editor.
 2. Ejecutar el contenido completo de
    [install_staging.sql](../supabase/setup/install_staging.sql).
-   Es una copia generada de las 31 migraciones en orden, con una sola transacción.
+   Es una copia generada de las 32 migraciones en orden, con una sola transacción.
    Rechaza bases donde ya exista alguna de las tablas de la app. No usar en clientes.
    Si falla, la transacción revierte; comunicar el error antes de reintentar.
 3. En Auth desactivar `Allow new users to sign up`, manteniendo Email habilitado.
-4. Crear dos usuarios ficticios desde Auth Users mediante la opción administrativa
-   de añadir usuario. Usar correos controlados por el desarrollador; no reutilizar
-   correos o contraseñas de clientes. No compartir contraseñas en el chat.
-5. Aprobar únicamente esas dos cuentas por sus UUID desde SQL Editor: los nuevos
-   perfiles quedan suspendidos por defecto. No activar todas las cuentas en bloque.
-   La sentencia con los UUID concretos se preparará al crear esas cuentas.
+4. Crear manualmente solo la primera identidad administrativa desde Auth Users y
+   asignarle `active`, `internal` y `admin` por UUID. Este es el arranque inicial;
+   no crear contraseñas de clientes desde Supabase.
+5. Desplegar `activate-account` y crear las cuentas ficticias siguientes desde
+   **Cuentas > Crear cuenta** en el portal administrativo. Cada persona define su
+   propia contraseña mediante el enlace privado.
 
-No se han instalado migraciones ni creado usuarios de forma remota desde Codex.
-La inspección inicial de solo lectura encontró Auth accesible, registro abierto
-y ausencia de `public.profiles` en REST. Esa inspección no ejecutó escrituras.
+Las migraciones incrementales se registran por separado: nunca se vuelve a usar
+el instalador completo sobre una base existente. Antes de probar invitaciones se
+debe aplicar `20260919000000_account_invitations.sql` y ejecutar la auditoría.
 
 ## Aplicación local
 

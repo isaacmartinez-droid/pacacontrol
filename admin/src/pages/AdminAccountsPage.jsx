@@ -1,4 +1,4 @@
-import { ChevronLeft, ChevronRight, Search } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Search, UserPlus } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { useAdminData } from '../AdminDataContext'
@@ -47,7 +47,10 @@ function AdminAccountsPage() {
 
   return (
     <div className="space-y-6">
-      <PageHeading eyebrow="Directorio" title="Cuentas" description="Busca, filtra y abre el expediente de una cuenta. Los cambios sensibles se realizan únicamente dentro de su detalle." />
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+        <PageHeading eyebrow="Directorio" title="Cuentas" description="Busca, filtra y abre el expediente de una cuenta. Los cambios sensibles se realizan únicamente dentro de su detalle." />
+        <Link to="/cuentas/nueva" className="inline-flex min-h-11 shrink-0 items-center justify-center gap-2 rounded-xl bg-brand-950 px-5 text-sm font-extrabold text-white hover:bg-brand-900"><UserPlus size={18} />Crear cuenta</Link>
+      </div>
       {error && <ErrorPanel message={error} onRetry={reload} />}
 
       <section className="rounded-2xl bg-white shadow-soft ring-1 ring-slate-100">
