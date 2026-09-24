@@ -1,4 +1,4 @@
-# Base de datos de PacaControl
+# Base de datos de ControlShop
 
 La carpeta `migrations` contiene el esquema de la aplicación y sus cambios posteriores: usuarios, categorías, pacas, inventario, ventas, seguimiento de entregas, clientes, gastos y productos dañados.
 

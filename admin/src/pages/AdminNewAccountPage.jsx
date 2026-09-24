@@ -22,7 +22,7 @@ function AdminNewAccountPage() {
   const activationUrl = useMemo(() => created && customerAppUrl
     ? `${customerAppUrl}/bienvenida/${encodeURIComponent(created.invitation_token)}` : '', [created, customerAppUrl])
   const invitationMessage = useMemo(() => created && activationUrl
-    ? `¡Tu espacio en PacaControl está listo para comenzar!\n\nHola, ${created.owner_name}. Hemos preparado tu acceso para que configures el sistema según tu negocio y tu forma de trabajar.\n\nActiva tu cuenta y crea tu contraseña desde este enlace seguro:\n${activationUrl}\n\nAl ingresar, te guiaremos paso a paso para definir tu negocio y adaptar la gestión de ventas, inventario y clientes.\n\nEste enlace es personal, vence ${formatAdminDate(created.expires_at)} y solo puede utilizarse una vez.`
+    ? `¡Tu espacio en ControlShop está listo para comenzar!\n\nHola, ${created.owner_name}. Hemos preparado tu acceso para que configures el sistema según tu negocio y tu forma de trabajar.\n\nActiva tu cuenta y crea tu contraseña desde este enlace seguro:\n${activationUrl}\n\nAl ingresar, te guiaremos paso a paso para definir tu negocio y adaptar la gestión de ventas, inventario y clientes.\n\nEste enlace es personal, vence ${formatAdminDate(created.expires_at)} y solo puede utilizarse una vez.`
     : '', [activationUrl, created])
 
   async function loadInvitations() {

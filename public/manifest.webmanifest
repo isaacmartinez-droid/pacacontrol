@@ -1,7 +1,7 @@
 {
   "id": "/",
-  "name": "Sistema de ventas",
-  "short_name": "Mis ventas",
+  "name": "ControlShop",
+  "short_name": "ControlShop",
   "description": "Inventario, ventas y alertas de tu negocio.",
   "lang": "es",
   "start_url": "/",

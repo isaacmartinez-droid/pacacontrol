@@ -35,8 +35,8 @@ function AdminSignInPage() {
         <div className="bg-brand-950 p-6 text-white sm:p-8">
           <span className="grid size-12 place-items-center rounded-2xl bg-white text-brand-950"><ShieldCheck aria-hidden="true" size={25} /></span>
           <p className="mt-5 text-xs font-extrabold uppercase tracking-[0.18em] text-brand-200">Acceso interno</p>
-          <h1 className="mt-2 text-2xl font-extrabold tracking-tight">Portal administrativo</h1>
-          <p className="mt-2 text-sm leading-6 text-brand-100">Gestión separada de cuentas, planes, accesos y vencimientos.</p>
+          <h1 className="mt-2 text-2xl font-extrabold tracking-tight">ControlShop</h1>
+          <p className="mt-2 text-sm leading-6 text-brand-100">Portal administrativo para cuentas, planes, accesos y vencimientos.</p>
         </div>
         <div className="p-6 sm:p-8">
           {!isConfigured ? (

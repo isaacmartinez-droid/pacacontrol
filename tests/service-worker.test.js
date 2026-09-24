@@ -64,6 +64,8 @@ test('reutiliza la ventana existente de la aplicación', async () => {
 
 test('el manifiesto incluye iconos PNG con las dimensiones declaradas', async () => {
   const manifest = JSON.parse(await readFile(new URL('../public/manifest.webmanifest', import.meta.url), 'utf8'))
+  assert.equal(manifest.name, 'ControlShop')
+  assert.equal(manifest.short_name, 'ControlShop')
   assert.equal(manifest.display, 'standalone')
   assert.equal(manifest.start_url, '/')
   for (const icon of manifest.icons) {

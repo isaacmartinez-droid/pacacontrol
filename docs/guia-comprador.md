@@ -1,8 +1,8 @@
-# Guía completa de Tienda J&F
+# Guía completa de ControlShop
 
-Bienvenido a Tienda J&F. Esta guía explica cómo usar el sistema para controlar compras de pacas, inventario, ventas, cobros, entregas, mermas y resultados.
+Bienvenido a ControlShop. Esta guía explica cómo usar el sistema para controlar compras, inventario, ventas, cobros, entregas, mermas y resultados.
 
-Tienda J&F funciona desde un navegador en computadora o teléfono. Necesitas conexión a Internet para guardar los cambios.
+ControlShop funciona desde un navegador en computadora o teléfono. Necesitas conexión a Internet para guardar los cambios.
 
 ## 1. Primer acceso
 
@@ -158,7 +158,7 @@ En **Inventario** ves las existencias por categoría. El número disponible ya d
 - pedidos registrados;
 - prendas dañadas.
 
-Cuando una categoría llega al límite configurado, Tienda J&F puede crear una alerta de inventario bajo. Cuando una paca llega a cero piezas vendibles, se marca como agotada.
+Cuando una categoría llega al límite configurado, ControlShop puede crear una alerta de inventario bajo. Cuando una compra o lote llega a cero unidades vendibles, se marca como agotado.
 
 ## 9. Clientes y gastos
 

@@ -503,6 +503,7 @@ try {
   await guest.getByText('Ana Pérez', { exact: true }).waitFor()
   await guest.getByLabel('Crea tu contraseña').waitFor()
   await guest.goto(origin + '/acceder')
+  await guest.getByRole('heading', { name: 'ControlShop', exact: true }).waitFor()
   await guest.getByRole('heading', { name: 'Bienvenido de nuevo', exact: true }).waitFor()
   assert.equal(await guest.getByRole('button', { name: /Crear.*cuenta/ }).count(), 0)
   await guest.close()

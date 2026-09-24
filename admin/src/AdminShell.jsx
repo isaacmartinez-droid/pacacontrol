@@ -28,7 +28,7 @@ function AdminShell() {
           <div className="flex items-center justify-between gap-3">
             <div className="flex items-center gap-3">
               <span className="grid size-11 place-items-center rounded-2xl bg-white text-brand-950"><ShieldCheck aria-hidden="true" size={22} /></span>
-              <div><p className="text-xs font-extrabold uppercase tracking-[0.14em] text-brand-200">PacaControl</p><p className="font-extrabold">Centro de control</p></div>
+              <div><p className="text-xs font-extrabold uppercase tracking-[0.14em] text-brand-200">ControlShop</p><p className="font-extrabold">Centro de control</p></div>
             </div>
             <button type="button" onClick={() => setMenuOpen(false)} aria-label="Cerrar navegación" className="grid size-10 place-items-center rounded-xl text-slate-300 hover:bg-white/10 lg:hidden"><X size={21} /></button>
           </div>

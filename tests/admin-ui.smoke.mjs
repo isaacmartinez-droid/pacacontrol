@@ -133,6 +133,7 @@ try {
   accountRole = 'admin'
   await page.reload()
   await page.getByRole('heading', { name: 'Panel admin', exact: true }).waitFor()
+  assert.equal(await page.title(), 'ControlShop | Centro de control')
   await page.getByText('Variedades Luna', { exact: true }).first().waitFor()
   await page.getByText('El pago registrado está vencido.', { exact: true }).waitFor()
 
@@ -148,7 +149,7 @@ try {
   await page.getByLabel('Usuario de acceso').fill('ana.perez')
   await page.getByRole('button', { name: 'Crear invitación', exact: true }).click()
   await page.getByText('Invitación creada', { exact: true }).waitFor()
-  await page.getByText(/¡Tu espacio en PacaControl está listo para comenzar!/).waitFor()
+  await page.getByText(/¡Tu espacio en ControlShop está listo para comenzar!/).waitFor()
   await page.getByText(/Hemos preparado tu acceso para que configures el sistema según tu negocio/).waitFor()
   await page.getByText(/te guiaremos paso a paso para definir tu negocio/).waitFor()
   await page.getByText(/https:\/\/customer-ui-test\.example\/bienvenida\/AbCdEfGhIjKlMnOpQrSt-_/).waitFor()

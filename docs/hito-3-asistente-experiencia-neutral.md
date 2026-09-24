@@ -41,11 +41,10 @@ El perfil confirmado alimenta una capa de términos visibles para:
 - notificaciones push generadas por el servidor;
 - reportes y pantallas de edición.
 
-La identidad antigua visible se sustituyó temporalmente por descriptores
-neutrales como «Sistema de ventas» y «Avisos del negocio». El nombre comercial
-definitivo, dominio e identidad visual corresponden al Hito 4 y no se inventan en
-esta entrega. Los identificadores internos `bale`, `paca` y `pacacontrol` se
-conservan donde no son texto presentado a la persona.
+En este hito, la identidad antigua visible se sustituyó temporalmente por
+descriptores neutrales. Posteriormente se aprobó **ControlShop** como nombre
+comercial. Los identificadores internos `bale`, `paca` y `pacacontrol` se
+conservan por compatibilidad donde no son texto presentado a la persona.
 
 ## Verificación local
 
